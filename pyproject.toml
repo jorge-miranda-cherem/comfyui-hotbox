@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-hotbox"
+description = "A fast, Nuke/Maya-style context-aware hotbox for ComfyUI: smart auto-wiring, model swapping, drag-to-pin bars, pro sliders and visual crop/paint editors. Frontend only, zero dependencies."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/jcherem/comfyui-hotbox"
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "Hotbox"
+Icon = ""
