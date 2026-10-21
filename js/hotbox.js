@@ -5,7 +5,7 @@
  *
  * Default Hotkeys:
  *   ` (Backquote)  — Open / Hold the Hotbox around node under cursor (or selected)
- *   Alt + Z        — Lupa (Large Live Prompt Editor / Visual Crop Editor / Fullscreen Painter)
+ *   Alt + Z        — Magnifier (Large Live Prompt Editor / Visual Crop Editor / Fullscreen Painter)
  *   Alt + N        — Label Studio (Create / Edit Label, Note, or Group with style presets)
  *   Alt + R        — Load in Canvas (Freeze node output/preview into a new LoadImage node)
  *   . (Period)     — Zoom camera to selected node(s) and press again to return to previous view
@@ -38,7 +38,7 @@
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
     /* Power tools (each one can be switched off in Settings) */
-    useAltZ: true,          /* Alt+Z Lupa / Visual Crop / Paint Studio */
+    useAltZ: true,          /* Alt+Z Magnifier / Visual Crop / Paint Studio */
     useAltN: true,          /* Alt+N Label Studio */
     useAltR: true,          /* Alt+R + [V] Load in Canvas */
     useShiftR: true,        /* Shift+R render only the selected output nodes */
@@ -588,7 +588,7 @@
       '.shb-ghost.shb-quiet.shb-ghost-rm{background:#2a1e1d;border-color:#6a342e}',
       '.shb-poof.shb-quiet .shb-poof-chip{padding:7px 10px;border-radius:6px;background:#2a1e1d;border:1px solid #6a342e;font:500 12.5px/1 Inter,system-ui,sans-serif;color:#e7a39a}',
 
-      /* Modals (Label Studio, Settings, Lupa, Crop, Paint) */
+      /* Modals (Label Studio, Settings, Magnifier, Crop, Paint) */
       '.shb-modal-bg{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font:400 12.5px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg)}',
       '.shb-modal{width:min(540px,94vw);max-height:90vh;overflow-y:auto;background:var(--shb-bg);border:1px solid var(--shb-border);border-radius:8px;padding:16px 18px;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}',
       '.shb-modal-t{font:600 14px/1.2 Inter,system-ui,sans-serif;color:var(--shb-fg);display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #333333}',
@@ -2413,13 +2413,42 @@
     return out;
   }
 
+  /* The video a node is showing right now (Save Video, Video Combine, …), or null */
+  var VIDEO_FILE_RE = /\.(mp4|webm|mov|mkv|avi|m4v)$/i;
+  function producedVideo(node) {
+    if (!node) return null;
+    var app = getApp();
+    var out = null;
+    try {
+      var no = app && app.nodeOutputs && app.nodeOutputs[node.id];
+      if (no) {
+        (no.gifs || []).concat(no.videos || [], no.images || []).forEach(function (m) {
+          if (!out && m && m.filename && VIDEO_FILE_RE.test(m.filename)) out = m;
+        });
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  /* Load in Canvas just hands a render to a new loader: Save / Preview Image → Load Image,
+     Save Video → Load Video. The file is copied into input/ so the new node owns its own copy. */
   function actLoadInCanvas(node) {
     var tgt = node || hbNode();
     if (!tgt) {
-      setStatus('error', 'Select or point at a node holding an image first');
+      setStatus('error', 'Select or point at a node holding an image or a video first');
       return Promise.resolve(null);
     }
-    var ims = producedImages(tgt);
+    var vid = producedVideo(tgt);
+    var loadType = 'LoadImage', loadWidget = 'image';
+    if (vid) {
+      if (canMake('LoadVideo') || hasType('LoadVideo')) { loadType = 'LoadVideo'; loadWidget = 'file'; }
+      else if (canMake('VHS_LoadVideo') || hasType('VHS_LoadVideo')) { loadType = 'VHS_LoadVideo'; loadWidget = 'video'; }
+      else {
+        setStatus('error', 'This ComfyUI has no Load Video node');
+        return Promise.resolve(null);
+      }
+    }
+    var ims = vid ? [vid] : producedImages(tgt);
     var imgUrl = ims.length ? viewURL(ims[0]) : '';
     if (!imgUrl && tgt.imgs && tgt.imgs[0] && tgt.imgs[0].src) {
       imgUrl = tgt.imgs[0].src;
@@ -2439,10 +2468,11 @@
       setStatus('error', 'This node has no rendered/preview image yet — run the workflow first');
       return Promise.resolve(null);
     }
-    setStatus('busy', 'Loading image into canvas…');
+    var what = vid ? 'video' : 'image';
+    setStatus('busy', 'Loading ' + what + ' into canvas…');
     return fetch(imgUrl)
       .then(function (r) {
-        if (!r.ok) throw new Error('Could not read image (HTTP ' + r.status + ')');
+        if (!r.ok) throw new Error('Could not read the ' + what + ' (HTTP ' + r.status + ')');
         return r.blob();
       })
       .then(function (blob) {
@@ -2450,7 +2480,8 @@
         var base = (ims[0] && ims[0].filename)
           ? String(ims[0].filename).replace(/\.[^.]+$/, '')
           : String(tgt.title || tgt.type || 'canvas').replace(/\W+/g, '_');
-        fd.append('image', blob, base + '_' + Date.now() + '.png');
+        var ext = vid ? String(vid.filename).match(VIDEO_FILE_RE)[0] : '.png';
+        fd.append('image', blob, base + '_' + Date.now() + ext);
         fd.append('type', 'input');
         return apiFetch('/upload/image', { method: 'POST', body: fd });
       })
@@ -2461,9 +2492,9 @@
       .then(function (j) {
         var val = (j.subfolder ? j.subfolder + '/' : '') + j.name;
         var vb = visBox(tgt);
-        var made = createNodeOrSubgraph('LoadImage', [vb.x, vb.y + vb.h + 90]);
-        if (!made) throw new Error('Could not create LoadImage node');
-        setWidgetVal(made, 'image', val);
+        var made = createNodeOrSubgraph(loadType, [vb.x, vb.y + vb.h + 90]);
+        if (!made) throw new Error('Could not create a ' + loadType + ' node');
+        setWidgetVal(made, loadWidget, val);
         var stem = String(j.name || '').replace(/\.[^.]+$/, '');
         var G = outGroup('INPUT  ' + stem, '#234264', [made]);
         var c = getCanvas(), g = getGraph();
@@ -2472,7 +2503,7 @@
           else if (c && c.selectNodes) c.selectNodes([made]);
         } catch (e) {}
         try { if (g) g.setDirtyCanvas(true, true); } catch (e) {}
-        setStatus('ok', '↓ Loaded in canvas: ' + j.name);
+        setStatus('ok', '↓ Loaded in canvas (' + loadType + '): ' + j.name);
         return made;
       })
       .catch(function (err) {
@@ -3230,7 +3261,7 @@
     head.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #333333;background:var(--shb-bg,#222222);font:500 12px/1.3 Inter,system-ui,sans-serif;color:var(--shb-fg-muted,#9a9a9a)';
     var cap = document.createElement('span');
     cap.style.cssText = 'flex:1;display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--shb-fg,#e2e2e2)';
-    cap.innerHTML = ico('lupa') + '<span>Lupa Prompt Editor' + (who ? ' · ' + esc(who) : '') + ' <span style="color:#777">(Alt+Z or Esc)</span></span>';
+    cap.innerHTML = ico('lupa') + '<span>Magnifier' + (who ? ' · ' + esc(who) : '') + ' <span style="color:#777">(Alt+Z or Esc)</span></span>';
 
     var boxes = document.createElement('span');
     boxes.style.cssText = 'display:flex;align-items:center;gap:4px';
@@ -3774,7 +3805,7 @@
       var w = lupaWidget(n);
       if (w) { lupaOpen({ w: w, node: n }); return; }
     }
-    setStatus('error', 'Alt+Z: Point at a Prompt node (Lupa), a Crop node (Visual Crop), or a Painter node');
+    setStatus('error', 'Alt+Z: Point at a Prompt node (Magnifier), a Crop node (Visual Crop), or a Painter node');
   }
 
   /* ---------------------------------------------------------------------
@@ -3963,7 +3994,7 @@
       seed:       { id: 'seed',       icon: 'seed',       label: 'Copy Seed',      kbd: '',  fn: function () { actExtractSeed(node); } },
       cropedit:   { id: 'cropedit',   icon: 'lupa',       label: 'Visual Crop',    kbd: 'Z', fn: function () { cropEditOpen(node); } },
       paintedit:  { id: 'paintedit',  icon: 'paint',      label: 'Paint Studio',   kbd: 'Z', fn: function () { paintEditOpen(node); } },
-      lupa:       { id: 'lupa',       icon: 'lupa',       label: 'Lupa Editor',    kbd: 'Z', fn: function () { actAltZ(node); } },
+      lupa:       { id: 'lupa',       icon: 'lupa',       label: 'Magnifier',      kbd: 'Z', fn: function () { actAltZ(node); } },
       label:      { id: 'label',      icon: 'label',      label: 'Add Label',      kbd: 'L', fn: function () { labelOpen(node); } },
       rename:     { id: 'rename',     icon: 'edit',       label: 'Rename Node',    kbd: 'F2', fn: function () { actRenameNode(node); } },
       reroute:    { id: 'reroute',    icon: 'reroute',    label: 'Add Reroute',    kbd: 'R', fn: function () { addReroute(node); } },
@@ -4055,13 +4086,13 @@
     catch (e) { return false; }
   }
 
-  /* Load in Canvas only makes sense on a node that is showing an image right now */
+  /* Load in Canvas only makes sense on a node that is showing an image or a video right now */
   function hbHasImage(node) {
     if (!node || isLoader(node)) return false;
     if (node.imgs && node.imgs.length) return true;
     var app = getApp();
     var no = app && app.nodeOutputs && app.nodeOutputs[node.id];
-    return !!(no && Array.isArray(no.images) && no.images.length);
+    return !!(no && Array.isArray(no.images) && no.images.length) || !!producedVideo(node);
   }
 
   function hbContextTools(node) {
@@ -5294,7 +5325,7 @@
     var fl = hbIsFluid();
     var icoSz = fl ? 15 : 13;
     var nodeTitle = node ? (node.title || node.type || 'Node') : 'Canvas';
-    var hasLupa = !!(node && hbToolOn('lupa') && (lupaWidget(node) || isCropNode(node) || isPainterNode(node)));
+    var hasMagnifier = !!(node && hbToolOn('lupa') && (lupaWidget(node) || isCropNode(node) || isPainterNode(node)));
     var slidersHTML = compact ? '' : buildProSlidersHTML(node);
 
     function rowHTML(attrs, icon, label, key, active) {
@@ -5367,10 +5398,10 @@
       var leftRows = [];
       if (node) leftRows.push(rowHTML('data-hb-act="rename"', 'edit', 'Rename', 'F2'));
       if (hbToolOn('label')) leftRows.push(rowHTML('data-hb-act="label"', 'label', 'Add Label', 'L'));
-      if (hasLupa) {
+      if (hasMagnifier) {
         leftRows.push(rowHTML('data-hb-act="lupa"',
           isCropNode(node) ? 'crop' : (isPainterNode(node) ? 'paint' : 'lupa'),
-          isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Lupa Editor'), 'Z'));
+          isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Magnifier'), 'Z'));
       }
       if (node) {
         leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R'));
@@ -6844,12 +6875,12 @@
 
   /* The user's own power tools — each one can be switched off here, which also hides its hotbox buttons */
   var POWER_TOOLS = [
-    { key: 'useAltZ', name: 'Lupa · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
-      tip: 'On a prompt / text node: Lupa, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
+    { key: 'useAltZ', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
+      tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
     { key: 'useAltN', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
-    { key: 'useAltR', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Freeze a rendered image into a new LoadImage',
-      tip: 'Takes the image the node is showing (its last render or preview), uploads it to input/ and drops a LoadImage with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image.' },
+    { key: 'useAltR', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
+      tip: 'Takes what the node is showing (Save / Preview Image, Save Video…), copies it into input/ and drops a Load Image — or a Load Video for videos — with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image or a video.' },
     { key: 'useShiftR', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
       tip: 'Renders only what you selected: the selected output nodes, or the output nodes downstream of the selection, with just the nodes they need. Nothing selected renders nothing, so a stray key never spends API credits on the whole graph. Uses rgthree\'s queue when it is installed.' },
     { key: 'useStitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
@@ -7212,7 +7243,7 @@
     hbClose();
   }, true);
 
-  /* Alt+Z: Lupa / Visual Crop / Paint Studio */
+  /* Alt+Z: Magnifier / Visual Crop / Paint Studio */
   listen(document, 'keydown', function (e) {
     if (!S.useAltZ || HB.binding) return;
     if (e.code !== 'KeyZ' && String(e.key || '').toLowerCase() !== 'z') return;

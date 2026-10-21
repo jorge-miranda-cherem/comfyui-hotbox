@@ -26,9 +26,9 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 | :--- | :--- |
 | **Top dock** | `[1]`–`[5]` smart suggestions for the node under the cursor (they add & auto-wire, or *swap* when an API/model node is selected) + your dock shortcut (`★ Models ▾` by default). |
 | **Context bar** | Tools for the node type — e.g. on a crop node: **Visual Crop `Z`**, **Super Stitch** and an aspect-ratio switch (`Free · 1:1 · 16:9 · 9:16 · 4:3 · 3:4`). |
-| **Left card** | `Rename F2` · `Add Label L` · `Lupa / Visual Crop / Paint Z` · `Add Reroute R` · `Set / Get Bus S` + node color swatches and a custom color picker. |
+| **Left card** | `Rename F2` · `Add Label L` · `Magnifier / Visual Crop / Paint Z` · `Add Reroute R` · `Set / Get Bus S` + node color swatches and a custom color picker. |
 | **Right card** | **Pro Sliders** for the node's numeric widgets (drag to scrub, <kbd>Shift</kbd> fine, <kbd>Ctrl</kbd>+click previous value, double-click default, wheel to nudge, click the value to type). |
-| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Kill APIs K` (when the workflow has API nodes) + your pinned nodes, the edit and settings buttons, and the `+` with its category dial. |
+| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image or a video) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Kill APIs K` (when the workflow has API nodes) + your pinned nodes, the edit and settings buttons, and the `+` with its category dial. |
 
 ---
 
@@ -60,16 +60,16 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | <kbd>1</kbd>–<kbd>9</kbd> | Run the matching dock button. |
 | <kbd>+</kbd> / <kbd>F</kbd> · <kbd>N</kbd> · <kbd>A</kbd> · <kbd>G</kbd> | Add drawer: all nodes · image/video kit · models & APIs · subgraphs. |
 | <kbd>Esc</kbd> | Leave edit mode, or close the hotbox. |
-| <kbd>Alt</kbd>+<kbd>Z</kbd> | **Lupa** big live prompt editor · **Visual Crop editor** on crop nodes · **Paint Studio** on paint / `LoadImage` nodes. |
+| <kbd>Alt</kbd>+<kbd>Z</kbd> | **Magnifier** — big live prompt editor · **Visual Crop editor** on crop nodes · **Paint Studio** on paint / `LoadImage` nodes. |
 | <kbd>Alt</kbd>+<kbd>N</kbd> | **Label Studio** — rich canvas titles/notes (`Label (rgthree)` when installed, otherwise `MarkdownNote` / `Note` / `Group`). |
-| <kbd>Alt</kbd>+<kbd>R</kbd> | **Load in Canvas** — freeze the selected node's output into a new `LoadImage` node. |
+| <kbd>Alt</kbd>+<kbd>R</kbd> | **Load in Canvas** — hand the selected node's render to a new `Load Image` (or `Load Video` for videos). |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | **Render Selected** — queue only the selected output nodes (or the outputs downstream of the selection). Nothing selected renders nothing. |
 | <kbd>.</kbd> | Frame the selected node(s); press again to return to the previous view. |
 
 While the hotbox is open it owns these keys, so other extensions (or ComfyUI keybindings) on the same keys don't fire at the same time.
 
 ### Power Tools
-Lupa / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Kill APIs and Zoom to Selection can each be switched off in **Settings → Power Tools** (hover a row for what it does); switching one off also hides its hotbox buttons.
+Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Kill APIs and Zoom to Selection can each be switched off in **Settings → Power Tools** (hover a row for what it does); switching one off also hides its hotbox buttons.
 
 ---
 
@@ -81,7 +81,7 @@ Lupa / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/jcherem/comfyui-hotbox.git
+git clone https://github.com/jorge-miranda-cherem/comfyui-hotbox.git
 ```
 
 Restart ComfyUI and refresh the browser. Look for the **H** button in the top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim, leader lines, UI scale, bar spacing, power tools, import / export of your bars), right-click it to enable or disable the hotbox.

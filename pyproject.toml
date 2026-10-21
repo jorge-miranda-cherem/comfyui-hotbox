@@ -6,7 +6,7 @@ license = { file = "LICENSE" }
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/jcherem/comfyui-hotbox"
+Repository = "https://github.com/jorge-miranda-cherem/comfyui-hotbox"
 
 [tool.comfy]
 PublisherId = ""
