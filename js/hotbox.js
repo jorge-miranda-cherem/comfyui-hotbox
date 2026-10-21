@@ -6,7 +6,7 @@
  * Default Hotkeys:
  *   ` (Backquote)  — Open / Hold the Hotbox around node under cursor (or selected)
  *   Alt + Z        — Lupa (Large Live Prompt Editor / Visual Crop Editor / Fullscreen Painter)
- *   Alt + N        — Label Studio (Create / Edit Label, Note, or Group with Pixaroma presets)
+ *   Alt + N        — Label Studio (Create / Edit Label, Note, or Group with style presets)
  *   Alt + R        — Load in Canvas (Freeze node output/preview into a new LoadImage node)
  *   . (Period)     — Zoom camera to selected node(s) and press again to return to previous view
  */
@@ -29,17 +29,22 @@
     hbCode: 'Backquote',
     hbMods: '',
     hbHold: false,          /* false = toggle on press, true = hold & release */
-    hbStyle: 'pro',         /* 'pro' (Fluid glass cards), 'quiet' (native panels) or 'classic' (compact toolbar) */
+    hbStyle: 'pro',         /* 'pro' (Fluid glass cards), 'quiet' (native panels) or 'classic' (Compact: Fluid look, bars only) */
+    hbDockCat: 'models',    /* category shortcut at the end of the dock: 'models' | 'tools' | 'subs' | 'search' | 'none' */
     hbEditAnim: 'jiggle',   /* edit-mode idle animation: 'jiggle' | 'tilt' | 'float' | 'outline' */
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
     hbLeaders: true,        /* Quiet: hairlines from the cursor to each zone */
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
-    useAltZ: true,
-    useAltN: true,
-    useAltR: true,
-    dotZoom: true,
+    /* Power tools (each one can be switched off in Settings) */
+    useAltZ: true,          /* Alt+Z Lupa / Visual Crop / Paint Studio */
+    useAltN: true,          /* Alt+N Label Studio */
+    useAltR: true,          /* Alt+R + [V] Load in Canvas */
+    useShiftR: true,        /* Shift+R render only the selected output nodes */
+    useStitch: true,        /* Super Stitch: put crops back into their plate (and keep them following) */
+    useKillApi: true,       /* [K] bypass / re-enable every API node */
+    dotZoom: true,          /* . frame the selection, press again to go back */
     lupaSize: 1,
     lupaBox: 1,
     lupaWH: '',
@@ -233,6 +238,7 @@
     sync: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
     layout: '<rect x="3" y="3" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
     check: '<polyline points="20 6 9 17 4 12"/>',
+    play: '<polygon points="7 4 20 12 7 20 7 4"/>',
     star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     pipette: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>',
     zapOff: '<path d="M10.5 4.9 13.1 2.2a.5.5 0 0 1 .9.5l-1.4 4.3"/><path d="M15.7 10H20a1 1 0 0 1 .8 1.6l-1.7 1.8"/><path d="M16.3 16.3 10.9 21.8a.5.5 0 0 1-.9-.5l1.9-6A1 1 0 0 0 11 14H4a1 1 0 0 1-.8-1.6l4.5-4.6"/><path d="m2 2 20 20"/>',
@@ -285,11 +291,11 @@
       '.shb-zone-bot{transform:translate(-50%,0);align-items:center}',
       '.shb-zone-left{transform:translate(-100%,-50%);align-items:flex-end}',
       '.shb-zone-right{transform:translate(0,-50%);align-items:flex-start}',
-      '.shb-zone-hub{transform:translate(-50%,-50%);align-items:center}',
-      '.shb-zone-bot > .shb-plus{position:absolute;left:100%;top:50%;margin-left:12px}',
-      '.shb-zone-bot.shb-plus-left > .shb-plus{left:auto;right:100%;margin-left:0;margin-right:12px}',
+      '.shb-zone-bot > .shb-plus-wrap{position:absolute;left:100%;top:50%;margin-left:12px;transform:translateY(-50%);display:flex}',
+      '.shb-zone-bot.shb-plus-left > .shb-plus-wrap{left:auto;right:100%;margin-left:0;margin-right:12px}',
       '.shb-zone-drawer{transform:none;z-index:30}',
-      '.shb-bar,.shb-card,.shb-drawer,.shb-classic-row,.shb-hub-pill,.shb-editbar,.shb-plus{zoom:var(--shb-zoom,1)}',
+      '.shb-zone-catmenu{transform:none;z-index:31}',
+      '.shb-bar,.shb-card,.shb-drawer,.shb-editbar,.shb-plus,.shb-dial-in,.shb-catmenu{zoom:var(--shb-zoom,1)}',
 
       /* Shared structure (both themes) */
       '.shb-bar{display:flex;align-items:center;gap:3px;padding:5px 8px;flex-wrap:wrap;justify-content:center;max-width:84vw}',
@@ -322,9 +328,6 @@
       '.shb-btn-pri,.shb-btn-amber,.shb-btn-teal,.shb-btn-purple{background:var(--shb-bg-elev);border-color:var(--shb-border);color:#f0f0f0}',
       '.shb-btn-pri:hover,.shb-btn-amber:hover,.shb-btn-teal:hover,.shb-btn-purple:hover{background:var(--shb-bg-hover);border-color:var(--shb-border-hover);color:#ffffff}',
       '.shb-btn-on{background:#2d3542;border-color:var(--shb-accent);color:#ffffff}',
-      '.shb-btn-plus{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:32px;padding:0 9px;margin-left:3px;border-radius:7px;background:#24303d;border:1px solid #3d5f86;color:#ffffff;cursor:pointer;transition:background .12s,border-color .12s,transform .1s}',
-      '.shb-btn-plus .shb-ico{color:#64a8f0;stroke-width:2.3}',
-      '.shb-btn-plus:hover{background:#2c3b4c;border-color:#64a8f0;transform:scale(1.05)}',
       '.shb-kbd{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:17px;padding:0 5px;border-radius:4px;background:#2b2b2b;border:1px solid #444444;color:#b0b0b0;font:600 10.5px/1 Inter,system-ui,sans-serif}',
       '.shb-ibtn{width:30px;height:28px;border-radius:6px;border:0;background:transparent;display:grid;place-items:center;color:#888;cursor:pointer;padding:0}',
       '.shb-ibtn .shb-ico{color:inherit}',
@@ -368,6 +371,31 @@
       '.shb-plus{display:grid;place-items:center;border:0;cursor:pointer;padding:0;transition:transform 70ms cubic-bezier(.34,1.56,.64,1),box-shadow 80ms,background 60ms,border-color 60ms}',
       '.shb-plus .shb-ico{transition:transform 90ms cubic-bezier(.34,1.56,.64,1)}',
       '.shb-plus.shb-plus-on .shb-ico{transform:rotate(45deg)}',
+      /* Speed dial: the categories fan out above the "+" on hover (the padding bridges the gap so hover holds) */
+      '.shb-dial{position:absolute;right:0;bottom:100%;padding-bottom:10px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(6px) scale(.97);transform-origin:100% 100%;transition:opacity 60ms ease,transform 90ms cubic-bezier(.34,1.4,.64,1),visibility 0s linear 90ms}',
+      '.shb-plus-wrap:hover .shb-dial{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity 60ms ease,transform 90ms cubic-bezier(.34,1.4,.64,1),visibility 0s}',
+      '.shb-plus-wrap.shb-drawer-open .shb-dial,.shb-dropping .shb-dial,.shb-editing .shb-dial{display:none}',
+      '.shb-dial-in{display:flex;flex-direction:column;width:212px;box-sizing:border-box}',
+      '.shb-dial-hd{white-space:nowrap}',
+      /* Swappable category shortcut at the end of the dock */
+      '.shb-catpick{display:grid;place-items:center;border:0;background:transparent;cursor:pointer;padding:0;color:inherit}',
+      '.shb-catmenu{display:flex;flex-direction:column;min-width:200px;box-sizing:border-box}',
+      '.shb-catmenu .shb-row .shb-chk{width:14px;text-align:center;flex-shrink:0}',
+      /* Floating tooltip (settings & hotbox) */
+      '.shb-tip{position:fixed;z-index:2147483640;max-width:300px;padding:8px 10px;border-radius:8px;background:#111113;border:1px solid #3a3a3e;color:#dcdcdc;font:400 11.5px/1.45 Inter,system-ui,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.5);pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity 90ms ease,transform 90ms ease}',
+      '.shb-tip.shb-tip-on{opacity:1;transform:none}',
+      /* Power tools rows in settings */
+      '.shb-pt{display:flex;flex-direction:column;gap:2px;width:100%}',
+      '.shb-pt-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;border:0;background:transparent;cursor:pointer;text-align:left;width:100%;box-sizing:border-box;color:inherit}',
+      '.shb-pt-row:hover{background:#262626}',
+      '.shb-pt-sw{position:relative;width:28px;height:16px;border-radius:8px;background:#3a3a3a;flex-shrink:0;transition:background .12s}',
+      '.shb-pt-sw::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#bdbdbd;transition:transform .12s,background .12s}',
+      '.shb-pt-row.shb-on .shb-pt-sw{background:#2f86e0}',
+      '.shb-pt-row.shb-on .shb-pt-sw::after{transform:translateX(12px);background:#fff}',
+      '.shb-pt-name{flex:1;min-width:0;font:500 12.5px/1.25 Inter,system-ui,sans-serif;color:#e6e6e6}',
+      '.shb-pt-name small{display:block;font:400 11px/1.35 Inter,system-ui,sans-serif;color:#8a8a8a;margin-top:1px}',
+      '.shb-pt-key{font:500 10.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#9a9a9a;background:#262626;border:1px solid #3a3a3a;border-radius:4px;padding:3px 5px;flex-shrink:0}',
+      '.shb-pt-info{width:16px;height:16px;border-radius:50%;border:1px solid #555;color:#9a9a9a;font:600 10px/14px Inter,system-ui,sans-serif;text-align:center;flex-shrink:0;cursor:help}',
       '.shb-ghost{position:fixed;z-index:2147483550;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;transform:translate(-50%,-50%)}',
       '.shb-ghost-dot{flex-shrink:0}',
       '.shb-ghost.shb-ghost-rm .shb-ghost-dot{background:#e0705f !important}',
@@ -382,13 +410,9 @@
       '.shb-search{width:100%;box-sizing:border-box;outline:none}',
       '.shb-list{display:flex;flex-direction:column;gap:1px;overflow-y:auto;max-height:290px;padding-right:2px}',
 
-      /* Classic (compact toolbar) layout */
-      '.shb-classic-row{display:flex;align-items:center;justify-content:center;gap:2px;padding:4px 6px;flex-wrap:wrap;max-width:84vw}',
-      '.shb-hub-pill{padding:6px 12px;font:500 12px/1.2 Inter,system-ui,sans-serif}',
-
       /* ---------- 1a FLUID: frosted glass, spring motion, sliding highlights ---------- */
       '.shb-fluid{--shb-glass:rgba(38,38,42,.6);--shb-t1:#f2f2f5;--shb-t2:rgba(235,235,245,.7);--shb-t3:rgba(235,235,245,.5);--shb-blue:#2f86e0;--shb-blue2:#5aa2f0;--shb-danger:#e8735f}',
-      '.shb-fluid .shb-bar,.shb-fluid .shb-card,.shb-fluid .shb-drawer,.shb-fluid .shb-editbar{background:var(--shb-glass);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 50px rgba(0,0,0,.45);color:var(--shb-t1)}',
+      '.shb-fluid .shb-bar,.shb-fluid .shb-card,.shb-fluid .shb-drawer,.shb-fluid .shb-editbar,.shb-fluid .shb-dial-in,.shb-fluid .shb-catmenu{background:var(--shb-glass);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 50px rgba(0,0,0,.45);color:var(--shb-t1)}',
       '.shb-fluid .shb-scrim{position:fixed;inset:0;background:rgba(8,8,10,.16);pointer-events:none;z-index:0}',
       '.shb-fluid .shb-bar{gap:2px;padding:5px;max-width:92vw}',
       '.shb-fluid .shb-dock{border-radius:18px}',
@@ -461,7 +485,12 @@
       '.shb-fluid .shb-editbar-b{padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:var(--shb-t1)}',
       '.shb-fluid .shb-editbar-b:hover{background:rgba(255,255,255,.1)}',
       '.shb-fluid .shb-editbar-done,.shb-fluid .shb-editbar-done:hover{background:var(--shb-blue);color:#fff;padding:8px 14px}',
-      '.shb-fluid .shb-plus{width:48px;height:48px;margin-top:-24px;border-radius:50%;background:var(--shb-blue);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 0 1px rgba(255,255,255,.12),0 12px 30px rgba(47,134,224,.45)}',
+      '.shb-fluid .shb-dial-in,.shb-fluid .shb-catmenu{padding:6px;border-radius:18px}',
+      '.shb-fluid .shb-catmenu{background:rgba(38,38,42,.82)}',
+      '.shb-fluid .shb-dial-hd{padding:6px 10px 6px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--shb-t3)}',
+      '.shb-fluid .shb-catpick{width:22px;height:34px;border-radius:11px;color:rgba(235,235,245,.6)}',
+      '.shb-fluid .shb-catpick:hover{background:rgba(255,255,255,.1);color:#fff}',
+      '.shb-fluid .shb-plus{width:48px;height:48px;border-radius:50%;background:var(--shb-blue);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 0 1px rgba(255,255,255,.12),0 12px 30px rgba(47,134,224,.45)}',
       '.shb-fluid .shb-plus .shb-ico{color:#fff;stroke-width:2.4}',
       '.shb-fluid .shb-plus:hover{transform:scale(1.08);background:#3b92ea}',
       '.shb-fluid .shb-plus:active{transform:scale(.94)}',
@@ -484,9 +513,13 @@
 
       /* ---------- 1b QUIET: native ComfyUI panels, hairline leaders, monospace keys ---------- */
       '.shb-quiet{--shb-qbg:#1f1f1f;--shb-qbd:#303030;--shb-qhover:#2a2a2a;--shb-qmuted:#6f6f6f;--shb-qblue:#64a8f0;--shb-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace}',
-      '.shb-quiet .shb-bar,.shb-quiet .shb-card,.shb-quiet .shb-drawer,.shb-quiet .shb-editbar,.shb-quiet .shb-classic-row,.shb-quiet .shb-hub-pill{background:var(--shb-qbg);border:1px solid var(--shb-qbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);color:#d6d6d6}',
-      '.shb-quiet .shb-bar,.shb-quiet .shb-classic-row{padding:3px;gap:1px}',
-      '.shb-quiet .shb-bar.shb-drop-over,.shb-quiet .shb-classic-row.shb-drop-over{border-color:#4a4a4a}',
+      '.shb-quiet .shb-bar,.shb-quiet .shb-card,.shb-quiet .shb-drawer,.shb-quiet .shb-editbar,.shb-quiet .shb-dial-in,.shb-quiet .shb-catmenu{background:var(--shb-qbg);border:1px solid var(--shb-qbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);color:#d6d6d6}',
+      '.shb-quiet .shb-bar{padding:3px;gap:1px}',
+      '.shb-quiet .shb-bar.shb-drop-over{border-color:#4a4a4a}',
+      '.shb-quiet .shb-dial-in,.shb-quiet .shb-catmenu{padding:4px}',
+      '.shb-quiet .shb-dial-hd{padding:7px 9px 4px;font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted)}',
+      '.shb-quiet .shb-catpick{width:18px;height:28px;border-radius:5px;color:#8a8a8a}',
+      '.shb-quiet .shb-catpick:hover{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-vsep{height:16px;background:#333;margin:0 3px}',
       '.shb-quiet .shb-bar-items{gap:1px}',
       '.shb-quiet .shb-btn{gap:7px;padding:7px 10px;border:0;border-radius:6px;background:transparent;color:#d6d6d6;font:500 12.5px/1 Inter,system-ui,sans-serif}',
@@ -537,16 +570,10 @@
       '.shb-quiet .shb-editbar-b{padding:6px 9px;border-radius:5px;font:500 12px/1 Inter,system-ui,sans-serif;color:#cfcfcf}',
       '.shb-quiet .shb-editbar-b:hover{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-editbar-done{color:var(--shb-qblue);font-weight:600}',
-      '.shb-quiet .shb-plus{width:40px;height:40px;margin-top:-20px;border-radius:8px;background:var(--shb-qbg);border:1px solid var(--shb-qbd);box-shadow:0 8px 24px rgba(0,0,0,.35)}',
+      '.shb-quiet .shb-plus{width:40px;height:40px;border-radius:8px;background:var(--shb-qbg);border:1px solid var(--shb-qbd);box-shadow:0 8px 24px rgba(0,0,0,.35)}',
       '.shb-quiet .shb-plus .shb-ico{color:var(--shb-qblue);stroke-width:2.2}',
       '.shb-quiet .shb-plus:hover{background:var(--shb-qhover);border-color:#3d5f86}',
       '.shb-quiet .shb-plus.shb-plus-drop{border-color:var(--shb-qblue);transform:scale(1.08)}',
-      '.shb-quiet .shb-cross{position:fixed;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:1}',
-      '.shb-quiet .shb-cross i{position:absolute;background:#fff}',
-      '.shb-quiet .shb-cross i:nth-child(1){left:50%;top:0;width:1px;height:6px;transform:translateX(-50%)}',
-      '.shb-quiet .shb-cross i:nth-child(2){left:50%;bottom:0;width:1px;height:6px;transform:translateX(-50%)}',
-      '.shb-quiet .shb-cross i:nth-child(3){top:50%;left:0;height:1px;width:6px;transform:translateY(-50%)}',
-      '.shb-quiet .shb-cross i:nth-child(4){top:50%;right:0;height:1px;width:6px;transform:translateY(-50%)}',
       '.shb-quiet .shb-drawer{padding:4px;width:300px}',
       '.shb-quiet .shb-drawer .shb-card-hd{padding:7px 9px 4px}',
       '.shb-quiet .shb-search{padding:6px 9px;border-radius:5px;border:1px solid var(--shb-qbd);background:#161616;color:#e6e6e6;font:400 12px/1.2 Inter,system-ui,sans-serif}',
@@ -1122,6 +1149,71 @@
     if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
     setStatus('ok', list.length + ' API node' + (list.length === 1 ? '' : 's')
       + (anyLive ? ' bypassed (cost-free test mode)' : ' re-enabled'));
+  }
+
+  /* Shift+R — render only what is selected (ported from ImissNuke): the selected output nodes, or the
+     output nodes downstream of the selection. Nothing selected renders nothing, so a stray key never
+     spends API credits on the whole graph. rgthree's queue is used when it is installed. */
+  function hbIsOutputNode(n) {
+    if (!n || n.mode === MODE_MUTE || n.mode === MODE_BYPASS) return false;
+    if ((n.constructor && n.constructor.nodeData && n.constructor.nodeData.output_node) || n.is_output_node) return true;
+    return /save|preview|output|display/i.test(String(n.type || ''));
+  }
+
+  function actRenderSelected() {
+    var app = getApp(), g = getGraph();
+    if (!app || !g) return;
+    var sel = selNodes();
+    if (!sel.length) {
+      setStatus('error', 'Render Selected: select the node(s) to render first');
+      return;
+    }
+    var outs = sel.filter(hbIsOutputNode);
+    if (!outs.length) {
+      var seen = {}, queue = sel.slice();
+      while (queue.length) {
+        var cur = queue.shift();
+        if (!cur || seen[cur.id]) continue;
+        seen[cur.id] = 1;
+        if (hbIsOutputNode(cur)) outs.push(cur);
+        (cur.outputs || []).forEach(function (o) {
+          ((o && o.links) || []).forEach(function (lid) {
+            var l = linkById(g, lid);
+            var t = (l && g.getNodeById) ? g.getNodeById(l.target_id) : null;
+            if (t && !seen[t.id]) queue.push(t);
+          });
+        });
+      }
+    }
+    if (!outs.length) {
+      setStatus('error', 'Render Selected: no output node is selected or downstream of the selection');
+      return;
+    }
+    var what = outs.length === 1 ? (outs[0].title || outs[0].type) : outs.length + ' output nodes';
+    function done() { setStatus('ok', '▶ Rendering ' + what); }
+    function failed(err) { setStatus('error', 'Render Selected failed: ' + msgOf(err)); }
+    if (window.rgthree && typeof window.rgthree.queueOutputNodes === 'function') {
+      Promise.resolve(window.rgthree.queueOutputNodes(outs)).then(done, failed);
+      return;
+    }
+    var api = app.api || (window.comfyAPI && window.comfyAPI.api && window.comfyAPI.api.api);
+    Promise.resolve(app.graphToPrompt()).then(function (p) {
+      var full = p && p.output;
+      if (!full || !api || !api.queuePrompt) throw new Error('the queue API is not available');
+      var part = {};
+      (function need(ids) {
+        ids.forEach(function (id) {
+          id = String(id);
+          if (part[id] || !full[id]) return;
+          part[id] = full[id];
+          var ins = full[id].inputs || {};
+          need(Object.keys(ins).filter(function (k) { return Array.isArray(ins[k]); })
+            .map(function (k) { return ins[k][0]; }));
+        });
+      })(outs.map(function (n) { return n.id; }));
+      if (!Object.keys(part).length) throw new Error('the selected outputs are not in the prompt (muted or bypassed?)');
+      return api.queuePrompt(0, { output: part, workflow: p.workflow });
+    }).then(done, failed);
   }
 
   function outGroup(title, color, members) {
@@ -1824,95 +1916,374 @@
     return true;
   }
 
+  /* ---------------------------------------------------------------------
+   * SUPER STITCH (ported from the Nuke2Comfy Scene Manager)
+   * One press puts processed crops back into the plate they were cut from:
+   *   - a FIT (ImageScale, bicubic, crop disabled) sizes the result back to the crop box first,
+   *     because what comes back from a model is the one thing whose size nobody can promise;
+   *   - an ImageCompositeMasked pastes it at the crop's x / y with destination = the PLATE;
+   *   - several crops of one plate make ONE chain (each stitch pastes into the one before it),
+   *     a crop that already has its stitch is never stitched twice, and a preview closes the chain;
+   *   - an empty "apinode / localmodel" group marks where the model goes, the rest is grouped "Stitch";
+   *   - every stitch keeps following its crop: move or resize the crop and x / y / fit update.
+   * Stitches made by the Scene Manager (`_n2c_stitch`) are recognised too.
+   * --------------------------------------------------------------------- */
+  var STITCH_TYPE = 'ImageCompositeMasked';
+  var STITCH_FIT_TYPE = 'ImageScale';
+  var STITCH_FIT_FILTER = 'bicubic';
+  var STITCH_HOLE_W = 760;
+
+  function inSlotNamed(node, name) {
+    var ins = (node && node.inputs) || [];
+    for (var i = 0; i < ins.length; i++) {
+      if (ins[i] && ins[i].name === name) return i;
+    }
+    return -1;
+  }
+
+  /* The node / slot feeding input `slot` of `node`, or null */
+  function inOrigin(graph, node, slot) {
+    var inp = node && node.inputs && node.inputs[slot];
+    if (!graph || !inp || inp.link == null) return null;
+    var l = linkById(graph, inp.link);
+    var up = (l && graph.getNodeById) ? graph.getNodeById(l.origin_id) : null;
+    return up ? { node: up, slot: l.origin_slot } : null;
+  }
+
+  function widgetInt(node, name) {
+    var w = widgetNamed(node, name);
+    return w ? Math.round(+w.value || 0) : null;
+  }
+
+  /* The picture a crop cuts (a preview in between is skipped) */
+  function cropPlate(graph, crop) {
+    var o = imageOrigin(graph, crop);
+    if (o && isPreviewNode(o.node)) o = imageOrigin(graph, o.node) || o;
+    return o;
+  }
+
+  function stitchMarkOf(st) {
+    var p = (st && st.properties) || {};
+    if (p._shb_stitch && p._shb_stitch.crop != null) return p._shb_stitch.crop;
+    if (p._n2c_stitch && p._n2c_stitch.crop != null) return p._n2c_stitch.crop;
+    return p._shb_crop_id != null ? p._shb_crop_id : null;
+  }
+
+  /* The crop a stitch takes its box from, or null */
+  function stitchCropOf(graph, st) {
+    var id = stitchMarkOf(st);
+    var c = (id != null && graph && graph.getNodeById) ? graph.getNodeById(id) : null;
+    return (c && isCropNode(c)) ? c : null;
+  }
+
+  function stitchesOf(graph, crop) {
+    return allNodes(graph).filter(function (st) {
+      return isStitchNode(st) && String(stitchMarkOf(st)) === String(crop.id);
+    });
+  }
+
+  /* The fit in front of a stitch's `source`, when it is ours */
+  function stitchFitOf(graph, st) {
+    var o = inOrigin(graph, st, inSlotNamed(st, 'source'));
+    var f = o && o.node;
+    if (!f || nodeTypeOf(f) !== STITCH_FIT_TYPE) return null;
+    var p = f.properties || {};
+    return (p._shb_fit || p._n2c_fit || /^↳ fit to box /.test(String(f.title || ''))) ? f : null;
+  }
+
+  /* The end of the chain that already pastes into `plate` (none of ours pastes into it), or null */
+  function stitchTail(graph, plate) {
+    if (!plate) return null;
+    var mine = allNodes(graph).filter(function (st) {
+      if (!isStitchNode(st)) return false;
+      var c = stitchCropOf(graph, st);
+      var o = c && cropPlate(graph, c);
+      return !!o && o.node === plate;
+    });
+    var tails = mine.filter(function (st) {
+      return !mine.some(function (o) {
+        var d = inOrigin(graph, o, inSlotNamed(o, 'destination'));
+        return !!d && d.node === st;
+      });
+    });
+    tails.sort(function (a, b) { return (a.pos[1] - b.pos[1]) || (a.pos[0] - b.pos[0]); });
+    return tails.length ? tails[tails.length - 1] : null;
+  }
+
+  /* The titles say which input is which: neither slot name tells you which one is the big picture */
+  function stitchTitles(st, fit, b) {
+    try {
+      if (st) st.title = '↱ stitch @ ' + b.x + ',' + b.y + '  ·  destination = the PLATE, source = your result';
+      if (fit) fit.title = '↳ fit to box ' + b.w + 'x' + b.h + '  ·  plug your result in here';
+    } catch (e) {}
+  }
+
+  /* One fit + stitch for `crop`, pasting into `dest` (the plate when null); `src` (optional) feeds the fit */
+  function stitchOne(graph, crop, dest, src) {
+    var b = cropBox(crop);
+    if (!b) return { why: (crop.title || crop.type) + ' has no box to read (no crop_region, no x/y)' };
+    var cw = (crop.size && crop.size[0]) || 260;
+    var made = createNodeOrSubgraph(STITCH_TYPE, [crop.pos[0] + cw + 340, crop.pos[1]]);
+    if (!made) return { why: 'this ComfyUI has no ' + STITCH_TYPE + ' node' };
+    made.properties = made.properties || {};
+    made.properties._shb_stitch = { crop: crop.id };
+    var fit = (canMake(STITCH_FIT_TYPE) || hasType(STITCH_FIT_TYPE))
+      ? createNodeOrSubgraph(STITCH_FIT_TYPE, [made.pos[0] - 330, made.pos[1] + 150]) : null;
+    if (fit) {
+      fit.properties = fit.properties || {};
+      fit.properties._shb_fit = { crop: crop.id };
+      setWidgetNum(fit, 'width', b.w);
+      setWidgetNum(fit, 'height', b.h);
+      /* `disabled`, never `center`: cropping here would throw away the very edge the stitch is about */
+      setWidgetVal(fit, 'crop', 'disabled');
+      setWidgetVal(fit, 'upscale_method', STITCH_FIT_FILTER);
+    }
+    setWidgetNum(made, 'x', b.x);
+    setWidgetNum(made, 'y', b.y);
+    stitchTitles(made, fit, b);
+    var plate = dest || cropPlate(graph, crop);
+    var dslot = inSlotNamed(made, 'destination');
+    var wired = false;
+    if (plate && dslot >= 0) {
+      try { wired = !!plate.node.connect(plate.slot, made, dslot); } catch (e) { wired = false; }
+    }
+    var sslot = inSlotNamed(made, 'source');
+    if (fit && sslot >= 0) {
+      try { fit.connect(Math.max(0, imageOutSlot(fit)), made, sslot); } catch (e) {}
+    }
+    if (src) {
+      try {
+        if (fit) src.node.connect(src.slot, fit, Math.max(0, findInSlot(fit, /^IMAGE$/i, false)));
+        else if (sslot >= 0) src.node.connect(src.slot, made, sslot);
+      } catch (e) {}
+    }
+    return { made: made, fit: fit, box: b, wired: wired, plate: plate };
+  }
+
+  /* What a press on `node` puts back: the selected crops, the crop itself, every crop cutting a plate,
+     or — on a result fed (through anything) by a crop — that crop, with the result plugged into its fit */
+  function stitchTargets(graph, node) {
+    var sel = selNodes().filter(isCropNode);
+    if (sel.length > 1) return { crops: sel };
+    if (node && isCropNode(node)) return { crops: [node] };
+    if (node) {
+      var cutting = allNodes(graph).filter(function (c) {
+        var o = isCropNode(c) && cropPlate(graph, c);
+        return !!o && o.node === node;
+      });
+      if (cutting.length) return { crops: cutting };
+      var at = node;
+      for (var hops = 0; at && hops < 24; hops++) {
+        var o = imageOrigin(graph, at);
+        if (!o) break;
+        if (isCropNode(o.node)) return { crops: [o.node], src: ensureImageFeed(node) };
+        at = o.node;
+      }
+    }
+    return { crops: [] };
+  }
+
+  function hasPreviewDownstream(graph, node) {
+    var found = false;
+    ((node && node.outputs) || []).forEach(function (o) {
+      ((o && o.links) || []).forEach(function (lid) {
+        var l = linkById(graph, lid);
+        var t = (l && graph.getNodeById) ? graph.getNodeById(l.target_id) : null;
+        if (t && isPreviewNode(t)) found = true;
+      });
+    });
+    return found;
+  }
+
+  /* Lays a new chain out to the right of its crops and boxes it: an empty "apinode / localmodel" hole
+     (where the model goes — the one part of the trip this tool cannot build) and "Stitch" */
+  function stitchLayout(graph, gp, view) {
+    if (gp.tail && gp.tail.pos) {
+      var tx = gp.tail.pos[0], ty = gp.tail.pos[1];
+      gp.rs.forEach(function (r, i) {
+        var y = ty + 420 * (i + 1);
+        if (r.fit) nodeMoveTo(r.fit, tx - 360, y);
+        nodeMoveTo(r.made, tx, y);
+      });
+      if (view) nodeMoveTo(view, tx + 360, ty + 420 * gp.rs.length);
+      return;
+    }
+    var x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    gp.crops.forEach(function (c) {
+      var b = visBox(c);
+      x1 = Math.max(x1, b.x + b.w);
+      y0 = Math.min(y0, b.y);
+      y1 = Math.max(y1, b.y + b.h);
+    });
+    if (!isFinite(x1)) return;
+    var gx = x1 + 120, sx = gx + STITCH_HOLE_W + 120;
+    var members = [];
+    gp.rs.forEach(function (r, i) {
+      var y = y0 + i * 420;
+      if (r.fit) { nodeMoveTo(r.fit, sx, y); members.push(r.fit); }
+      nodeMoveTo(r.made, sx + 360, y);
+      members.push(r.made);
+    });
+    if (view) { nodeMoveTo(view, sx + 720, y0); members.push(view); }
+    outGroup('Stitch', '#3b2e58', members);
+    if (gp.had) return;
+    var LG = litegraph();
+    try {
+      var hole = new LG.LGraphGroup();
+      hole.configure({
+        title: 'apinode / localmodel',
+        font_size: 22,
+        color: '#5b5f86',
+        bounding: [Math.round(gx), Math.round(y0 - 62), STITCH_HOLE_W,
+          Math.round(Math.max(y1 - y0, gp.rs.length * 420) + 62 + 38)]
+      });
+      graph.add(hole);
+    } catch (e) {}
+  }
+
   function actStitch(node) {
     var g = getGraph(), c = getCanvas();
     if (!g || !node) return null;
-    var crop = isCropNode(node) ? node : null;
-    if (!crop) {
-      /* Search upstream or downstream for a crop node */
-      var orig = imageOrigin(g, node);
-      if (orig && isCropNode(orig.node)) crop = orig.node;
-    }
-    if (!crop) {
-      allNodes(g).forEach(function (n) { if (!crop && isCropNode(n)) crop = n; });
-    }
-    if (!crop) {
-      setStatus('error', 'Select a Crop node (or a node fed by a Crop) to Stitch');
+    var tg = stitchTargets(g, node);
+    if (!tg.crops.length) {
+      setStatus('error', 'Super Stitch: select the crop to put back, the plate it cuts, or the result that came out of it');
       return null;
     }
-    var b = cropBox(crop) || { x: 0, y: 0, w: 512, h: 512 };
-    var plateOrig = imageOrigin(g, crop);
-    if (plateOrig && isPreviewNode(plateOrig.node)) {
-      plateOrig = imageOrigin(g, plateOrig.node) || plateOrig;
-    }
-    var vb = visBox(node);
-    var scale = createNodeOrSubgraph('ImageScale', [vb.x + vb.w + 60, vb.y]);
-    var comp = createNodeOrSubgraph('ImageCompositeMasked', [vb.x + vb.w + 340, vb.y]);
-    if (!comp) {
-      setStatus('error', 'ImageCompositeMasked is not available');
+    if (!(canMake(STITCH_TYPE) || hasType(STITCH_TYPE))) {
+      setStatus('error', 'This ComfyUI has no ' + STITCH_TYPE + ' (core node) — nothing was added');
       return null;
     }
-    if (scale) {
-      setWidgetNum(scale, 'width', b.w);
-      setWidgetNum(scale, 'height', b.h);
-      try { scale.flags = scale.flags || {}; scale.flags.collapsed = true; } catch (e) {}
+    /* one chain per plate, in the order the crops sit on the canvas */
+    var groups = [];
+    tg.crops.forEach(function (cr) {
+      var pl = (cropPlate(g, cr) || {}).node || cr;
+      var gp = null;
+      groups.forEach(function (x) { if (x.plate === pl) gp = x; });
+      if (!gp) { gp = { plate: pl, crops: [] }; groups.push(gp); }
+      gp.crops.push(cr);
+    });
+    var all = [], bad = [], had = 0, rewired = 0;
+    groups.forEach(function (gp) {
+      gp.crops.sort(function (a, b) { return (a.pos[1] - b.pos[1]) || (a.pos[0] - b.pos[0]); });
+      gp.rs = [];
+      gp.had = 0;
+      gp.tail = stitchTail(g, gp.plate);
+      var dest = gp.tail ? { node: gp.tail, slot: Math.max(0, imageOutSlot(gp.tail)) } : null;
+      gp.crops.forEach(function (cr) {
+        /* a crop that already has its stitch is not stitched twice; a result pressed on it is plugged in */
+        var old = stitchesOf(g, cr)[0];
+        if (old) {
+          had++; gp.had++;
+          var oldFit = stitchFitOf(g, old);
+          if (tg.src && oldFit) {
+            try { tg.src.node.connect(tg.src.slot, oldFit, Math.max(0, findInSlot(oldFit, /^IMAGE$/i, false))); rewired++; } catch (e) {}
+          }
+          if (!dest) dest = { node: old, slot: Math.max(0, imageOutSlot(old)) };
+          return;
+        }
+        var r = stitchOne(g, cr, dest, tg.src);
+        if (!r.made) { bad.push(r.why); return; }
+        all.push(r);
+        gp.rs.push(r);
+        dest = { node: r.made, slot: Math.max(0, imageOutSlot(r.made)) };
+      });
+    });
+    if (!all.length) {
+      setStatus(rewired || (had && !bad.length) ? 'ok' : 'error', bad[0] || (rewired
+        ? '↱ Result plugged into the existing stitch'
+        : (had ? 'Already stitched — the stitch follows its crop when you move it' : 'Nothing was added')));
+      try { g.setDirtyCanvas(true, true); } catch (e) {}
+      return null;
     }
-    setWidgetNum(comp, 'x', b.x);
-    setWidgetNum(comp, 'y', b.y);
-    comp.properties = comp.properties || {};
-    comp.properties._shb_crop_id = crop.id;
-    if (scale) comp.properties._shb_scale_id = scale.id;
-
-    /* Wire destination = original plate, source = current node (or crop) via scale */
-    if (plateOrig && plateOrig.node) {
-      try { plateOrig.node.connect(plateOrig.slot, comp, 0); } catch (e) {}
-    }
-    var srcFeed = ensureImageFeed(node);
-    if (srcFeed && scale) {
-      try { srcFeed.node.connect(srcFeed.slot, scale, 0); } catch (e) {}
-      try { scale.connect(0, comp, 1); } catch (e) {}
-    } else if (srcFeed) {
-      try { srcFeed.node.connect(srcFeed.slot, comp, 1); } catch (e) {}
-    }
-    var pv = createNodeOrSubgraph(PREVIEW_TYPE, [vb.x + vb.w + 640, vb.y]);
-    if (pv) { try { comp.connect(0, pv, 0); } catch (e) {} }
-    outGroup('Stitch', '#3b2e58', (scale ? [scale, comp] : [comp]).concat(pv ? [pv] : []));
-    try { if (c && c.selectNodes) c.selectNodes([comp]); } catch (e) {}
+    /* a preview closes every chain */
+    groups.forEach(function (gp) {
+      if (!gp.rs.length) return;
+      var last = gp.rs[gp.rs.length - 1].made;
+      var view = null;
+      if (!hasPreviewDownstream(g, last) && (canMake(PREVIEW_TYPE) || hasType(PREVIEW_TYPE))) {
+        view = createNodeOrSubgraph(PREVIEW_TYPE, [last.pos[0] + 360, last.pos[1]]);
+        if (view) {
+          try { last.connect(Math.max(0, imageOutSlot(last)), view, 0); } catch (e) {}
+          try { view.title = 'stitched · the plate with your result in'; } catch (e) {}
+        }
+      }
+      try { stitchLayout(g, gp, view); } catch (e) {}
+    });
+    var mades = all.map(function (r) { return r.made; });
+    try { if (c && c.selectNodes) c.selectNodes(mades); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    setStatus('ok', '↱ Stitch created at (' + b.x + ', ' + b.y + ') · ' + b.w + '×' + b.h);
-    return comp;
+    var b0 = all[0].box;
+    setStatus(bad.length ? 'error' : 'ok',
+      (all.length > 1 ? '↱ ' + all.length + ' stitches chained' : '↱ Stitch at ' + b0.x + ',' + b0.y)
+      + (all[0].wired ? '' : ' · destination NOT wired — plug the plate in')
+      + (tg.src ? ' · your result is plugged into the fit' : ' · plug your result into the fit (' + b0.w + '×' + b0.h + ')')
+      + (had ? ' · ' + had + ' already stitched, chained after' : '')
+      + ' · it follows the crop'
+      + (bad.length ? ' · not made: ' + bad[0] : ''));
+    return all[0].made;
   }
+
+  /* A stitch (and its fit) set to its crop's box; `did` says whether anything changed */
+  function stitchSync(graph, st, crop) {
+    var b = cropBox(crop);
+    if (!b) return null;
+    var did = false;
+    if (widgetInt(st, 'x') !== b.x) { setWidgetNum(st, 'x', b.x); did = true; }
+    if (widgetInt(st, 'y') !== b.y) { setWidgetNum(st, 'y', b.y); did = true; }
+    var fit = stitchFitOf(graph, st);
+    if (fit && (widgetInt(fit, 'width') !== b.w || widgetInt(fit, 'height') !== b.h)) {
+      setWidgetNum(fit, 'width', b.w);
+      setWidgetNum(fit, 'height', b.h);
+      stitchTitles(null, fit, b);
+      did = true;
+    }
+    if (did && /^↱ stitch @ /.test(String(st.title || ''))) stitchTitles(st, null, b);
+    return { did: did, box: b };
+  }
+
+  /* The stitch follows its crop — a few property reads per stitch, a write only when a number differs */
+  function stitchFollow() {
+    if (!S.useStitch) return;
+    var g = getGraph();
+    if (!g) return;
+    var moved = 0;
+    allNodes(g).forEach(function (st) {
+      if (!isStitchNode(st)) return;
+      var crop = stitchCropOf(g, st);
+      var sy = crop ? stitchSync(g, st, crop) : null;
+      if (sy && sy.did) moved++;
+    });
+    if (moved && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
+  }
+  every(1500, stitchFollow);
 
   function actStitchUpdate(node) {
     var g = getGraph();
     if (!g || !node) return false;
-    var crop = isCropNode(node) ? node : null;
-    var stitch = isStitchNode(node) ? node : null;
-    if (stitch && !crop && stitch.properties && stitch.properties._shb_crop_id) {
-      crop = g.getNodeById ? g.getNodeById(stitch.properties._shb_crop_id) : null;
+    var pairs = [];
+    if (isStitchNode(node)) {
+      var cr = stitchCropOf(g, node);
+      if (cr) pairs.push([node, cr]);
+    } else if (isCropNode(node)) {
+      stitchesOf(g, node).forEach(function (st) { pairs.push([st, node]); });
     }
-    if (crop && !stitch) {
-      allNodes(g).forEach(function (n) {
-        if (isStitchNode(n) && n.properties && n.properties._shb_crop_id === crop.id) stitch = n;
-      });
-    }
-    if (!crop || !stitch) {
-      setStatus('error', 'Could not find paired Crop & Stitch nodes');
+    if (!pairs.length) {
+      setStatus('error', isCropNode(node) ? 'This crop has no stitch yet — Super Stitch makes it' : 'No crop is paired with this stitch');
       return false;
     }
-    var b = cropBox(crop);
-    if (!b) return false;
-    setWidgetNum(stitch, 'x', b.x);
-    setWidgetNum(stitch, 'y', b.y);
-    if (stitch.properties && stitch.properties._shb_scale_id) {
-      var sc = g.getNodeById ? g.getNodeById(stitch.properties._shb_scale_id) : null;
-      if (sc) {
-        setWidgetNum(sc, 'width', b.w);
-        setWidgetNum(sc, 'height', b.h);
-      }
-    }
+    var did = 0, b = null;
+    pairs.forEach(function (p) {
+      var sy = stitchSync(g, p[0], p[1]);
+      if (sy) { b = sy.box; if (sy.did) did++; }
+    });
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    setStatus('ok', '⟳ Stitch synced to (' + b.x + ', ' + b.y + ') · ' + b.w + '×' + b.h);
+    if (!b) {
+      setStatus('error', 'Update stitch: the crop has no box to read');
+      return false;
+    }
+    setStatus('ok', did
+      ? '⟳ Stitch updated to the crop: @ ' + b.x + ',' + b.y + ' · fit ' + b.w + '×' + b.h
+      : 'The stitch already matched the crop (@ ' + b.x + ',' + b.y + ' · ' + b.w + '×' + b.h + ')');
     return true;
   }
 
@@ -2302,7 +2673,7 @@
   }
 
   /* ---------------------------------------------------------------------
-   * 11. LABEL STUDIO (Alt+N) — rgthree / Pixaroma / MarkdownNote / Group
+   * 11. LABEL STUDIO (Alt+N) — rgthree / label node / MarkdownNote / Group
    * --------------------------------------------------------------------- */
   var LABEL_RG_TYPE = 'Label (rgthree)';
   var LABEL_PIX_TYPE = 'PixaromaLabel';
@@ -2428,7 +2799,7 @@
         setWidgetVal(pix, 'label_json', json);
         try { pix.flags = pix.flags || {}; pix.flags.no_title = true; pix.color = 'rgba(0,0,0,0)'; pix.bgcolor = 'rgba(0,0,0,0)'; } catch (e) {}
         g.setDirtyCanvas(true, true);
-        setStatus('ok', 'Label added (PixaromaLabel)');
+        setStatus('ok', 'Label added');
         return;
       }
     }
@@ -2513,7 +2884,7 @@
             '<span data-lb-sizev style="min-width:44px;font:11.5px monospace">' + LB.size + 'px</span>' +
             '<select class="shb-select" data-lb-font style="width:155px">' +
               LABEL_FONTS.map(function (f) {
-                var nm = f === LABEL_PIX_FONT ? 'Segoe UI (Pixaroma)' : f;
+                var nm = f === LABEL_PIX_FONT ? 'Segoe UI' : f;
                 return '<option value="' + esc(f) + '"' + (f === LB.font ? ' selected' : '') + '>' + esc(nm) + '</option>';
               }).join('') +
             '</select>' +
@@ -3008,18 +3379,9 @@
     setWidgetNum(node, 'y', b.y);
     setWidgetNum(node, 'width', b.w);
     setWidgetNum(node, 'height', b.h);
-    /* Auto-sync any paired Stitch node */
+    /* Auto-sync any paired Stitch node (and its fit) */
     var g = getGraph();
-    allNodes(g).forEach(function (n) {
-      if (isStitchNode(n) && n.properties && n.properties._shb_crop_id === node.id) {
-        setWidgetNum(n, 'x', b.x);
-        setWidgetNum(n, 'y', b.y);
-        if (n.properties._shb_scale_id && g.getNodeById) {
-          var sc = g.getNodeById(n.properties._shb_scale_id);
-          if (sc) { setWidgetNum(sc, 'width', b.w); setWidgetNum(sc, 'height', b.h); }
-        }
-      }
-    });
+    stitchesOf(g, node).forEach(function (st) { stitchSync(g, st, node); });
     if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
   }
 
@@ -3612,6 +3974,10 @@
       mute:       { id: 'mute',       icon: 'bypass',     label: 'Mute Node',      kbd: 'M', cls: (node && node.mode === 2) ? 'shb-btn-on' : '', fn: function () { actMute(node); } },
       apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Kill APIs',      kbd: 'K', fn: function () { actBypassApi(); } },
       zoom:       { id: 'zoom',       icon: 'zoom',       label: 'Zoom',           kbd: '.', fn: function () { actDotZoom(node); } },
+      render:     { id: 'render',     icon: 'play',       label: 'Render Selected', kbd: '⇧R', fn: function () { actRenderSelected(); } },
+      stitch:     { id: 'stitch',     icon: 'stitch',     label: 'Super Stitch',   kbd: '',  fn: function () { actStitch(node); } },
+      stitchupd:  { id: 'stitchupd',  icon: 'sync',       label: 'Update Stitch',  kbd: '',  fn: function () { actStitchUpdate(node); } },
+      stitchswap: { id: 'stitchswap', icon: 'swap',       label: 'Swap FG / BG',   kbd: '',  fn: function () { actStitchSwap(node); } },
       seedtoggle: {
         id: 'seedtoggle',
         icon: 'seed',
@@ -3647,6 +4013,57 @@
     return map;
   }
 
+  /* Power tools are the user's own extras; each can be switched off in Settings, which hides its buttons too */
+  var POWER_TOOL_OF = {
+    cropedit: 'useAltZ', paintedit: 'useAltZ', lupa: 'useAltZ',
+    label: 'useAltN', note: 'useAltN',
+    loadcanvas: 'useAltR',
+    render: 'useShiftR',
+    stitch: 'useStitch', stitchupd: 'useStitch',
+    apibypass: 'useKillApi',
+    zoom: 'dotZoom'
+  };
+
+  function hbToolOn(tid) {
+    var k = POWER_TOOL_OF[tid];
+    return !k || S[k] !== false;
+  }
+
+  /* Never offer the node you are standing on again — unless it is the kind that chains (LoRAs, ControlNet…) */
+  var CHAINABLE_RE = /lora|controlnetapply|ipadapterapply|ipadapteradvanced|conditioning(combine|concat|average)|imagebatch|latentbatch|stringconcat|textconcat/i;
+  var TOOL_SPAWNS = {
+    saveimg: ['SaveImage'], savevid: ['SaveVideo', 'VHS_VideoCombine'], prev: ['PreviewImage'],
+    gvc: ['GetVideoComponents'], mkvid: ['CreateVideo'], batch: ['ImageFromBatch'],
+    flip: ['ImageFlip', 'ImageFlip+'], paint: ['Painter'], crop: ['ImageCropV2', 'ImageCrop', 'ImageCrop+'],
+    cmp: ['ImageCompare', 'Image Comparer (rgthree)'],
+    rsz: ['ImageResizeKJv2', 'ImageResize+', 'ImageScaleBy', 'ImageScale']
+  };
+
+  function hbSameNode(type, node) {
+    if (!node || !type) return false;
+    var cur = String(node.type || node.comfyClass || '');
+    return String(type) === cur && !CHAINABLE_RE.test(cur);
+  }
+
+  function hbToolIsSelf(tid, node) {
+    var ts = TOOL_SPAWNS[tid];
+    return !!(ts && node && ts.some(function (t) { return hbSameNode(t, node); }));
+  }
+
+  function isSubgraphNode(node) {
+    try { return !!(node && (typeof node.isSubgraphNode === 'function' ? node.isSubgraphNode() : node.subgraph)); }
+    catch (e) { return false; }
+  }
+
+  /* Load in Canvas only makes sense on a node that is showing an image right now */
+  function hbHasImage(node) {
+    if (!node || isLoader(node)) return false;
+    if (node.imgs && node.imgs.length) return true;
+    var app = getApp();
+    var no = app && app.nodeOutputs && app.nodeOutputs[node.id];
+    return !!(no && Array.isArray(no.images) && no.images.length);
+  }
+
   function hbContextTools(node) {
     var k = ndKind(node);
     var mt = getMasterTools(node);
@@ -3655,8 +4072,16 @@
     var hasVid = node && videoOutSlot(node) >= 0;
 
     if (k === 'crop') {
-      ids.push('cropedit');
+      ids.push('cropedit', 'stitch');
+      if (stitchesOf(getGraph(), node).length) ids.push('stitchupd');
       CROP_ASPECTS.slice(0, 5).forEach(function (ar) { ids.push('ar_' + ar); });
+    } else if (k === 'stitch') {
+      ids.push('stitchupd', 'stitchswap', 'prev', 'saveimg');
+    } else if (k === 'api' || isSubgraphNode(node)) {
+      /* a generator's first question is "keep it": save comes first, video or image by what it outputs */
+      if (hasVid || (k === 'api' && genOut(node) === 'video')) ids.push('savevid', 'gvc');
+      if (hasImg) ids.push('saveimg', 'prev', 'crop', 'rsz', 'cmp');
+      if (hasImg && stitchTargets(getGraph(), node).crops.length) ids.push('stitch');
     } else if (k === 'paint') {
       ids.push('paintedit', 'prev', 'cmp', 'saveimg');
     } else if (k === 'set') {
@@ -3677,11 +4102,15 @@
       if (hasImg && (canMake(CREATE_VIDEO_TYPE) || hasType(CREATE_VIDEO_TYPE))) {
         ids.push('mkvid');
       }
+      /* a plate that crops cut, or a result that came out of a crop, can be stitched back */
+      if (hasImg && stitchTargets(getGraph(), node).crops.length) ids.push('stitch');
       if (k === 'load') {
         ids.push('wf', 'seed');
       }
     }
-    return ids.map(function (id) { return mt[id]; }).filter(Boolean);
+    return ids.filter(function (id) {
+      return hbToolOn(id) && !hbToolIsSelf(id, node);
+    }).map(function (id) { return mt[id]; }).filter(Boolean);
   }
 
   /* Resolve any bar item uid ('model:...', 'node:...', 'tool:...') into a unified renderable & executable item */
@@ -3695,15 +4124,23 @@
 
     if (u.indexOf('tool:') === 0) {
       var tid = u.slice(5);
+      /* A power tool switched off in Settings is gone everywhere */
+      if (!hbToolOn(tid)) return null;
       /* Hide node-specific tools on empty canvas (unless in edit mode) to prevent bottom bar clutter */
       if (!HB.editMode) {
-        if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh)$/.test(tid)) {
+        if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
           return null;
         }
         if (node && tid === 'prev' && imageOutSlot(node) < 0 && !isPreviewNode(node)) {
           return null;
         }
         if (node && tid === 'seedtoggle' && !seedControls(node).length) {
+          return null;
+        }
+        if (tid === 'loadcanvas' && !hbHasImage(node)) {
+          return null;
+        }
+        if (hbToolIsSelf(tid, node)) {
           return null;
         }
       }
@@ -3755,6 +4192,7 @@
 
     if (u.indexOf('node:') === 0) {
       var nType = u.slice(5);
+      if (!HB.editMode && hbSameNode(nType, node)) return null;
       var nDef = (SRV.types && SRV.types[nType]) || null;
       var subName = '';
       if (nType.indexOf('subgraph:') === 0) {
@@ -3926,7 +4364,7 @@
     for (var d = 0; d < maxDepth && picked.length < max; d++) {
       for (var s = 0; s < outTypes.length && picked.length < max; s++) {
         var arr = bySlot[outTypes[s]] || [];
-        if (d < arr.length) {
+        if (d < arr.length && !hbSameNode(arr[d], node)) {
           var candUid = 'node:' + arr[d];
           if (picked.indexOf(candUid) < 0) picked.push(candUid);
         }
@@ -3937,7 +4375,7 @@
     if (!picked.length) {
       var fallback = ['PreviewImage', 'SaveImage', 'KSampler', 'CLIPTextEncode', 'VAEDecode'];
       fallback.forEach(function (t) {
-        if (picked.length < max && (hasType(t) || !SRV.probed)) picked.push('node:' + t);
+        if (picked.length < max && (hasType(t) || !SRV.probed) && !hbSameNode(t, node)) picked.push('node:' + t);
       });
     }
     return picked.slice(0, max);
@@ -3948,12 +4386,13 @@
       return suggestNodesFor(node, 5);
     }
     if (barName === 'tools') {
-      return hbContextTools(node).slice(0, 6).map(function (t) { return 'tool:' + t.id; });
+      var ctx = hbContextTools(node);
+      /* a crop keeps all its ratio segments; other nodes show their first six tools */
+      return (isCropNode(node) ? ctx : ctx.slice(0, 6)).map(function (t) { return 'tool:' + t.id; });
     }
     if (barName === 'bot') {
       var out = [];
-      var canBakeCanvas = !!(node && !isLoader(node) && (imageOutSlot(node) >= 0 || isPreviewNode(node) || (node.imgs && node.imgs.length)));
-      if (canBakeCanvas) out.push('tool:loadcanvas');
+      if (hbHasImage(node)) out.push('tool:loadcanvas');
       if (node && (imageOutSlot(node) >= 0 || isPreviewNode(node))) out.push('tool:prev');
       if (node && seedControls(node).length) out.push('tool:seedtoggle');
       if (node) out.push('tool:bypass');
@@ -4110,11 +4549,11 @@
     if (d === 'tools') {
       var mt = getMasterTools(node);
       var allToolIds = [
-        'crop', 'rsz', 'flip', 'paint', 'cmp', 'saveimg', 'prev', 'loadcanvas',
+        'crop', 'stitch', 'stitchupd', 'rsz', 'flip', 'paint', 'cmp', 'saveimg', 'prev', 'loadcanvas',
         'gvc', 'batch', 'mkvid', 'savevid', 'wf', 'seed', 'lupa', 'label',
-        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'apibypass', 'zoom', 'seedtoggle'
+        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'apibypass', 'zoom', 'seedtoggle'
       ];
-      var allToolsList = allToolIds.map(function (id) { return mt[id]; }).filter(Boolean);
+      var allToolsList = allToolIds.filter(hbToolOn).map(function (id) { return mt[id]; }).filter(Boolean);
       var filteredTools = allToolsList.filter(function (t) {
         return !q || t.label.toLowerCase().indexOf(q) >= 0 || t.id.toLowerCase().indexOf(q) >= 0;
       });
@@ -4249,12 +4688,13 @@
     return S.hbStyle === 'quiet' ? 'quiet' : (S.hbStyle === 'classic' ? 'classic' : 'fluid');
   }
 
+  /* Compact wears the Fluid look and motion; it only leaves out the side cards */
   function hbThemeCls() {
     var t = hbTheme();
-    return t === 'fluid' ? 'shb-fluid' : (t === 'classic' ? 'shb-quiet shb-classic' : 'shb-quiet');
+    return t === 'quiet' ? 'shb-quiet' : (t === 'classic' ? 'shb-fluid shb-classic' : 'shb-fluid');
   }
 
-  function hbIsFluid() { return hbTheme() === 'fluid'; }
+  function hbIsFluid() { return hbTheme() !== 'quiet'; }
 
   var HB_STYLE_NAMES = { pro: 'Fluid', quiet: 'Quiet', classic: 'Compact' };
   function hbCycleStyle() {
@@ -4428,12 +4868,11 @@
       });
     }
     add('[data-zone="left"] > .shb-card', 'translateX(80px) scale(.55)', 'translateX(5px)', 0, 0);
-    add('[data-zone="top"] > .shb-dock, [data-zone="top"] > .shb-classic-row', 'translateY(60px) scale(.55)', 'translateY(5px)', 20, 0);
+    add('[data-zone="top"] > .shb-dock', 'translateY(60px) scale(.55)', 'translateY(5px)', 20, 0);
     add('[data-zone="top"] > .shb-ctx', 'translateY(60px) scale(.55)', 'translateY(5px)', 60, 40);
     add('[data-zone="right"] > .shb-card', 'translateX(-80px) scale(.55)', 'translateX(-5px)', 30, 0);
-    add('[data-zone="bot"] > .shb-bar, [data-zone="bot"] > .shb-classic-row', 'translateY(-60px) scale(.55)', 'translateY(-5px)', 50, 40);
-    add('[data-zone="bot"] > .shb-plus', 'translateY(-40px) scale(.4)', 'translateY(-5px)', 70, 40);
-    add('[data-zone="hub"] > .shb-hub-pill', 'scale(.55)', 'scale(.96)', 0, 0);
+    add('[data-zone="bot"] > .shb-bar', 'translateY(-60px) scale(.55)', 'translateY(-5px)', 50, 40);
+    add('[data-zone="bot"] .shb-plus', 'translateY(-40px) scale(.4)', 'translateY(-5px)', 70, 40);
     return out;
   }
 
@@ -4494,7 +4933,7 @@
         it.p.animate([{ transform: 'none', opacity: 1 }, { transform: fl ? it.fl : it.qt, opacity: 0 }],
           { duration: dur, easing: fl ? 'cubic-bezier(.4,0,1,1)' : 'ease-in', fill: 'forwards' });
       });
-      Array.prototype.forEach.call(el.querySelectorAll('.shb-cross, .shb-scrim, .shb-leaders, [data-zone="drawer"]'), function (n) {
+      Array.prototype.forEach.call(el.querySelectorAll('.shb-scrim, .shb-leaders, [data-zone="drawer"], [data-zone="catmenu"]'), function (n) {
         n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
       });
     } catch (e) {}
@@ -4538,11 +4977,11 @@
   }
 
   function hbBotBarEl() {
-    return HB.el ? HB.el.querySelector('[data-zone="bot"] > .shb-bar, [data-zone="bot"] > .shb-classic-row') : null;
+    return HB.el ? HB.el.querySelector('[data-zone="bot"] > .shb-bar') : null;
   }
 
   function hbPlusEl() {
-    return HB.el ? HB.el.querySelector('.shb-plus, .shb-btn-plus') : null;
+    return HB.el ? HB.el.querySelector('.shb-plus') : null;
   }
 
   function hbOverPlus(x, y, pad) { return hbInRect(hbPlusEl(), x, y, pad); }
@@ -4577,21 +5016,27 @@
     if (b) hbWiggle(b, hbAmp());
   }
 
-  /* The standalone "+" toggles the Add drawer right beside itself */
+  /* The standalone "+" opens the Add drawer right beside itself. The "+" itself toggles (All Nodes);
+     a category picked from its dial (or F / N / A / G) switches straight to that category. */
   function hbTogglePlus(which) {
     if (!HB.el) return;
     var wasOn = !!HB.drawer;
+    var closing = which ? HB.drawer === which : wasOn;
     HB.drawerAnchor = { plus: true };
-    HB.drawer = wasOn ? '' : (which || 'search');
+    HB.drawer = closing ? '' : (which || 'search');
     HB.q = '';
+    HB.catMenu = false;
     hbPaint();
     var np = hbPlusEl();
     if (!np) return;
     hbWiggle(np, hbAmp() * 2);
     var ic = np.querySelector('.shb-ico');
+    var isOn = !!HB.drawer;
     try {
-      if (ic) ic.animate([{ transform: 'rotate(' + (wasOn ? 45 : 0) + 'deg)' }, { transform: 'rotate(' + (wasOn ? 0 : 45) + 'deg)' }],
-        { duration: 120, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      if (ic && isOn !== wasOn) {
+        ic.animate([{ transform: 'rotate(' + (wasOn ? 45 : 0) + 'deg)' }, { transform: 'rotate(' + (isOn ? 45 : 0) + 'deg)' }],
+          { duration: 120, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      }
     } catch (e) {}
   }
 
@@ -4625,17 +5070,17 @@
           if (it.run) it.run();
         };
       });
-      HB.keyMap['l'] = function () { hbClose(); labelOpen(node); };
+      if (hbToolOn('label')) HB.keyMap['l'] = function () { hbClose(); labelOpen(node); };
       HB.keyMap['f2'] = function () { hbClose(); actRenameNode(node); };
       HB.keyMap['r'] = function () { hbClose(); addReroute(node); };
       HB.keyMap['s'] = function () { hbClose(); addSetNode(node); };
-      HB.keyMap['v'] = function () { hbClose(); actLoadInCanvas(node); };
+      if (hbToolOn('loadcanvas')) HB.keyMap['v'] = function () { hbClose(); actLoadInCanvas(node); };
       HB.keyMap['t'] = function () { hbClose(); addPreview(node); };
       HB.keyMap['b'] = function () { hbClose(); actBypass(node); };
       HB.keyMap['m'] = function () { hbClose(); actMute(node); };
-      HB.keyMap['k'] = function () { hbClose(); actBypassApi(); };
-      HB.keyMap['z'] = function () { hbClose(); actAltZ(node); };
-      HB.keyMap['.'] = function () { hbClose(); actDotZoom(node); };
+      if (hbToolOn('apibypass')) HB.keyMap['k'] = function () { hbClose(); actBypassApi(); };
+      if (hbToolOn('lupa')) HB.keyMap['z'] = function () { hbClose(); actAltZ(node); };
+      if (hbToolOn('zoom')) HB.keyMap['.'] = function () { hbClose(); actDotZoom(node); };
       if (toolItems[0] && toolItems[0].run) {
         HB.keyMap['c'] = function () {
           if (!toolItems[0].stayOpen) hbClose();
@@ -4644,11 +5089,7 @@
       }
 
       el.className = 'shb-wrap ' + hbThemeCls() + (HB.editMode ? ' shb-editing' : '');
-      if (S.hbStyle === 'classic') {
-        hbPaintClassic(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel);
-      } else {
-        hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel);
-      }
+      hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, S.hbStyle === 'classic');
 
       hbPlace();
       hbSyncEditAnim();
@@ -4835,12 +5276,26 @@
     }
   }
 
-  function hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel) {
+  /* The four Add categories: they fan out above the "+", and one of them can live at the end of the dock */
+  var HB_CATS = {
+    search: { icon: 'search', label: 'All Nodes', short: 'All Nodes', key: 'F' },
+    tools: { icon: 'crop', label: 'Image / Video Kit', short: 'Kit', key: 'N' },
+    models: { icon: 'star', label: 'Models & APIs', short: 'Models', key: 'A' },
+    subs: { icon: 'subgraph', label: 'Subgraphs', short: 'Subgraphs', key: 'G' }
+  };
+
+  function hbDockCat() {
+    if (S.hbDockCat === 'none') return '';
+    return HB_CATS[S.hbDockCat] ? S.hbDockCat : 'models';
+  }
+
+  /* Fluid & Quiet draw every zone; Compact (`compact`) keeps the Fluid look but only the bars */
+  function hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, compact) {
     var fl = hbIsFluid();
     var icoSz = fl ? 15 : 13;
     var nodeTitle = node ? (node.title || node.type || 'Node') : 'Canvas';
-    var hasLupa = !!(node && (lupaWidget(node) || isCropNode(node) || isPainterNode(node)));
-    var slidersHTML = buildProSlidersHTML(node);
+    var hasLupa = !!(node && hbToolOn('lupa') && (lupaWidget(node) || isCropNode(node) || isPainterNode(node)));
+    var slidersHTML = compact ? '' : buildProSlidersHTML(node);
 
     function rowHTML(attrs, icon, label, key, active) {
       return '<button type="button" class="shb-row' + (active ? ' shb-active' : '') + '" ' + attrs + '>' +
@@ -4856,7 +5311,9 @@
       return '<div class="shb-card-hd"><span class="shb-hd-t">' + esc(title) + '</span>' + (note || '') + '</div>';
     }
 
-    /* TOP ZONE: edit toolbar (edit mode only) + favorites dock [1]..[N] + context bar */
+    /* TOP ZONE: edit toolbar (edit mode only) + favorites dock [1]..[N] + its category shortcut + context bar */
+    var dc = hbDockCat();
+    var dcInfo = HB_CATS[dc];
     var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' + hbEditBarHTML() +
       '<div class="shb-bar shb-dock">' +
         ((!isAdd || isPair) ? '<span class="shb-dock-mode" title="' + (isPair ? 'Adds the model and wires both selected loaders' : 'Swaps the selected model in place') + '">' +
@@ -4868,9 +5325,10 @@
           }).join('') +
         '</div>' +
         '<span class="shb-vsep"></span>' +
-        '<button type="button" class="shb-btn shb-models-btn' + (HB.drawer === 'models' ? ' shb-btn-on' : '') + '" data-hb-drawer="models" title="Browse models & APIs (A)">' +
-          ico('star', 13) + '<span>Models</span>' + ico('chevDown', 12) +
-        '</button>' +
+        (dcInfo ? '<button type="button" class="shb-btn shb-models-btn' + (HB.drawer === dc ? ' shb-btn-on' : '') + '" data-hb-drawer="' + dc + '" title="' + esc(dcInfo.label) + ' (' + dcInfo.key + ')">' +
+          ico(dcInfo.icon, 13) + '<span>' + esc(dcInfo.short) + '</span>' +
+        '</button>' : '') +
+        '<button type="button" class="shb-catpick' + (HB.catMenu ? ' shb-btn-on' : '') + '" data-hb-catpick title="Choose the category that lives here">' + ico('chevDown', 12) + '</button>' +
       '</div>';
 
     /* Crop nodes get the ratio segmented control (sliding thumb); every other tool stays a bar button */
@@ -4904,57 +5362,60 @@
     topHTML += '</div>';
 
     /* LEFT ZONE: node utilities + color swatches */
-    var leftRows = [];
-    if (node) leftRows.push(rowHTML('data-hb-act="rename"', 'edit', 'Rename', 'F2'));
-    leftRows.push(rowHTML('data-hb-act="label"', 'label', 'Add Label', 'L'));
-    if (hasLupa) {
-      leftRows.push(rowHTML('data-hb-act="lupa"',
-        isCropNode(node) ? 'crop' : (isPainterNode(node) ? 'paint' : 'lupa'),
-        isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Lupa Editor'), 'Z'));
+    var leftHTML = '';
+    if (!compact) {
+      var leftRows = [];
+      if (node) leftRows.push(rowHTML('data-hb-act="rename"', 'edit', 'Rename', 'F2'));
+      if (hbToolOn('label')) leftRows.push(rowHTML('data-hb-act="label"', 'label', 'Add Label', 'L'));
+      if (hasLupa) {
+        leftRows.push(rowHTML('data-hb-act="lupa"',
+          isCropNode(node) ? 'crop' : (isPainterNode(node) ? 'paint' : 'lupa'),
+          isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Lupa Editor'), 'Z'));
+      }
+      if (node) {
+        leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R'));
+        leftRows.push(rowHTML('data-hb-act="set"', 'set', 'Set / Get Bus', 'S'));
+      }
+      var hdTitle = fl ? nodeTitle : String(nodeTitle).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      leftHTML = '<div class="shb-zone shb-zone-left" data-zone="left">' +
+        '<div class="shb-card shb-card-left">' +
+          headHTML((hdTitle || 'node').slice(0, 28), node ? '<span class="shb-hd-id">#' + esc(node.id) + '</span>' : '') +
+          rowsHTML(leftRows) +
+          (node ? '<div class="shb-sep"></div>' +
+            '<div class="shb-colors">' +
+              HB_SWATCHES.map(function (sw, i) {
+                var on = sw.color ? node.color === sw.color : !node.color;
+                return '<i class="shb-cdot' + (on ? ' shb-cdot-on' : '') + '" data-hb-color="' + i + '" style="background:' + sw.dot + '" title="' + esc(sw.name) + '"></i>';
+              }).join('') +
+              '<label class="shb-pipette" title="Custom color">' + ico('pipette', 14) +
+                '<input type="color" data-hb-customcolor value="' + esc(node.bgcolor || node.color || '#3a3a3a') + '">' +
+              '</label>' +
+            '</div>' : '') +
+        '</div>' +
+      '</div>';
     }
-    if (node) {
-      leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R'));
-      leftRows.push(rowHTML('data-hb-act="set"', 'set', 'Set / Get Bus', 'S'));
-    }
-    var hdTitle = fl ? nodeTitle : String(nodeTitle).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    var leftHTML = '<div class="shb-zone shb-zone-left" data-zone="left">' +
-      '<div class="shb-card shb-card-left">' +
-        headHTML((hdTitle || 'node').slice(0, 28), node ? '<span class="shb-hd-id">#' + esc(node.id) + '</span>' : '') +
-        rowsHTML(leftRows) +
-        (node ? '<div class="shb-sep"></div>' +
-          '<div class="shb-colors">' +
-            HB_SWATCHES.map(function (sw, i) {
-              var on = sw.color ? node.color === sw.color : !node.color;
-              return '<i class="shb-cdot' + (on ? ' shb-cdot-on' : '') + '" data-hb-color="' + i + '" style="background:' + sw.dot + '" title="' + esc(sw.name) + '"></i>';
-            }).join('') +
-            '<label class="shb-pipette" title="Custom color">' + ico('pipette', 14) +
-              '<input type="color" data-hb-customcolor value="' + esc(node.bgcolor || node.color || '#3a3a3a') + '">' +
-            '</label>' +
-          '</div>' : '') +
-      '</div>' +
-    '</div>';
 
-    /* RIGHT ZONE: Pro Sliders (numeric widgets) + Add & Customize */
-    var addRows = [
-      rowHTML('data-hb-drawer="search"', 'search', 'All Nodes', 'F', HB.drawer === 'search' || HB.drawer === 'addcustom'),
-      rowHTML('data-hb-drawer="tools"', 'crop', 'Image / Video Kit', 'N', HB.drawer === 'tools'),
-      rowHTML('data-hb-drawer="models"', 'model', 'Models & APIs', 'A', HB.drawer === 'models'),
-      rowHTML('data-hb-drawer="subs"', 'subgraph', 'Subgraphs', 'G', HB.drawer === 'subs')
-    ];
-    var slidersHd = fl
-      ? headHTML('Pro Sliders', '<span class="shb-hd-note">⇧ fine · ⌃ prev</span>')
-      : headHTML('sliders', '<span>⇧ fine</span>');
-    var addHd = headHTML(fl ? 'Add & Customize' : 'add', '');
-    var rightHTML = '<div class="shb-zone shb-zone-right" data-zone="right">' +
-      (fl
-        ? (slidersHTML ? '<div class="shb-card shb-ps-card">' + slidersHd + slidersHTML + '</div>' : '') +
-          '<div class="shb-card">' + addHd + rowsHTML(addRows) + '</div>'
-        : '<div class="shb-card">' + (slidersHTML ? slidersHd + slidersHTML + '<div class="shb-sep"></div>' : addHd) + rowsHTML(addRows) + '</div>') +
-    '</div>';
+    /* RIGHT ZONE: Pro Sliders for the node's numeric widgets (the categories live on the "+") */
+    var rightHTML = slidersHTML
+      ? '<div class="shb-zone shb-zone-right" data-zone="right">' +
+          '<div class="shb-card shb-ps-card">' +
+            (fl ? headHTML('Pro Sliders', '<span class="shb-hd-note">⇧ fine · ⌃ prev</span>') : headHTML('sliders', '<span>⇧ fine</span>')) +
+            slidersHTML +
+          '</div>' +
+        '</div>'
+      : '';
 
-    /* BOTTOM ZONE: action bar (actions, then pinned nodes, then the drop gap) + the standalone "+" beside it */
+    /* BOTTOM ZONE: action bar (actions, then pinned nodes, then the drop gap) + the standalone "+"
+       with its category dial beside it */
     var actItems = botItems.filter(function (it) { return it.kind === 'tool'; });
     var pinItems = botItems.filter(function (it) { return it.kind !== 'tool'; });
+    var dialHTML = '<div class="shb-dial"><div class="shb-dial-in">' +
+      '<div class="shb-dial-hd">' + (fl ? 'Add & Customize' : 'add') + '</div>' +
+      rowsHTML(['search', 'tools', 'models', 'subs'].map(function (c) {
+        var k = HB_CATS[c];
+        return rowHTML('data-hb-dial="' + c + '"', k.icon, k.label, k.key, HB.drawer === c);
+      })) +
+    '</div></div>';
     var botHTML = '<div class="shb-zone shb-zone-bot" data-zone="bot">' +
       '<div class="shb-bar shb-botbar">' +
         '<div class="shb-bar-items" data-hb-bar="bot">' +
@@ -4971,66 +5432,33 @@
         '<button type="button" class="shb-ibtn' + (HB.editMode ? ' shb-btn-on' : '') + '" data-hb-act="toggleedit" title="Edit bars (or long-press any button)">' + ico('edit', icoSz) + '</button>' +
         '<button type="button" class="shb-ibtn" data-hb-act="settings" title="Hotbox Settings">' + ico('settings', fl ? 16 : 14) + '</button>' +
       '</div>' +
-      '<button type="button" class="shb-plus' + (HB.drawer ? ' shb-plus-on' : '') + '" data-hb-plus title="Add any node, tool or model (+) · Drop a node here to pin it">' + ico('plus', fl ? 22 : 18) + '</button>' +
+      '<div class="shb-plus-wrap' + (HB.drawer ? ' shb-drawer-open' : '') + '">' +
+        dialHTML +
+        '<button type="button" class="shb-plus' + (HB.drawer ? ' shb-plus-on' : '') + '" data-hb-plus title="Add any node (+) · Hover for categories · Drop a node here to pin it">' + ico('plus', fl ? 22 : 18) + '</button>' +
+      '</div>' +
     '</div>';
 
-    /* Canvas scrim (Fluid), cursor crosshair and leaders (Quiet). Fluid draws no cursor marker so the node stays readable */
+    /* Which category lives at the end of the dock */
+    var catMenuHTML = HB.catMenu
+      ? '<div class="shb-zone shb-zone-catmenu" data-zone="catmenu"><div class="shb-catmenu">' +
+          '<div class="shb-dial-hd">' + (fl ? 'Dock shortcut' : 'dock shortcut') + '</div>' +
+          rowsHTML(['models', 'tools', 'subs', 'search', 'none'].map(function (c) {
+            var k = HB_CATS[c] || { icon: 'collapse', label: 'Hide shortcut' };
+            return rowHTML('data-hb-catset="' + c + '"', k.icon, k.label, (c || 'none') === (dc || 'none') ? '✓' : '', (c || 'none') === (dc || 'none'));
+          })) +
+        '</div></div>'
+      : '';
+
+    /* Canvas scrim (Fluid look) and hairline leaders (Quiet); no cursor marker so the node stays readable */
     var decoHTML = fl
       ? (S.hbScrim !== false ? '<div class="shb-scrim"></div>' : '')
-      : '<div class="shb-cross"><i></i><i></i><i></i><i></i></div>' +
-        (S.hbLeaders !== false ? '<svg class="shb-leaders" xmlns="http://www.w3.org/2000/svg"></svg>' : '');
+      : (S.hbLeaders !== false ? '<svg class="shb-leaders" xmlns="http://www.w3.org/2000/svg"></svg>' : '');
 
     var drawerHTML = HB.drawer
       ? '<div class="shb-zone shb-zone-drawer" data-zone="drawer">' + buildDrawerHTML(node, tools) + '</div>'
       : '';
 
-    el.innerHTML = decoHTML + topHTML + leftHTML + rightHTML + botHTML + drawerHTML;
-  }
-
-  function hbPaintClassic(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel) {
-    var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' + hbEditBarHTML() +
-      '<div class="shb-classic-row">' +
-        '<div class="shb-bar-items" data-hb-bar="add">' +
-          addItems.map(function (it, idx) {
-            return renderBarItemHTML(it, 'add', idx < 9 ? (idx + 1) : 0);
-          }).join('') +
-        '</div>' +
-        '<button type="button" class="shb-ibtn' + (HB.editMode ? ' shb-btn-on' : '') + '" data-hb-act="toggleedit" title="Edit bars (or long-press any button)">' + ico('edit', 13) + '</button>' +
-        '<span class="shb-vsep"></span>' +
-        '<button type="button" class="shb-btn shb-btn-plus' + (HB.drawer ? ' shb-btn-on' : '') + '" data-hb-custom-bar="all" title="Add or drag any Node / Tool / Model into any bar (+)">' + ico('plus', 18) + '</button>' +
-      '</div>' +
-      (toolItems.length || HB.editMode ? '<div class="shb-classic-row">' +
-        '<div class="shb-bar-items" data-hb-bar="tools">' +
-          toolItems.map(function (it) {
-            return renderBarItemHTML(it, 'tools', 0);
-          }).join('') +
-        '</div>' +
-      '</div>' : '') +
-    '</div>';
-
-    var hubHTML = HB.hub
-      ? '<div class="shb-zone shb-zone-hub" data-zone="hub"><div class="shb-hub-pill">' + esc(node ? (node.title || node.type) : 'Canvas Hotbox') + '</div></div>'
-      : '';
-
-    var botHTML = '<div class="shb-zone shb-zone-bot" data-zone="bot">' +
-      '<div class="shb-classic-row">' +
-        '<div class="shb-bar-items" data-hb-bar="bot">' +
-          botItems.map(function (it) {
-            return renderBarItemHTML(it, 'bot', 0);
-          }).join('') +
-        '</div>' +
-        '<span class="shb-drop-gap"></span>' +
-        '<span class="shb-vsep"></span>' +
-        '<button type="button" class="shb-btn" data-hb-act="style" title="Switch style (Tab)">' + ico('layout', 13) + '<span>Fluid</span></button>' +
-        '<button type="button" class="shb-ibtn" data-hb-act="settings" title="Hotbox Settings">' + ico('settings', 14) + '</button>' +
-      '</div>' +
-    '</div>';
-
-    var drawerHTML = HB.drawer
-      ? '<div class="shb-zone shb-zone-drawer" data-zone="drawer">' + buildDrawerHTML(node, tools) + '</div>'
-      : '';
-
-    el.innerHTML = topHTML + hubHTML + botHTML + drawerHTML;
+    el.innerHTML = decoHTML + topHTML + leftHTML + rightHTML + botHTML + catMenuHTML + drawerHTML;
   }
 
   function hbUpdateBounds() {
@@ -5194,17 +5622,20 @@
     /* The standalone "+" sits right of the bottom bar; flip it to the left side near the screen edge */
     if (zBot) {
       zBot.classList.remove('shb-plus-left');
-      var pEl = zBot.querySelector(':scope > .shb-plus');
+      var pEl = zBot.querySelector(':scope > .shb-plus-wrap');
       if (pEl && pEl.getBoundingClientRect().right > W - EDGE) zBot.classList.add('shb-plus-left');
     }
-
-    /* Quiet's crosshair sits exactly where the hotbox was summoned */
-    var mark = el.querySelector('.shb-cross');
-    if (mark) {
-      mark.style.left = (HB.anchorX || HB.x) + 'px';
-      mark.style.top = (HB.anchorY || HB.y) + 'px';
-    }
     hbDrawLeaders();
+
+    /* The dock's category menu opens under its ▾, right-aligned */
+    var zCat = el.querySelector('[data-zone="catmenu"]');
+    var pick = el.querySelector('[data-hb-catpick]');
+    if (zCat && pick) {
+      var kr = pick.getBoundingClientRect();
+      var cw = zCat.getBoundingClientRect().width;
+      zCat.style.left = Math.max(EDGE, Math.min(W - EDGE - cw, Math.round(kr.right - cw))) + 'px';
+      zCat.style.top = Math.round(kr.bottom + 8) + 'px';
+    }
 
     /* Position Drawer right next to the clicked (+) button or Add & Customize button */
     if (zDrawer) {
@@ -5214,7 +5645,7 @@
       if (plusEl) {
         /* Beside the live "+" (bottom-aligned), on whichever side it has room */
         var pr = plusEl.getBoundingClientRect();
-        var flipped = !!(plusEl.parentNode && plusEl.parentNode.classList.contains('shb-plus-left'));
+        var flipped = !!(zBot && zBot.classList.contains('shb-plus-left'));
         anc = flipped
           ? { x: Math.round(pr.left - 12), y: Math.round(pr.bottom), fromRight: true, fromBottom: true }
           : { x: Math.round(pr.right + 12), y: Math.round(pr.bottom), fromBottom: true };
@@ -5366,7 +5797,7 @@
   /* Distance in px from point (px, py) to the nearest bar container inside rootEl */
   function distToNearestBar(rootEl, px, py) {
     if (!rootEl) return 0;
-    var bars = rootEl.querySelectorAll('.shb-bar, .shb-classic-row');
+    var bars = rootEl.querySelectorAll('.shb-bar');
     var minDist = 1e9;
     for (var i = 0; i < bars.length; i++) {
       var r = bars[i].getBoundingClientRect();
@@ -5443,7 +5874,7 @@
         try { underEl = document.elementFromPoint(px, py); } catch (err) { underEl = null; }
         if (underEl && underEl.closest) {
           var overWrapEl = underEl.closest('.shb-item-wrap[data-hb-uid]');
-          var overBarBox = underEl.closest('.shb-bar, .shb-classic-row');
+          var overBarBox = underEl.closest('.shb-bar');
           if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
             var wr = overWrapEl.getBoundingClientRect();
             target = overWrapEl.parentNode;
@@ -5623,7 +6054,7 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
-    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {};
+    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
     if (old) {
       old.removeAttribute('id');
       hbAnimateClose(old, cx, cy);
@@ -5876,8 +6307,30 @@
         return;
       }
 
-      if (t.closest('[data-hb-plus]') || t.closest('[data-hb-custom-bar]')) {
-        hbTogglePlus('search');
+      if (t.closest('[data-hb-plus]')) {
+        hbTogglePlus();
+        return;
+      }
+
+      var dialCat = t.closest('[data-hb-dial]');
+      if (dialCat) {
+        hbTogglePlus(dialCat.getAttribute('data-hb-dial'));
+        return;
+      }
+
+      if (t.closest('[data-hb-catpick]')) {
+        HB.catMenu = !HB.catMenu;
+        hbPaint();
+        return;
+      }
+
+      var catSet = t.closest('[data-hb-catset]');
+      if (catSet) {
+        S.hbDockCat = catSet.getAttribute('data-hb-catset') || 'models';
+        save();
+        HB.catMenu = false;
+        hbPaint();
+        setStatus('ok', S.hbDockCat === 'none' ? 'Dock shortcut hidden' : 'Dock shortcut: ' + HB_CATS[S.hbDockCat].label);
         return;
       }
 
@@ -5913,9 +6366,10 @@
       var drw = t.closest('[data-hb-drawer]');
       if (drw) {
         var which = drw.getAttribute('data-hb-drawer');
-        var dCard = drw.closest('.shb-card') || drw;
-        var dRect = dCard.getBoundingClientRect();
-        HB.drawerAnchor = { x: Math.round(dRect.right + 8), y: Math.round(dRect.top) };
+        var dRect = drw.getBoundingClientRect();
+        /* from the dock: open under the button, right-aligned to it */
+        HB.drawerAnchor = { x: Math.round(dRect.right), y: Math.round(dRect.bottom + 10), fromRight: true };
+        HB.catMenu = false;
         HB.drawer = (HB.drawer === which) ? '' : which;
         HB.q = '';
         hbPaint();
@@ -6388,6 +6842,52 @@
     inp.click();
   }
 
+  /* The user's own power tools — each one can be switched off here, which also hides its hotbox buttons */
+  var POWER_TOOLS = [
+    { key: 'useAltZ', name: 'Lupa · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
+      tip: 'On a prompt / text node: Lupa, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
+    { key: 'useAltN', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
+      tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
+    { key: 'useAltR', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Freeze a rendered image into a new LoadImage',
+      tip: 'Takes the image the node is showing (its last render or preview), uploads it to input/ and drops a LoadImage with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image.' },
+    { key: 'useShiftR', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
+      tip: 'Renders only what you selected: the selected output nodes, or the output nodes downstream of the selection, with just the nodes they need. Nothing selected renders nothing, so a stray key never spends API credits on the whole graph. Uses rgthree\'s queue when it is installed.' },
+    { key: 'useStitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
+      tip: 'On a crop, on the plate it cuts, or on a result that came out of a crop: adds a fit (ImageScale, bicubic) that sizes your result back to the crop box and an ImageCompositeMasked that pastes it at the crop\'s x / y. Several crops of one plate chain into one result, a preview closes the chain, an empty "apinode / localmodel" group marks where the model goes, and every stitch keeps following its crop when you move or resize it.' },
+    { key: 'useKillApi', name: 'Kill APIs', keys: 'K', desc: 'Bypass every API node at once',
+      tip: 'Bypasses every paid API node in the workflow for a cost-free test run; press it again to bring them back. Shows up in the bottom bar when the workflow has API nodes.' },
+    { key: 'dotZoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
+      tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' }
+  ];
+
+  /* One floating tooltip for anything that carries data-tip (it lives on body, so a scrolling modal never clips it) */
+  var TIP = null;
+  function tipHide() {
+    if (TIP) TIP.classList.remove('shb-tip-on');
+  }
+  listen(document, 'mouseover', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!t) return;
+    if (!TIP) {
+      TIP = owns(document.createElement('div'));
+      TIP.className = 'shb-tip';
+      document.body.appendChild(TIP);
+    }
+    TIP.textContent = t.getAttribute('data-tip') || '';
+    TIP.style.left = '0px';
+    TIP.style.top = '0px';
+    var r = t.getBoundingClientRect(), tr = TIP.getBoundingClientRect();
+    var y = r.bottom + 6;
+    if (y + tr.height > (window.innerHeight || 900) - 10) y = r.top - tr.height - 6;
+    TIP.style.left = Math.max(10, Math.min((window.innerWidth || 1600) - tr.width - 10, r.left)) + 'px';
+    TIP.style.top = Math.max(10, y) + 'px';
+    TIP.classList.add('shb-tip-on');
+  }, true);
+  listen(document, 'mouseout', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) tipHide();
+  }, true);
+
   function openSettingsModal(anchorBtn) {
     var old = document.getElementById(PANEL_ID + '-settings');
     if (old && old.parentNode) old.parentNode.removeChild(old);
@@ -6406,6 +6906,7 @@
 
     function closeSettings() {
       HB.binding = false;
+      tipHide();
       if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
       var tb = document.getElementById(PANEL_ID + '-topbar-btn');
       if (tb) tb.classList.remove('open');
@@ -6424,6 +6925,7 @@
     var modalStyle = ' style="position:fixed;top:' + topPx + 'px;left:' + leftPx + 'px;width:min(' + mw + 'px,94vw);margin:0;pointer-events:auto"';
 
     function render() {
+      tipHide();
       var curScale = parseFloat(S.hbScale) || 1;
       var curGap = (S.hbGap !== undefined && S.hbGap !== null) ? Number(S.hbGap) : 28;
       wrap.innerHTML =
@@ -6471,11 +6973,15 @@
               '<span data-st-gap-val style="min-width:46px;font:600 11.5px monospace;text-align:right">' + curGap + 'px</span>' +
             '</div>' +
             '<label>Power Tools</label>' +
-            '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-              '<button class="shb-btn ' + (S.useAltZ ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="useAltZ">Alt+Z Lupa / Crop / Paint</button>' +
-              '<button class="shb-btn ' + (S.useAltN ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="useAltN">Alt+N Label Studio</button>' +
-              '<button class="shb-btn ' + (S.useAltR ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="useAltR">Alt+R Load in Canvas</button>' +
-              '<button class="shb-btn ' + (S.dotZoom ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="dotZoom">. (Period) Zoom Toggle</button>' +
+            '<div class="shb-pt">' +
+              POWER_TOOLS.map(function (pt) {
+                var on = S[pt.key] !== false;
+                return '<button type="button" class="shb-pt-row' + (on ? ' shb-on' : '') + '" data-st-toggle="' + pt.key + '" data-tip="' + esc(pt.tip) + '">' +
+                  '<span class="shb-pt-sw"></span>' +
+                  '<span class="shb-pt-name">' + esc(pt.name) + '<small>' + esc(pt.desc) + '</small></span>' +
+                  '<span class="shb-pt-key">' + esc(pt.keys) + '</span>' +
+                '</button>';
+              }).join('') +
             '</div>' +
             '<label>Custom Config</label>' +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
@@ -6662,17 +7168,15 @@
         return;
       }
       var kl = String(e.key || '').toLowerCase();
-      if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+      /* Shift + a letter is someone else's shortcut (Shift+R renders), never a hotbox quick key */
+      if (!e.ctrlKey && !e.altKey && !e.metaKey && !(e.shiftKey && /^[a-z]$/.test(kl))) {
         var cardDrawer = { f: 'search', n: 'tools', a: 'models', g: 'subs' }[kl];
         if (cardDrawer) {
           hbEat(e);
-          HB.drawerAnchor = null;
-          HB.drawer = HB.drawer === cardDrawer ? '' : cardDrawer;
-          HB.q = '';
-          hbPaint();
+          hbTogglePlus(cardDrawer);
           return;
         }
-        if (kl === '+' || kl === '=') { hbEat(e); hbTogglePlus('search'); return; }
+        if (kl === '+' || kl === '=') { hbEat(e); hbTogglePlus(); return; }
         if (kl === 'p' && HB.node && seedControls(HB.node).length) {
           hbEat(e);
           var cur = seedModeOf([HB.node]);
@@ -6736,6 +7240,19 @@
     e.preventDefault(); e.stopPropagation();
     if (e.repeat) return;
     actLoadInCanvas(hbNode());
+  }, true);
+
+  /* Shift+R: Render only the selected output nodes. Listens at window capture and consumes the key, and
+     steps aside when another tool already took it (ImissNuke has the same shortcut), so one press never
+     queues the same render twice */
+  listen(window, 'keydown', function (e) {
+    if (e.defaultPrevented || !S.useShiftR || HB.binding || hbTyping()) return;
+    if (e.code !== 'KeyR' && String(e.key || '').toLowerCase() !== 'r') return;
+    if (!e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    hbEat(e);
+    if (e.repeat) return;
+    if (HB.el) hbClose();
+    actRenderSelected();
   }, true);
 
   /* . (Period): Zoom to Selected Node(s) & Return */
