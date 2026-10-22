@@ -375,20 +375,6 @@
     });
   }
 
-  /* Opens the folder in Explorer / Finder (ComfyUI on this computer), else copies its path */
-  function cfgOpenFolder() {
-    if (!CFG.srv) { cfgCopy(cfgFolder(), 'Folder path'); return; }
-    apiFetch('/hotbox/folder/open', { method: 'POST' }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
-        setStatus('ok', '📂 Opened ' + (j.folder || cfgFolder()));
-      });
-    }).catch(function (err) {
-      try { navigator.clipboard.writeText(cfgFolder()); } catch (e) {}
-      setStatus('error', 'Could not open the folder (' + msgOf(err) + ') · its path is copied');
-    });
-  }
-
   function hbKeyRefused(key, code) {
     var no = {
       Delete: 1, Backspace: 1, Escape: 1, Enter: 1, Tab: 1,
@@ -600,7 +586,7 @@
 
       /* Zones are un-animated positioning wrappers: never put opacity/filter on them or the glass breaks */
       '.shb-zone{position:fixed;display:flex;flex-direction:column;gap:6px;width:max-content;pointer-events:auto;z-index:2}',
-      '.shb-zone-top{transform:translate(-50%,-100%);align-items:center}',
+      '.shb-zone-top{transform:translate(-50%,-100%);align-items:center;gap:14px}',
       '.shb-zone-bot{transform:translate(-50%,0);align-items:center}',
       '.shb-zone-left{transform:translate(-100%,-50%);align-items:flex-end}',
       '.shb-zone-right{transform:translate(0,-50%);align-items:flex-start}',
@@ -709,6 +695,8 @@
       '.shb-pt-grip{display:inline-grid;place-items:center;color:#5a5a5a;flex-shrink:0}',
       '.shb-pt-row:hover .shb-pt-grip{color:#a0a0a0}',
       '.shb-st-dragging .shb-modal{opacity:.14;pointer-events:none !important;transition:opacity 90ms ease}',
+      /* Nodes 2.0 seed menu replayed by Seed mode: it opens and closes without being seen */
+      '.shb-seedsync [data-reka-popper-content-wrapper]{opacity:0 !important;pointer-events:none !important}',
       /* Where the preferences are saved */
       '.shb-cfg{display:flex;flex-direction:column;gap:5px;min-width:0}',
       '.shb-cfg-path{font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#cfd6e0;background:#161616;border:1px solid #333;border-radius:6px;padding:6px 8px;word-break:break-all;user-select:text;cursor:text}',
@@ -1442,7 +1430,7 @@
       if (!w) continue;
       var nm = String(w.name || '');
       if (nm === 'control_after_generate' || /seed.*control/i.test(nm)) {
-        out.push(w);
+        if (out.indexOf(w) < 0) out.push(w);
       } else if (w.linkedWidgets && w.linkedWidgets.length) {
         w.linkedWidgets.forEach(function (lw) {
           if (lw && lw.name === 'control_after_generate' && out.indexOf(lw) < 0) {
@@ -1481,10 +1469,42 @@
     var g = getGraph();
     if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
     if (count) {
+      hbSyncSeedButtons(list, mode);
       setStatus('ok', 'Seed mode set to "' + mode + '" on ' + count + ' control' + (count === 1 ? '' : 's'));
     } else {
       setStatus('error', 'No seed control_after_generate widget found on this node');
     }
+  }
+
+  /* Nodes 2.0 draws a seed's mode button from a copy of the mode it takes once, so a mode set from here would
+     run but not show. It is replayed through that button's own menu, kept invisible (.shb-seedsync), one
+     button at a time. A node scrolled out of view needs nothing: it reads the mode again when it comes back. */
+  function hbSyncSeedButtons(nodes, mode) {
+    var btns = [];
+    nodes.forEach(function (n) {
+      var el = document.querySelector('.lg-node[data-node-id="' + cssEsc(n.id) + '"]');
+      if (el) Array.prototype.push.apply(btns, el.querySelectorAll('[data-testid="value-control"]'));
+    });
+    if (!btns.length) return;
+    document.body.classList.add('shb-seedsync');
+    var i = 0;
+    (function next() {
+      var b = btns[i++];
+      if (!b) {
+        setTimeout(function () { document.body.classList.remove('shb-seedsync'); }, 60);
+        return;
+      }
+      if (!b.isConnected) { next(); return; }
+      b.click();
+      var tries = 0;
+      (function pick() {
+        var r = document.querySelector('[data-reka-popper-content-wrapper] input[type="radio"][id="' + mode + '"]');
+        if (!r && ++tries < 40) { setTimeout(pick, 25); return; }
+        if (r && !r.checked) r.click();
+        if (document.querySelector('[data-reka-popper-content-wrapper]')) b.click();
+        setTimeout(next, 30);
+      })();
+    })();
   }
 
   /* Bypass helpers */
@@ -7463,17 +7483,45 @@
     return K.handle(total);
   }
 
-  /* A template drops back: each node springs out of the point `p` to its place */
-  function mgUnpack(ctx, p) {
+  /* A saved button drops its nodes, in the style's own way. Fluid: each node springs out of the button (point `p`)
+     to its place, one after another. Compact: they inflate in place like little balloons, faster and faster,
+     with a soft bounce. Quiet: they just pop in, all at once. */
+  function mgUnpack(ctx, p, variant) {
     var K = mgKit(ctx, { pace: ctx.pace });
-    ctx.nodes.forEach(function (n, i) {
-      var c = mgCtr(K.rel(n));
-      K.A(n, [
+    var n = ctx.nodes.length;
+    if (variant === 'clean') {
+      ctx.nodes.forEach(function (el) {
+        K.A(el, [
+          { transform: 'scale(.86)', opacity: 0 },
+          { transform: 'scale(1.03)', opacity: 1, offset: 0.6 },
+          { transform: 'scale(1)', opacity: 1 }
+        ], 150, 0, 'ease-out');
+      });
+      return K.handle(170);
+    }
+    if (variant === 'shrinkwrap') {
+      /* the gaps between balloons shrink as they go, so the cadence speeds up */
+      var spread = Math.min(240, 45 * (n - 1));
+      ctx.nodes.forEach(function (el, i) {
+        el.style.transformOrigin = '50% 100%';
+        K.A(el, [
+          { transform: 'translateY(14px) scale(.2)', opacity: 0, borderRadius: '50%' },
+          { transform: 'translateY(-4px) scale(1.06)', opacity: 1, borderRadius: '14px', offset: 0.55 },
+          { transform: 'translateY(1px) scale(.98)', offset: 0.8 },
+          { transform: 'none', opacity: 1, borderRadius: '8px' }
+        ], 260, n > 1 ? spread * Math.sqrt(i / (n - 1)) : 0, 'cubic-bezier(.3,1.2,.5,1)');
+      });
+      return K.handle(spread + 280);
+    }
+    var D = 225, ST = 30;
+    ctx.nodes.forEach(function (el, i) {
+      var c = mgCtr(K.rel(el));
+      K.A(el, [
         { transform: 'translate(' + (p.x - c.x) + 'px,' + (p.y - c.y) + 'px) scale(.12)', opacity: 0 },
         { transform: 'translate(0px,0px) scale(1)', opacity: 1 }
-      ], 340, i * 45, 'cubic-bezier(.34,1.3,.64,1)');
+      ], D, i * ST, 'cubic-bezier(.34,1.3,.64,1)');
     });
-    return K.handle(400 + Math.max(0, ctx.nodes.length - 1) * 45);
+    return K.handle(D + 40 + Math.max(0, n - 1) * ST);
   }
 
   /* Fluid = gravity (4d), Compact = shrinkwrap (4c), Quiet = clean (4b). Like the rest of the hotbox motion it
@@ -7916,7 +7964,8 @@
       root.appendChild(gh);
       return gh;
     });
-    var h = mgUnpack({ root: root, nodes: ghosts, fx: root.querySelector('.shb-mg-fx'), pace: mgVariant().pace }, from);
+    var mv = mgVariant();
+    var h = mgUnpack({ root: root, nodes: ghosts, fx: root.querySelector('.shb-mg-fx'), pace: mv.pace }, from, mv.v);
     /* the real nodes appear right under their ghosts just before the ghosts go */
     setTimeout(function () {
       var made = [];
@@ -8407,7 +8456,7 @@
           }).join('') + '</div>'
           : '<div class="shb-sb-empty">Nothing saved yet. Select some nodes and press X (Save as Button) in the hotbox.</div>') +
           '<div class="shb-sb-foot"><span title="' + esc(cfgPath()) + '">Kept inside ' + esc(CFG.file) + ' · ' + esc(cfgFolder()) + '</span>' +
-            '<button type="button" class="shb-btn shb-btn-pri" data-st-open data-tip="Open this folder in your file browser">' + ico('folder', 13) + '<span>Show Folder</span></button>' +
+            '<button type="button" class="shb-btn shb-btn-pri" data-st-copydir data-tip="Copy the path of the folder these files live in">' + ico('folder', 13) + '<span>Copy Folder Path</span></button>' +
           '</div>' +
         '</div>' : '');
     }
@@ -8474,7 +8523,7 @@
               '<span data-st-cfgstate class="shb-cfg-state shb-cfg-' + esc(CFG.state) + '">' + esc(cfgStateText()) + '</span>' +
               '<div class="shb-cfg-btns">' +
                 '<button type="button" class="shb-btn shb-btn-pri" data-st-copy data-tip="Copy the full path">' + ico('copy', 13) + '<span>Copy Path</span></button>' +
-                '<button type="button" class="shb-btn shb-btn-pri" data-st-open data-tip="Open this folder in your file browser">' + ico('folder', 13) + '<span>Show Folder</span></button>' +
+                '<button type="button" class="shb-btn shb-btn-pri" data-st-copydir data-tip="Copy the path of the folder these files live in">' + ico('folder', 13) + '<span>Copy Folder Path</span></button>' +
                 (CFG.srv ? '<button type="button" class="shb-btn' + (dirEdit ? ' shb-btn-on' : ' shb-btn-pri') + '" data-st-dir data-tip="Keep the Hotbox files in another folder (a synced drive, a shared team folder…)">' + ico('edit', 13) + '<span>Change Folder</span></button>' : '') +
               '</div>' +
               (dirEdit ? '<div class="shb-cfg-edit">' +
@@ -8547,8 +8596,8 @@
       if (copyB) {
         copyB.onclick = function () { cfgCopy(cfgPath(), 'Path'); };
       }
-      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-open]'), function (b) {
-        b.onclick = cfgOpenFolder;
+      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-copydir]'), function (b) {
+        b.onclick = function () { cfgCopy(cfgFolder(), 'Folder path'); };
       });
       var sbBtn = wrap.querySelector('[data-st-sbmenu]');
       if (sbBtn) {

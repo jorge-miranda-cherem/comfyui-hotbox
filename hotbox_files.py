@@ -7,14 +7,12 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 
 from aiohttp import web
 
 NAME_RE = re.compile(r"^(?:hotbox(?:_v\d+)?|active)\.json$")
 POINTER = "folder.json"
-LOOPBACK = ("127.0.0.1", "::1", "localhost")
 
 
 def _server():
@@ -110,23 +108,6 @@ def setup(routes):
             with open(pointer, "w", encoding="utf-8") as f:
                 json.dump({"folder": target}, f, indent=2)
         return _folder_info(request, found=found, copied=copied)
-
-    @routes.post("/hotbox/folder/open")
-    async def open_folder(request):
-        """Shows the folder in Explorer / Finder / the file manager, when ComfyUI runs on this computer."""
-        if request.remote not in LOOPBACK:
-            return web.json_response({"error": "ComfyUI runs on another computer"}, status=403)
-        cur = current_dir(request)[0]
-        try:
-            if sys.platform == "win32":
-                os.startfile(cur)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", cur])
-            else:
-                subprocess.Popen(["xdg-open", cur])
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
-        return web.json_response({"ok": True, "folder": cur})
 
     @routes.get("/hotbox/files")
     async def list_files(request):
