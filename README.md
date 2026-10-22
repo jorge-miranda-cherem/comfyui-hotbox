@@ -10,8 +10,8 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 
 - **Three styles** (switch live with <kbd>Tab</kbd>):
   - **Fluid** (default) — frosted glass panels, spring motion that blooms from the cursor, sliding hover highlights and iOS-style sliders.
-  - **Quiet** — native ComfyUI panels, hairline leader lines from the cursor to each zone, monospace key hints, fast fades.
   - **Compact** — the same Fluid look and motion, bars only (no side cards).
+  - **Quiet** — native ComfyUI panels, hairline leader lines from the cursor to each zone, monospace key hints, fast fades.
 - **The big blue `+`** sits right beside the bottom bar. Hover it and the four categories fan out (`All Nodes F` · `Image / Video Kit N` · `Models & APIs A` · `Subgraphs G`); click it for All Nodes. Drag any result onto any bar to pin it, or **drop it on the `+`** to pin it to the bottom bar.
 - **A dock shortcut you choose.** The button at the end of the top dock opens one category (Models by default); its `▾` swaps it for the Kit, Subgraphs or All Nodes — or hides it.
 - **Drag a node onto the bar to pin it.** Grab any node by its title while the hotbox is open and drop it on the bottom bar (or the `+`). The node stays where it was; its type becomes a one-click button for that context.
@@ -28,14 +28,14 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 | **Context bar** | Tools for the node type — e.g. on a crop node: **Visual Crop `Z`**, **Super Stitch** and an aspect-ratio switch (`Free · 1:1 · 16:9 · 9:16 · 4:3 · 3:4`). |
 | **Left card** | `Rename F2` · `Add Label L` · `Magnifier / Visual Crop / Paint Z` · `Add Reroute R` · `Set / Get Bus S` + node color swatches and a custom color picker. |
 | **Right card** | **Pro Sliders** for the node's numeric widgets (drag to scrub, <kbd>Shift</kbd> fine, <kbd>Ctrl</kbd>+click previous value, double-click default, wheel to nudge, click the value to type). |
-| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image or a video) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Kill APIs K` (when the workflow has API nodes) + your pinned nodes, the edit and settings buttons, and the `+` with its category dial. |
+| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image or a video) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Bypass All APIs K` (when the workflow has API nodes) + your pinned nodes, the edit and settings buttons, and the `+` with its category dial. |
 
 ---
 
 ## 🧠 Context-aware behavior
 
 - **Empty canvas** — quick spawners (`Load Image`, `Load Checkpoint`, `KSampler`, …) and labels.
-- **Any node** — the dock suggests nodes that accept its outputs (multi-slot aware: a checkpoint loader suggests nodes for `MODEL` *and* `CLIP`) and wires them on click. It never offers the node you are standing on again, unless it is the kind that chains (LoRA loaders, ControlNet apply, conditioning combine…).
+- **Any node** — the dock suggests nodes that accept its outputs (multi-slot aware: a checkpoint loader suggests nodes for `MODEL` *and* `CLIP`) and wires them on click. It never offers the node you are standing on again, unless it is the kind that chains (LoRA loaders, ControlNet apply, conditioning combine…), and it never offers deprecated nodes. New nodes slide down until they don't overlap anything.
 - **API nodes and subgraphs** — saving comes first: **Save Video** when they output video, **Save Image** / Preview when they output images.
 - **Image / video loaders** — `[1]`–`[5]` add the model to the right and auto-wire `IMAGE` / `VIDEO` / `MASK`. A `LoadImage` node also offers **Read PNG metadata** (load workflow, copy seed).
 - **Two loaders selected** — the model is wired to both (reference + target / first + last frame), plus **Compare A/B**.
@@ -56,7 +56,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | Shortcut | Action |
 | :--- | :--- |
 | <kbd>`</kbd> | Open / close the hotbox (rebindable; toggle or hold-and-release mode). |
-| <kbd>Tab</kbd> | Switch style (Fluid → Quiet → Compact) while the hotbox is open. |
+| <kbd>Tab</kbd> | Switch style (Fluid → Compact → Quiet) while the hotbox is open. |
 | <kbd>1</kbd>–<kbd>9</kbd> | Run the matching dock button. |
 | <kbd>+</kbd> / <kbd>F</kbd> · <kbd>N</kbd> · <kbd>A</kbd> · <kbd>G</kbd> | Add drawer: all nodes · image/video kit · models & APIs · subgraphs. |
 | <kbd>Esc</kbd> | Leave edit mode, or close the hotbox. |
@@ -69,7 +69,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 While the hotbox is open it owns these keys, so other extensions (or ComfyUI keybindings) on the same keys don't fire at the same time.
 
 ### Power Tools
-Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Kill APIs and Zoom to Selection can each be switched off in **Settings → Power Tools** (hover a row for what it does); switching one off also hides its hotbox buttons.
+Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Bypass All APIs and Zoom to Selection can each be switched off in **Settings → Power Tools** (hover a row for what it does); switching one off also hides its hotbox buttons.
 
 ---
 

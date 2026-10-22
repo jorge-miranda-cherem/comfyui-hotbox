@@ -43,7 +43,7 @@
     useAltR: true,          /* Alt+R + [V] Load in Canvas */
     useShiftR: true,        /* Shift+R render only the selected output nodes */
     useStitch: true,        /* Super Stitch: put crops back into their plate (and keep them following) */
-    useKillApi: true,       /* [K] bypass / re-enable every API node */
+    useKillApi: true,       /* [K] Bypass All APIs: bypass / re-enable every API node */
     dotZoom: true,          /* . frame the selection, press again to go back */
     lupaSize: 1,
     lupaBox: 1,
@@ -239,6 +239,15 @@
     layout: '<rect x="3" y="3" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
     check: '<polyline points="20 6 9 17 4 12"/>',
     play: '<polygon points="7 4 20 12 7 20 7 4"/>',
+    power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+    keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+    pointer: '<path d="M9 9l5 12 1.8-5.2L21 14 9 9z"/><path d="M7.2 2.2 8 5.1"/><path d="M5.1 8l-2.9-.8"/><path d="M14 4.1 12 6"/><path d="M6 12l-1.9 2"/>',
+    palette: '<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.8 1.6-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1a1.6 1.6 0 0 1 1.7-1.7h2c3 0 5.5-2.5 5.5-5.5C22 6 17.5 2 12 2z"/>',
+    sparkles: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z"/>',
+    spacing: '<path d="M3 3v18"/><path d="M21 3v18"/><path d="M8 12h8"/><path d="M11 9l-3 3 3 3"/><path d="M13 9l3 3-3 3"/>',
+    tools: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.8 3.8z"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+    leaders: '<circle cx="12" cy="12" r="2"/><path d="M10.6 10.6 4 4"/><path d="M13.4 10.6 20 4"/><path d="M12 14v7"/>',
     star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     pipette: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>',
     zapOff: '<path d="M10.5 4.9 13.1 2.2a.5.5 0 0 1 .9.5l-1.4 4.3"/><path d="M15.7 10H20a1 1 0 0 1 .8 1.6l-1.7 1.8"/><path d="M16.3 16.3 10.9 21.8a.5.5 0 0 1-.9-.5l1.9-6A1 1 0 0 0 11 14H4a1 1 0 0 1-.8-1.6l4.5-4.6"/><path d="m2 2 20 20"/>',
@@ -395,6 +404,19 @@
       '.shb-pt-name{flex:1;min-width:0;font:500 12.5px/1.25 Inter,system-ui,sans-serif;color:#e6e6e6}',
       '.shb-pt-name small{display:block;font:400 11px/1.35 Inter,system-ui,sans-serif;color:#8a8a8a;margin-top:1px}',
       '.shb-pt-key{font:500 10.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#9a9a9a;background:#262626;border:1px solid #3a3a3a;border-radius:4px;padding:3px 5px;flex-shrink:0}',
+      '.shb-grid label.shb-set-l{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}',
+      '.shb-set-l .shb-ico{color:#7aa7e0}',
+      '.shb-grid label.shb-set-top{align-self:start;padding-top:8px}',
+      '.shb-cycle{gap:9px;min-width:168px;justify-content:space-between}',
+      '.shb-cycle .shb-ico{color:#8a8a8a}',
+      '.shb-cycle-v{flex:1;text-align:left;font-weight:600}',
+      '.shb-cycle-dots{display:inline-flex;gap:3px}',
+      '.shb-cycle-dots i{width:5px;height:5px;border-radius:50%;background:#4a4a4a}',
+      '.shb-cycle-dots i.shb-on{background:#64a8f0}',
+      '.shb-ptmenu{gap:8px;min-width:168px;justify-content:space-between}',
+      '.shb-ptmenu .shb-ptmenu-v{flex:1;text-align:left}',
+      '.shb-pt{margin-top:6px}',
+      '.shb-pt-row > .shb-ico{color:#9aa4b2}',
       '.shb-pt-info{width:16px;height:16px;border-radius:50%;border:1px solid #555;color:#9a9a9a;font:600 10px/14px Inter,system-ui,sans-serif;text-align:center;flex-shrink:0;cursor:help}',
       '.shb-ghost{position:fixed;z-index:2147483550;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;transform:translate(-50%,-50%)}',
       '.shb-ghost-dot{flex-shrink:0}',
@@ -593,6 +615,7 @@
       '.shb-modal{width:min(540px,94vw);max-height:90vh;overflow-y:auto;background:var(--shb-bg);border:1px solid var(--shb-border);border-radius:8px;padding:16px 18px;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}',
       '.shb-modal-t{font:600 14px/1.2 Inter,system-ui,sans-serif;color:var(--shb-fg);display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #333333}',
       '.shb-grid{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:9px 12px}',
+      '.shb-settings .shb-grid{grid-template-columns:128px 1fr}',
       '.shb-grid label{color:var(--shb-fg-muted);font-weight:500;font-size:12px}',
       '.shb-input,.shb-select{width:100%;box-sizing:border-box;padding:6px 10px;border-radius:6px;border:1px solid var(--shb-border);background:var(--shb-bg-input);color:var(--shb-fg);font:400 12px/1.2 Inter,system-ui,sans-serif;outline:none}',
       '.shb-input:focus,.shb-select:focus{border-color:var(--shb-accent)}',
@@ -650,9 +673,21 @@
     return hasType(type);
   }
 
+  /* Deprecated nodes are never offered anywhere (they still load fine in old workflows) */
+  function isDeprecatedType(type) {
+    var def = SRV.types && SRV.types[type];
+    if (def && (def.deprecated || /\(deprecated\)/i.test(String(def.display_name || '')))) return true;
+    try {
+      var reg = (litegraph() || {}).registered_node_types;
+      var nd = reg && reg[type] && reg[type].nodeData;
+      if (nd && nd.deprecated) return true;
+    } catch (e) {}
+    return false;
+  }
+
   function allTypes() {
     var seen = {}, out = [];
-    function add(t) { if (t && !seen[t]) { seen[t] = 1; out.push(t); } }
+    function add(t) { if (t && !seen[t] && !isDeprecatedType(t)) { seen[t] = 1; out.push(t); } }
     try { Object.keys(SRV.types || {}).forEach(add); } catch (e) {}
     try {
       var reg = (litegraph() || {}).registered_node_types;
@@ -662,7 +697,7 @@
   }
 
   function classifyServerType(type, def) {
-    if (!def || typeof def !== 'object') return null;
+    if (!def || typeof def !== 'object' || isDeprecatedType(type)) return null;
     var cat = String(def.category || '').toLowerCase();
     var disp = String(def.display_name || type || '');
     if (/input\s*files?|config|options|credential|auth|key|settings/i.test(disp + ' ' + type)) return null;
@@ -1360,8 +1395,33 @@
     if (!made) return null;
     made.pos = [Math.round(pos[0]), Math.round(pos[1])];
     g.add(made);
+    hbAvoidOverlap(g, made);
     hbWiggleNode(made);
     return made;
+  }
+
+  /* A new node never lands on top of another one: it slides down, past whatever it would cover,
+     until its spot (title bar included, plus a small gap) is free */
+  function hbAvoidOverlap(graph, made) {
+    if (!graph || !made || !made.pos) return;
+    var LG = litegraph();
+    var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30, GAP = 30;
+    function box(n) {
+      var b = visBox(n);
+      return { x: b.x, y: b.y - TH, w: b.w, h: b.h + TH };
+    }
+    var others = allNodes(graph).filter(function (n) { return n !== made && n.pos; }).map(box);
+    var me = box(made), y0 = me.y;
+    for (var i = 0; i < 80; i++) {
+      var hit = null;
+      for (var k = 0; k < others.length && !hit; k++) {
+        var o = others[k];
+        if (me.x < o.x + o.w + GAP && me.x + me.w + GAP > o.x && me.y < o.y + o.h + GAP && me.y + me.h + GAP > o.y) hit = o;
+      }
+      if (!hit) break;
+      me.y = hit.y + hit.h + GAP;
+    }
+    if (me.y !== y0) nodeMoveTo(made, made.pos[0], made.pos[1] + (me.y - y0));
   }
 
   /* Connect all compatible slots between srcNode and dstNode (multi-slot aware, e.g. MODEL + CLIP) */
@@ -1621,7 +1681,7 @@
       { type: 'ImageScaleBy', label: 'Upscale Image By', why: 'Core scale by factor' },
       { type: 'ImageScale', label: 'Upscale Image (Core)', why: 'Core exact width/height upscale' }
     ];
-    return candidates.filter(function (c) { return canMake(c.type) || hasType(c.type); });
+    return candidates.filter(function (c) { return (canMake(c.type) || hasType(c.type)) && !isDeprecatedType(c.type); });
   }
 
   /* Ensures an IMAGE output feed from node (splices GetVideoComponents if VIDEO) */
@@ -2117,14 +2177,33 @@
     });
     if (!isFinite(x1)) return;
     var gx = x1 + 120, sx = gx + STITCH_HOLE_W + 120;
+    var blockH = Math.max(y1 - y0, gp.rs.length * 420);
     var members = [];
-    gp.rs.forEach(function (r, i) {
-      var y = y0 + i * 420;
-      if (r.fit) { nodeMoveTo(r.fit, sx, y); members.push(r.fit); }
-      nodeMoveTo(r.made, sx + 360, y);
+    gp.rs.forEach(function (r) {
+      if (r.fit) members.push(r.fit);
       members.push(r.made);
     });
-    if (view) { nodeMoveTo(view, sx + 720, y0); members.push(view); }
+    if (view) members.push(view);
+    /* the whole block (hole + fits + stitches + preview) slides down until it covers no other node */
+    var others = allNodes(graph).filter(function (n) {
+      return n.pos && members.indexOf(n) < 0 && gp.crops.indexOf(n) < 0;
+    }).map(visBox);
+    for (var guard = 0; guard < 60; guard++) {
+      var bx = gx, by = y0 - 62, bw = sx + 720 + 300 - gx, bh = blockH + 62 + 38;
+      var hit = null;
+      others.forEach(function (o) {
+        if (!hit && bx < o.x + o.w && bx + bw > o.x && by < o.y + o.h && by + bh > o.y - 30) hit = o;
+      });
+      if (!hit) break;
+      y0 = hit.y + hit.h + 100;
+    }
+    gp.rs.forEach(function (r, i) {
+      var y = y0 + i * 420;
+      if (r.fit) nodeMoveTo(r.fit, sx, y);
+      nodeMoveTo(r.made, sx + 360, y);
+    });
+    if (view) nodeMoveTo(view, sx + 720, y0);
+    y1 = y0 + blockH;
     outGroup('Stitch', '#3b2e58', members);
     if (gp.had) return;
     var LG = litegraph();
@@ -4003,7 +4082,7 @@
       addget:     { id: 'addget',     icon: 'plus',       label: 'Paired Get',     kbd: 'G', fn: function () { addGetNode(node); } },
       bypass:     { id: 'bypass',     icon: 'bypass',     label: 'Bypass',         kbd: 'B', cls: (node && node.mode === 4) ? 'shb-btn-on' : '', fn: function () { actBypass(node); } },
       mute:       { id: 'mute',       icon: 'bypass',     label: 'Mute Node',      kbd: 'M', cls: (node && node.mode === 2) ? 'shb-btn-on' : '', fn: function () { actMute(node); } },
-      apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Kill APIs',      kbd: 'K', fn: function () { actBypassApi(); } },
+      apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Bypass All APIs', kbd: 'K', fn: function () { actBypassApi(); } },
       zoom:       { id: 'zoom',       icon: 'zoom',       label: 'Zoom',           kbd: '.', fn: function () { actDotZoom(node); } },
       render:     { id: 'render',     icon: 'play',       label: 'Render Selected', kbd: '⇧R', fn: function () { actRenderSelected(); } },
       stitch:     { id: 'stitch',     icon: 'stitch',     label: 'Super Stitch',   kbd: '',  fn: function () { actStitch(node); } },
@@ -4223,7 +4302,7 @@
 
     if (u.indexOf('node:') === 0) {
       var nType = u.slice(5);
-      if (!HB.editMode && hbSameNode(nType, node)) return null;
+      if (!HB.editMode && (hbSameNode(nType, node) || isDeprecatedType(nType))) return null;
       var nDef = (SRV.types && SRV.types[nType]) || null;
       var subName = '';
       if (nType.indexOf('subgraph:') === 0) {
@@ -4348,7 +4427,7 @@
       var canvasDefaults = ['LoadImage', 'CheckpointLoaderSimple', 'KSampler', 'CLIPTextEncode', 'EmptyLatentImage', 'LoraLoader', 'SaveImage'];
       var cOut = [];
       canvasDefaults.forEach(function (t) {
-        if (cOut.length < max && (hasType(t) || !SRV.probed)) cOut.push('node:' + t);
+        if (cOut.length < max && (hasType(t) || !SRV.probed) && !isDeprecatedType(t)) cOut.push('node:' + t);
       });
       return cOut;
     }
@@ -4365,13 +4444,14 @@
       var list = [];
       var curated = CURATED_BY_SLOT[st] || [];
       curated.forEach(function (cand) {
-        if (hasType(cand) || !SRV.probed) list.push(cand);
+        if ((hasType(cand) || !SRV.probed) && !isDeprecatedType(cand)) list.push(cand);
       });
       /* Supplement with any installed node from SRV.types that accepts `st` as input */
       if (SRV.types && list.length < max * 2) {
         Object.keys(SRV.types).forEach(function (tName) {
           if (list.indexOf(tName) >= 0) return;
           if (SRV.api && SRV.api[tName]) return;
+          if (isDeprecatedType(tName)) return;
           var def = SRV.types[tName];
           var inp = (def && def.input) || {};
           var req = inp.required || {};
@@ -4406,7 +4486,7 @@
     if (!picked.length) {
       var fallback = ['PreviewImage', 'SaveImage', 'KSampler', 'CLIPTextEncode', 'VAEDecode'];
       fallback.forEach(function (t) {
-        if (picked.length < max && (hasType(t) || !SRV.probed) && !hbSameNode(t, node)) picked.push('node:' + t);
+        if (picked.length < max && (hasType(t) || !SRV.probed) && !hbSameNode(t, node) && !isDeprecatedType(t)) picked.push('node:' + t);
       });
     }
     return picked.slice(0, max);
@@ -4729,7 +4809,7 @@
 
   var HB_STYLE_NAMES = { pro: 'Fluid', quiet: 'Quiet', classic: 'Compact' };
   function hbCycleStyle() {
-    var order = ['pro', 'quiet', 'classic'];
+    var order = ['pro', 'classic', 'quiet'];
     S.hbStyle = order[(order.indexOf(S.hbStyle) + 1) % order.length] || 'pro';
     save();
     if (HB.el) {
@@ -6875,19 +6955,19 @@
 
   /* The user's own power tools — each one can be switched off here, which also hides its hotbox buttons */
   var POWER_TOOLS = [
-    { key: 'useAltZ', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
+    { key: 'useAltZ', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
-    { key: 'useAltN', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
+    { key: 'useAltN', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
-    { key: 'useAltR', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
+    { key: 'useAltR', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
       tip: 'Takes what the node is showing (Save / Preview Image, Save Video…), copies it into input/ and drops a Load Image — or a Load Video for videos — with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image or a video.' },
-    { key: 'useShiftR', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
+    { key: 'useShiftR', icon: 'play', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
       tip: 'Renders only what you selected: the selected output nodes, or the output nodes downstream of the selection, with just the nodes they need. Nothing selected renders nothing, so a stray key never spends API credits on the whole graph. Uses rgthree\'s queue when it is installed.' },
-    { key: 'useStitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
+    { key: 'useStitch', icon: 'stitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
       tip: 'On a crop, on the plate it cuts, or on a result that came out of a crop: adds a fit (ImageScale, bicubic) that sizes your result back to the crop box and an ImageCompositeMasked that pastes it at the crop\'s x / y. Several crops of one plate chain into one result, a preview closes the chain, an empty "apinode / localmodel" group marks where the model goes, and every stitch keeps following its crop when you move or resize it.' },
-    { key: 'useKillApi', name: 'Kill APIs', keys: 'K', desc: 'Bypass every API node at once',
+    { key: 'useKillApi', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
       tip: 'Bypasses every paid API node in the workflow for a cost-free test run; press it again to bring them back. Shows up in the bottom bar when the workflow has API nodes.' },
-    { key: 'dotZoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
+    { key: 'dotZoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
       tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' }
   ];
 
@@ -6955,66 +7035,89 @@
     }
     var modalStyle = ' style="position:fixed;top:' + topPx + 'px;left:' + leftPx + 'px;width:min(' + mw + 'px,94vw);margin:0;pointer-events:auto"';
 
+    /* Settings with several choices are one button that steps through them; the dots show where you are */
+    var CYCLES = {
+      hbHold: { opts: [false, true], names: ['Toggle on Press', 'Hold & Release'],
+        tip: 'Toggle: press the hotkey to open, press again to close. Hold & Release: Maya / Nuke style, open while held.' },
+      hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
+        tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels with hairline leaders. Tab also switches it.' },
+      hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
+        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' }
+    };
+    var ptOpen = false;
+
+    function cycleCur(key) {
+      var c = CYCLES[key];
+      var cur = key === 'hbHold' ? !!S.hbHold : S[key];
+      return Math.max(0, c.opts.indexOf(cur));
+    }
+
+    function cycleBtn(key) {
+      var c = CYCLES[key], i = cycleCur(key);
+      return '<button type="button" class="shb-btn shb-btn-pri shb-cycle" data-st-cycle="' + key + '" data-tip="' + esc(c.tip) + '">' +
+        '<span class="shb-cycle-v">' + esc(c.names[i]) + '</span>' +
+        '<span class="shb-cycle-dots">' + c.opts.map(function (o, j) { return '<i' + (j === i ? ' class="shb-on"' : '') + '></i>'; }).join('') + '</span>' +
+        ico('sync', 12) +
+      '</button>';
+    }
+
+    function setLabel(icon, text, top) {
+      return '<label class="shb-set-l' + (top ? ' shb-set-top' : '') + '">' + ico(icon, 14) + '<span>' + esc(text) + '</span></label>';
+    }
+
     function render() {
       tipHide();
       var curScale = parseFloat(S.hbScale) || 1;
       var curGap = (S.hbGap !== undefined && S.hbGap !== null) ? Number(S.hbGap) : 28;
       wrap.innerHTML =
-        '<div class="shb-modal"' + modalStyle + '>' +
+        '<div class="shb-modal shb-settings"' + modalStyle + '>' +
           '<div class="shb-modal-t">' +
             '<span style="display:inline-flex;align-items:center;gap:7px"><span style="color:#e58c2c;font-weight:900">H</span><span>Hotbox Settings</span></span>' +
             '<button class="shb-btn shb-btn-ico" data-st-close>✕</button>' +
           '</div>' +
           '<div class="shb-grid">' +
-            '<label>Hotbox</label>' +
+            setLabel('power', 'Hotbox') +
             '<div style="display:flex;align-items:center;gap:8px">' +
-              '<button class="shb-btn ' + (S.useHotbox ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="useHotbox">' + (S.useHotbox ? '● Enabled' : '○ Disabled') + '</button>' +
-              '<button class="shb-btn shb-btn-pri" data-st-bind>' + (HB.binding ? 'Listening… Press any key' : 'Hotkey: ' + esc(hbKeyLabel()) + ' (Click to change)') + '</button>' +
+              '<button class="shb-btn ' + (S.useHotbox ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="useHotbox" data-tip="Right-click the H in the top bar to switch it on or off any time">' + (S.useHotbox ? '● Enabled' : '○ Disabled') + '</button>' +
+              '<button class="shb-btn shb-btn-pri" data-st-bind data-tip="Click, then press the key (or combination) that opens the hotbox">' + ico('keyboard', 13) + '<span>' + (HB.binding ? 'Press any key…' : 'Hotkey: ' + esc(hbKeyLabel())) + '</span></button>' +
             '</div>' +
-            '<label>Launch Mode</label>' +
-            '<span class="shb-seg">' +
-              '<button type="button" data-st-hold="0"' + (!S.hbHold ? ' class="shb-on"' : '') + '>Toggle on Press</button>' +
-              '<button type="button" data-st-hold="1"' + (S.hbHold ? ' class="shb-on"' : '') + '>Hold & Release (Maya/Nuke)</button>' +
-            '</span>' +
-            '<label>UI Style</label>' +
-            '<span class="shb-seg">' +
-              '<button type="button" data-st-style="pro"' + (S.hbStyle === 'pro' ? ' class="shb-on"' : '') + ' title="Frosted glass cards, spring motion">Fluid</button>' +
-              '<button type="button" data-st-style="quiet"' + (S.hbStyle === 'quiet' ? ' class="shb-on"' : '') + ' title="Native ComfyUI panels, hairline leaders">Quiet</button>' +
-              '<button type="button" data-st-style="classic"' + (S.hbStyle === 'classic' ? ' class="shb-on"' : '') + ' title="Compact toolbar ring">Compact</button>' +
-            '</span>' +
-            '<label>Edit Mode</label>' +
-            '<span class="shb-seg">' +
-              ['jiggle', 'tilt', 'float', 'outline'].map(function (k) {
-                return '<button type="button" data-st-editanim="' + k + '"' + ((S.hbEditAnim || 'jiggle') === k ? ' class="shb-on"' : '') + '>' + k.charAt(0).toUpperCase() + k.slice(1) + '</button>';
-              }).join('') +
-            '</span>' +
-            '<label>Effects</label>' +
+            setLabel('pointer', 'Launch Mode') + '<div>' + cycleBtn('hbHold') + '</div>' +
+            setLabel('palette', 'UI Style') + '<div>' + cycleBtn('hbStyle') + '</div>' +
+            setLabel('edit', 'Edit Mode') + '<div>' + cycleBtn('hbEditAnim') + '</div>' +
+            setLabel('sparkles', 'Effects') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-              '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" title="Fluid: soft dim behind the hotbox (never blurred)">Canvas Dim (Fluid)</button>' +
-              '<button class="shb-btn ' + (S.hbLeaders !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbLeaders" title="Quiet: hairlines from the cursor to each zone">Leader Lines (Quiet)</button>' +
+              '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" data-tip="Fluid & Compact: a soft dim behind the hotbox (never blurred)">' + ico('moon', 13) + '<span>Canvas Dim</span></button>' +
+              '<button class="shb-btn ' + (S.hbLeaders !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbLeaders" data-tip="Quiet: hairlines from the cursor to each zone">' + ico('leaders', 13) + '<span>Leader Lines</span></button>' +
             '</div>' +
-            '<label>UI Scale</label>' +
+            setLabel('resize', 'UI Scale') +
             '<div style="display:flex;align-items:center;gap:8px">' +
               '<input type="range" min="0.70" max="1.50" step="0.05" value="' + curScale + '" data-st-scale style="flex:1;accent-color:#4b6584;cursor:ew-resize">' +
               '<span data-st-scale-val style="min-width:46px;font:600 11.5px monospace;text-align:right">' + Math.round(curScale * 100) + '%</span>' +
             '</div>' +
-            '<label>Bar Spacing</label>' +
+            setLabel('spacing', 'Bar Spacing') +
             '<div style="display:flex;align-items:center;gap:8px">' +
               '<input type="range" min="8" max="110" step="2" value="' + curGap + '" data-st-gap style="flex:1;accent-color:#4b6584;cursor:ew-resize">' +
               '<span data-st-gap-val style="min-width:46px;font:600 11.5px monospace;text-align:right">' + curGap + 'px</span>' +
             '</div>' +
-            '<label>Power Tools</label>' +
-            '<div class="shb-pt">' +
-              POWER_TOOLS.map(function (pt) {
-                var on = S[pt.key] !== false;
-                return '<button type="button" class="shb-pt-row' + (on ? ' shb-on' : '') + '" data-st-toggle="' + pt.key + '" data-tip="' + esc(pt.tip) + '">' +
-                  '<span class="shb-pt-sw"></span>' +
-                  '<span class="shb-pt-name">' + esc(pt.name) + '<small>' + esc(pt.desc) + '</small></span>' +
-                  '<span class="shb-pt-key">' + esc(pt.keys) + '</span>' +
-                '</button>';
-              }).join('') +
+            setLabel('tools', 'Power Tools', true) +
+            '<div>' +
+              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Your own extras: switch each one on or off (hover a tool to see what it does)">' +
+                '<span class="shb-ptmenu-v">' + POWER_TOOLS.filter(function (pt) { return S[pt.key] !== false; }).length + ' of ' + POWER_TOOLS.length + ' on</span>' +
+                ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
+              '</button>' +
+              (ptOpen ? '<div class="shb-pt">' +
+                POWER_TOOLS.map(function (pt) {
+                  var on = S[pt.key] !== false;
+                  return '<button type="button" class="shb-pt-row' + (on ? ' shb-on' : '') + '" data-st-toggle="' + pt.key + '" data-tip="' + esc(pt.tip) + '">' +
+                    '<span class="shb-pt-sw"></span>' +
+                    ico(pt.icon, 15) +
+                    '<span class="shb-pt-name">' + esc(pt.name) + '<small>' + esc(pt.desc) + '</small></span>' +
+                    '<span class="shb-pt-key">' + esc(pt.keys) + '</span>' +
+                  '</button>';
+                }).join('') +
+              '</div>' : '') +
             '</div>' +
-            '<label>Custom Config</label>' +
+            setLabel('save', 'Custom Config') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
               '<button type="button" class="shb-btn shb-btn-pri" data-st-export title="Export all your custom buttons, bars, labels & settings to a .json file">' + ico('save', 13) + '<span>Export Settings (.json)</span></button>' +
               '<button type="button" class="shb-btn shb-btn-pri" data-st-import title="Import custom buttons, bars & settings from a .json file">' + ico('loadCanvas', 13) + '<span>Import Settings (.json)</span></button>' +
@@ -7040,35 +7143,29 @@
           render();
         };
       });
-      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-editanim]'), function (b) {
+      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-cycle]'), function (b) {
         b.onclick = function () {
-          S.hbEditAnim = b.getAttribute('data-st-editanim');
+          var key = b.getAttribute('data-st-cycle');
+          var c = CYCLES[key];
+          S[key] = c.opts[(cycleCur(key) + 1) % c.opts.length];
           save();
-          if (HB.el) {
+          if (key === 'hbStyle' && HB.el) {
+            hbPaint();
+            hbAnimateOpen();
+          } else if (key === 'hbEditAnim' && HB.el) {
             if (!HB.editMode) hbSetEdit(true);
             else hbSyncEditAnim();
           }
           render();
         };
       });
-      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-hold]'), function (b) {
-        b.onclick = function () {
-          S.hbHold = b.getAttribute('data-st-hold') === '1';
-          save();
+      var ptBtn = wrap.querySelector('[data-st-ptmenu]');
+      if (ptBtn) {
+        ptBtn.onclick = function () {
+          ptOpen = !ptOpen;
           render();
         };
-      });
-      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-style]'), function (b) {
-        b.onclick = function () {
-          S.hbStyle = b.getAttribute('data-st-style');
-          save();
-          if (HB.el) {
-            hbPaint();
-            hbAnimateOpen();
-          }
-          render();
-        };
-      });
+      }
       var sc = wrap.querySelector('[data-st-scale]');
       var scVal = wrap.querySelector('[data-st-scale-val]');
       if (sc) {
