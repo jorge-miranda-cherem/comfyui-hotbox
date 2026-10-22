@@ -37,7 +37,7 @@
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
-    /* Power tools (each one can be switched off in Settings) */
+    /* Power tools: Settings lists them as buttons to drag into the hotbox; false here (in hotbox.json) turns one off */
     useAltZ: true,          /* Alt+Z Magnifier / Visual Crop / Paint Studio */
     useAltN: true,          /* Alt+N Label Studio */
     useAltR: true,          /* Alt+R + [V] Load in Canvas */
@@ -57,28 +57,36 @@
     customToolsBar: {},     /* per-bucket array of item uids for Tools Bar */
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
+    templates: [],          /* Merge to Button: saved node selections, each one a bar button ('tpl:<id>') */
+    cfgRev: 0,              /* config migrations already applied */
     lbLast: null
   };
 
   var S = {};
-  function loadConfig() {
-    var raw = null;
-    try {
-      raw = JSON.parse(localStorage.getItem(STORAGE_KEY)
-        || localStorage.getItem(LEGACY_STORAGE_KEY) || '{}');
-    } catch (e) { raw = {}; }
+  /* Fills S from a saved config (raw settings, or an exported / on-disk file that wraps them); defaults fill the rest */
+  function applyConfig(raw) {
+    if (raw && raw.settings && typeof raw.settings === 'object') raw = raw.settings;
     if (!raw || typeof raw !== 'object') raw = {};
     for (var k in DEFAULTS) {
       if (Object.prototype.hasOwnProperty.call(DEFAULTS, k)) {
         S[k] = (raw[k] !== undefined) ? raw[k] : JSON.parse(JSON.stringify(DEFAULTS[k]));
       }
     }
-    /* Migrate any legacy apibypass in customBotBar to normal node bypass */
-    if (Array.isArray(S.customBotBar)) {
+    var rev = +S.cfgRev || 0;
+    /* Migrate any legacy apibypass in customBotBar to normal node bypass (once: Bypass All APIs can be pinned now) */
+    if (rev < 1 && Array.isArray(S.customBotBar)) {
       S.customBotBar = S.customBotBar.map(function (u) {
         return u === 'tool:apibypass' ? 'tool:bypass' : u;
       });
     }
+    /* Swap Nodes and Merge to Button ride in the bottom bar (they only show while they apply) */
+    if (rev < 2 && Array.isArray(S.customBotBar)) {
+      ['tool:swappair', 'tool:magic'].forEach(function (u) {
+        if (S.customBotBar.indexOf(u) < 0) S.customBotBar.push(u);
+      });
+    }
+    S.cfgRev = 2;
+    if (!Array.isArray(S.templates)) S.templates = [];
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
       S.hbCode = 'Backquote';
@@ -86,8 +94,204 @@
     }
   }
 
+  function loadConfig() {
+    var raw = null;
+    try {
+      raw = JSON.parse(localStorage.getItem(STORAGE_KEY)
+        || localStorage.getItem(LEGACY_STORAGE_KEY) || '{}');
+    } catch (e) { raw = {}; }
+    applyConfig(raw);
+  }
+
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) {}
+    if (!CFG.ready) return;
+    if (CFG.timer) clearTimeout(CFG.timer);
+    CFG.state = 'saving';
+    CFG.timer = setTimeout(cfgWrite, 400);
+  }
+
+  /* ---------------------------------------------------------------------
+   * 1b. THE HOTBOX FILE: <ComfyUI>/user/<user>/hotbox/hotbox.json
+   * Every preference (moved buttons, bars, labels, templates, settings) is written there through
+   * ComfyUI's user-data API, so it follows the user to any browser and survives cache clears.
+   * localStorage keeps a copy for an instant start. Importing a file can replace it or add a
+   * version (hotbox_v2.json, ...); active.json remembers which one is in use.
+   * --------------------------------------------------------------------- */
+  var CFG_DIR = 'hotbox';
+  var CFG_NAME_RE = /^hotbox(?:_v(\d+))?\.json$/;
+  var CFG = { file: 'hotbox.json', ready: false, booted: false, timer: 0, state: 'local', err: '', savedAt: 0, versions: [], userDir: '', origin: 'browser' };
+  /* Set once this browser has read or written the file. A browser without it still carries its preferences
+     from before the file existed. */
+  var CFG_SYNCED_KEY = 'hotbox_cfg_synced';
+
+  function cfgMarkSynced() {
+    try { localStorage.setItem(CFG_SYNCED_KEY, '1'); } catch (e) {}
+  }
+
+  function cfgUrl(name) {
+    return '/userdata/' + encodeURIComponent(CFG_DIR + '/' + name);
+  }
+
+  /* `origin: 'defaults'` marks a file that a fresh browser started from scratch */
+  function cfgPayload() {
+    return { hotbox_version: 2, saved_at: new Date().toISOString(), origin: CFG.origin, settings: JSON.parse(JSON.stringify(S)) };
+  }
+
+  function cfgVerNum(name) {
+    var m = CFG_NAME_RE.exec(String(name || ''));
+    return m ? (+m[1] || 1) : 0;
+  }
+
+  function cfgRead(name) {
+    return apiFetch(cfgUrl(name), { cache: 'no-store' }).then(function (r) {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  function cfgPut(name, obj) {
+    return apiFetch(cfgUrl(name) + '?overwrite=true', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(obj, null, 2)
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    });
+  }
+
+  function cfgWrite() {
+    if (CFG.timer) { clearTimeout(CFG.timer); CFG.timer = 0; }
+    CFG.state = 'saving';
+    cfgShow();
+    return cfgPut(CFG.file, cfgPayload()).then(function () {
+      cfgMarkSynced();
+      CFG.state = 'saved';
+      CFG.err = '';
+      CFG.savedAt = Date.now();
+      if (CFG.versions.indexOf(CFG.file) < 0) CFG.versions.push(CFG.file);
+      cfgShow();
+    }).catch(function (err) {
+      CFG.state = 'error';
+      CFG.err = msgOf(err);
+      cfgShow();
+    });
+  }
+
+  /* Full path of the file on disk, as ComfyUI was started (falls back to the default layout) */
+  function cfgPath(name) {
+    var app = getApp();
+    var api = (app && app.api) || (window.comfyAPI && window.comfyAPI.api && window.comfyAPI.api.api);
+    var base = CFG.userDir || 'ComfyUI/user';
+    var sep = base.indexOf('\\') >= 0 ? '\\' : '/';
+    return base.replace(/[\\/]+$/, '') + sep + ((api && api.user) || 'default') + sep + CFG_DIR + sep + (name || CFG.file);
+  }
+
+  function cfgStateText() {
+    if (CFG.state === 'saving') return 'Saving…';
+    if (CFG.state === 'saved') return '✓ Saved ' + new Date(CFG.savedAt || Date.now()).toLocaleTimeString();
+    if (CFG.state === 'new') return 'Created with your first change';
+    if (CFG.state === 'error') return 'Could not write the file (' + CFG.err + ') · kept in this browser';
+    return 'Waiting for ComfyUI · kept in this browser';
+  }
+
+  function cfgShow() {
+    var el = document.querySelector('#' + PANEL_ID + '-settings [data-st-cfgstate]');
+    if (!el) return;
+    el.textContent = cfgStateText();
+    el.className = 'shb-cfg-state shb-cfg-' + CFG.state;
+  }
+
+  /* A config came in from the file (start-up, version switch, import): redraw whatever shows it */
+  function cfgApplied() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) {}
+    updateTopBarButtonState();
+    if (HB.el) hbPaint();
+    if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
+  }
+
+  function cfgListVersions() {
+    return apiFetch('/userdata?dir=' + encodeURIComponent(CFG_DIR)).then(function (r) {
+      return r.ok ? r.json() : [];
+    }).then(function (list) {
+      var names = (Array.isArray(list) ? list : []).map(function (f) {
+        return String((f && f.path) || f).split(/[\\/]/).pop();
+      }).filter(function (f) { return CFG_NAME_RE.test(f); });
+      if (CFG.state === 'saved' && names.indexOf(CFG.file) < 0) names.push(CFG.file);
+      CFG.versions = names.sort(function (a, b) { return cfgVerNum(a) - cfgVerNum(b); });
+      if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
+    }).catch(function () {});
+  }
+
+  function cfgNewVersionName() {
+    var n = 1;
+    CFG.versions.concat([CFG.file]).forEach(function (f) { n = Math.max(n, cfgVerNum(f)); });
+    return 'hotbox_v' + (n + 1) + '.json';
+  }
+
+  /* Switch to another saved version: the one in use is written first, so nothing is lost */
+  function cfgSwitch(name, onDone) {
+    var flush = CFG.timer ? cfgWrite() : Promise.resolve();
+    flush.then(function () { return cfgRead(name); }).then(function (raw) {
+      if (!raw) throw new Error(name + ' is missing');
+      applyConfig(raw);
+      CFG.origin = raw.origin || 'browser';
+      CFG.file = name;
+      CFG.state = 'saved';
+      CFG.savedAt = Date.parse(raw.saved_at) || Date.now();
+      cfgApplied();
+      setStatus('ok', 'Now using ' + name);
+      if (typeof onDone === 'function') onDone();
+      return cfgPut('active.json', { file: name });
+    }).catch(function (err) {
+      setStatus('error', 'Could not switch: ' + msgOf(err));
+    });
+  }
+
+  function cfgBoot() {
+    if (CFG.booted) return;
+    CFG.booted = true;
+    apiFetch('/system_stats').then(function (r) { return r.json(); }).then(function (st) {
+      var a = (st && st.system && st.system.argv) || [];
+      var ud = a.indexOf('--user-directory'), bd = a.indexOf('--base-directory');
+      if (ud >= 0 && a[ud + 1]) CFG.userDir = String(a[ud + 1]);
+      else if (bd >= 0 && a[bd + 1]) {
+        CFG.userDir = String(a[bd + 1]).replace(/[\\/]+$/, '') + (String(a[bd + 1]).indexOf('\\') >= 0 ? '\\' : '/') + 'user';
+      }
+    }).catch(function () {});
+    cfgRead('active.json').catch(function () { return null; }).then(function (act) {
+      if (act && CFG_NAME_RE.test(String(act.file || ''))) CFG.file = act.file;
+      return cfgRead(CFG.file);
+    }).then(function (raw) {
+      CFG.ready = true;
+      var local = null, synced = false;
+      try {
+        local = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+        synced = !!localStorage.getItem(CFG_SYNCED_KEY);
+      } catch (e) {}
+      if (raw && !(local && !synced && raw.origin === 'defaults')) {
+        applyConfig(raw);
+        CFG.origin = raw.origin || 'browser';
+        CFG.state = 'saved';
+        CFG.savedAt = Date.parse(raw.saved_at) || Date.now();
+        cfgMarkSynced();
+        cfgApplied();
+      } else if (local) {
+        /* This browser's preferences from before the file existed become the file. They also win over a
+           file that a fresh browser started from scratch, so moved buttons are never lost. */
+        CFG.origin = 'browser';
+        cfgWrite();
+      } else {
+        CFG.origin = 'defaults';
+        CFG.state = 'new';
+      }
+      cfgListVersions();
+    }).catch(function (err) {
+      CFG.state = 'error';
+      CFG.err = msgOf(err);
+      cfgShow();
+    });
   }
 
   function hbKeyRefused(key, code) {
@@ -251,7 +455,12 @@
     star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     pipette: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>',
     zapOff: '<path d="M10.5 4.9 13.1 2.2a.5.5 0 0 1 .9.5l-1.4 4.3"/><path d="M15.7 10H20a1 1 0 0 1 .8 1.6l-1.7 1.8"/><path d="M16.3 16.3 10.9 21.8a.5.5 0 0 1-.9-.5l1.9-6A1 1 0 0 0 11 14H4a1 1 0 0 1-.8-1.6l4.5-4.6"/><path d="m2 2 20 20"/>',
-    grip: '<circle cx="9" cy="6" r="1.2" fill="currentColor"/><circle cx="15" cy="6" r="1.2" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><circle cx="9" cy="18" r="1.2" fill="currentColor"/><circle cx="15" cy="18" r="1.2" fill="currentColor"/>'
+    grip: '<circle cx="9" cy="6" r="1.2" fill="currentColor"/><circle cx="15" cy="6" r="1.2" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><circle cx="9" cy="18" r="1.2" fill="currentColor"/><circle cx="15" cy="18" r="1.2" fill="currentColor"/>',
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    wand: '<path d="M21.6 3.6 20.4 2.4a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.3 1.3a1.2 1.2 0 0 0 1.7 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/>'
   };
 
   function ico(name, size) {
@@ -395,12 +604,22 @@
       '.shb-tip.shb-tip-on{opacity:1;transform:none}',
       /* Power tools rows in settings */
       '.shb-pt{display:flex;flex-direction:column;gap:2px;width:100%}',
-      '.shb-pt-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;border:0;background:transparent;cursor:pointer;text-align:left;width:100%;box-sizing:border-box;color:inherit}',
-      '.shb-pt-row:hover{background:#262626}',
-      '.shb-pt-sw{position:relative;width:28px;height:16px;border-radius:8px;background:#3a3a3a;flex-shrink:0;transition:background .12s}',
-      '.shb-pt-sw::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#bdbdbd;transition:transform .12s,background .12s}',
-      '.shb-pt-row.shb-on .shb-pt-sw{background:#2f86e0}',
-      '.shb-pt-row.shb-on .shb-pt-sw::after{transform:translateX(12px);background:#fff}',
+      '.shb-pt-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;border:1px solid transparent;background:transparent;cursor:grab;touch-action:none;user-select:none;text-align:left;width:100%;box-sizing:border-box;color:inherit}',
+      '.shb-pt-row:hover{background:#262626;border-color:#333}',
+      '.shb-pt-row:active{cursor:grabbing}',
+      '.shb-pt-grip{display:inline-grid;place-items:center;color:#5a5a5a;flex-shrink:0}',
+      '.shb-pt-row:hover .shb-pt-grip{color:#a0a0a0}',
+      '.shb-st-dragging .shb-modal{opacity:.14;pointer-events:none !important;transition:opacity 90ms ease}',
+      /* Where the preferences are saved */
+      '.shb-cfg{display:flex;flex-direction:column;gap:5px;min-width:0}',
+      '.shb-cfg-path{font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#cfd6e0;background:#161616;border:1px solid #333;border-radius:6px;padding:6px 8px;word-break:break-all;user-select:text;cursor:text}',
+      '.shb-cfg-row{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+      '.shb-cfg-state{font-size:11px;color:#8a8a8a}',
+      '.shb-cfg-saved{color:#7fbf8f}',
+      '.shb-cfg-error{color:#e8735f}',
+      '.shb-imp-b{width:100%;justify-content:flex-start;text-align:left;padding:10px 12px;gap:10px;white-space:normal;height:auto}',
+      '.shb-imp-b b{display:block;font-weight:600}',
+      '.shb-imp-b small{display:block;font-weight:400;font-size:11px;color:#9a9a9a;margin-top:3px;line-height:1.35}',
       '.shb-pt-name{flex:1;min-width:0;font:500 12.5px/1.25 Inter,system-ui,sans-serif;color:#e6e6e6}',
       '.shb-pt-name small{display:block;font:400 11px/1.35 Inter,system-ui,sans-serif;color:#8a8a8a;margin-top:1px}',
       '.shb-pt-key{font:500 10.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#9a9a9a;background:#262626;border:1px solid #3a3a3a;border-radius:4px;padding:3px 5px;flex-shrink:0}',
@@ -426,6 +645,25 @@
       '.shb-poof-chip{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap}',
       '.shb-leaders{position:fixed;left:0;top:0;pointer-events:none;z-index:1;overflow:visible}',
       '.shb-leaders line{stroke:rgba(255,255,255,.22);stroke-width:1;stroke-dasharray:1;stroke-dashoffset:0}',
+
+      /* Merge to Button: overlay, node ghosts, the flying pill and the template buttons */
+      '.shb-magic{position:fixed;inset:0;pointer-events:none;z-index:2147482600}',
+      '.shb-mg-fx{position:absolute;inset:0;pointer-events:none}',
+      '.shb-mg-ghost{position:absolute;pointer-events:none;transform-origin:50% 50%;will-change:transform,opacity,filter}',
+      '.shb-mg-card{border-radius:8px;background:#2b2b2e;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden;box-sizing:border-box}',
+      '.shb-mg-card-t{padding:0 10px;display:flex;align-items:center;background:#36363a;color:#e8e8ec;font-weight:600;font-family:Inter,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-mg-sel{position:absolute;border:1.5px dashed rgba(170,190,255,.8);border-radius:16px;background:rgba(110,140,255,.07);box-sizing:border-box}',
+      '.shb-mg-fly{position:absolute;left:0;top:0;opacity:0;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;box-sizing:border-box;padding:8px 12px;border-radius:17px;background:rgba(48,48,54,.92);border:1px solid rgba(255,255,255,.16);box-shadow:0 14px 34px rgba(0,0,0,.5);color:#fff;font:500 13px/1 Inter,system-ui,sans-serif}',
+      '.shb-mg-flyc{display:inline-flex;align-items:center;gap:7px}',
+      '.shb-magic.shb-quiet .shb-mg-fly{border-radius:6px;padding:7px 10px;background:#262626;border-color:#3a3a3a;font-size:12.5px;color:#e6e6e6}',
+      '.shb-mg-slot{display:inline-flex;flex:none;max-width:0;overflow:hidden;padding:4px 0;margin:-4px 0}',
+      '.shb-tpl-ico{display:inline-grid;place-items:center}',
+      '.shb-tpl-ico .shb-ico{color:oklch(0.82 0.11 300) !important}',
+      '.shb-tpl-n{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:rgba(190,170,255,.18);color:#dcd2ff;font:600 10px/1 Inter,system-ui,sans-serif}',
+      '.shb-quiet .shb-tpl-n{background:none;color:#a99be0;font-family:var(--shb-mono)}',
+      '.shb-tpl-del{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;opacity:.45;cursor:pointer}',
+      '.shb-tpl-del:hover{opacity:1;background:rgba(232,115,95,.18)}',
+      '.shb-tpl-del.shb-armed{opacity:1;background:rgba(232,115,95,.32);color:#ffb3a6}',
 
       /* Drawer for Categories / Search / Models */
       '.shb-drawer{display:flex;flex-direction:column;gap:6px;width:320px;max-height:420px;overflow:hidden;box-sizing:border-box}',
@@ -1046,7 +1284,10 @@
 
   function hbBucket(node) {
     if (!node) return 'empty';
-    return ndKind(node) || 'other';
+    var k = ndKind(node) || 'other';
+    /* image and video generators keep separate bars: a video model's first tool is Save Video, not Crop */
+    if ((k === 'api' || k === 'gen' || k === 'other') && genOut(node) === 'video') return k + '-video';
+    return k;
   }
 
   function hbPinList(node) {
@@ -1292,8 +1533,9 @@
   function swapMates(node, kind) {
     var want = kind || genOut(node);
     var cur = node ? String(node.type || node.comfyClass || '') : '';
+    /* a video model swaps to video models, an image model to image ones (their outputs differ) */
     return (SRV.models || []).filter(function (m) {
-      return m.type !== cur && (!want || m.kind === want || m.api);
+      return m.type !== cur && (!want || m.kind === want);
     });
   }
 
@@ -1379,7 +1621,7 @@
     return null;
   }
 
-  function createNodeOrSubgraph(type, pos) {
+  function createNodeOrSubgraph(type, pos, keepPos) {
     var g = getGraph();
     var LG = litegraph();
     if (!g || !LG || !LG.createNode) return null;
@@ -1395,33 +1637,49 @@
     if (!made) return null;
     made.pos = [Math.round(pos[0]), Math.round(pos[1])];
     g.add(made);
-    hbAvoidOverlap(g, made);
+    /* a swap keeps the exact spot of the node it replaces */
+    if (!keepPos) hbAvoidOverlap(g, made);
     hbWiggleNode(made);
     return made;
   }
 
-  /* A new node never lands on top of another one: it slides down, past whatever it would cover,
-     until its spot (title bar included, plus a small gap) is free */
-  function hbAvoidOverlap(graph, made) {
-    if (!graph || !made || !made.pos) return;
+  /* A new node (or a dropped block of nodes) never lands on top of another one: it slides down, past
+     whatever it would cover, until its spot (title bars included, plus a small gap) is free */
+  function hbTitledBox(n) {
     var LG = litegraph();
-    var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30, GAP = 30;
-    function box(n) {
-      var b = visBox(n);
-      return { x: b.x, y: b.y - TH, w: b.w, h: b.h + TH };
-    }
-    var others = allNodes(graph).filter(function (n) { return n !== made && n.pos; }).map(box);
-    var me = box(made), y0 = me.y;
+    var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30;
+    var b = visBox(n);
+    return { x: b.x, y: b.y - TH, w: b.w, h: b.h + TH };
+  }
+
+  /* How far down the box `me` (graph units, title included) must slide to cover no node outside `skip` */
+  function hbFreeDy(graph, me, skip) {
+    var GAP = 30;
+    var others = allNodes(graph).filter(function (n) { return skip.indexOf(n) < 0 && n.pos; }).map(hbTitledBox);
+    var y = me.y;
     for (var i = 0; i < 80; i++) {
       var hit = null;
       for (var k = 0; k < others.length && !hit; k++) {
         var o = others[k];
-        if (me.x < o.x + o.w + GAP && me.x + me.w + GAP > o.x && me.y < o.y + o.h + GAP && me.y + me.h + GAP > o.y) hit = o;
+        if (me.x < o.x + o.w + GAP && me.x + me.w + GAP > o.x && y < o.y + o.h + GAP && y + me.h + GAP > o.y) hit = o;
       }
       if (!hit) break;
-      me.y = hit.y + hit.h + GAP;
+      y = hit.y + hit.h + GAP;
     }
-    if (me.y !== y0) nodeMoveTo(made, made.pos[0], made.pos[1] + (me.y - y0));
+    return y - me.y;
+  }
+
+  function hbAvoidOverlap(graph, made) {
+    var list = (Array.isArray(made) ? made : [made]).filter(function (n) { return n && n.pos; });
+    if (!graph || !list.length) return;
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    list.forEach(function (n) {
+      var b = hbTitledBox(n);
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+      x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    });
+    var dy = hbFreeDy(graph, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, list);
+    if (dy) list.forEach(function (n) { nodeMoveTo(n, n.pos[0], n.pos[1] + dy); });
   }
 
   /* Connect all compatible slots between srcNode and dstNode (multi-slot aware, e.g. MODEL + CLIP) */
@@ -1568,7 +1826,7 @@
     var g = getGraph(), c = getCanvas();
     if (!g || !node) return null;
     var pos = node.pos ? [node.pos[0], node.pos[1]] : [200, 200];
-    var made = createNodeOrSubgraph(type, pos);
+    var made = createNodeOrSubgraph(type, pos, true);
     if (!made) {
       setStatus('error', 'Could not create node: ' + type);
       return null;
@@ -1632,6 +1890,73 @@
     setStatus('ok', '⇄ Swapped to ' + (made.title || made.type)
       + (carried ? ' (' + carried + ' settings carried)' : ''));
     return made;
+  }
+
+  /* Swap Nodes: two selected nodes trade places and wires (Nuke's Ctrl+Shift drag). Each slot goes to the
+     other node's slot with the same name, else the first free one of a fitting type, so two different
+     models of one kind swap cleanly too. Wired or not, they always trade places. */
+  function actSwapPair() {
+    var g = getGraph();
+    var sel = selNodes();
+    if (!g || sel.length !== 2) {
+      setStatus('error', 'Select exactly two nodes to swap them');
+      return;
+    }
+    var a = sel[0], b = sel[1];
+    function twin(n) { return n === a ? b : (n === b ? a : n); }
+    function fits(x, y) { return typeFits(x, y) || typeFits(y, x); }
+    function slotMap(from, to, key) {
+      var src = from[key] || [], dst = to[key] || [], map = {}, used = {};
+      src.forEach(function (sl, i) {
+        if (!sl) return;
+        var hit = -1;
+        dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && d.name === sl.name && fits(sl.type, d.type)) hit = j; });
+        dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && fits(sl.type, d.type)) hit = j; });
+        if (hit >= 0) { map[i] = hit; used[hit] = 1; }
+      });
+      return map;
+    }
+    var maps = { ia: slotMap(a, b, 'inputs'), ib: slotMap(b, a, 'inputs'), oa: slotMap(a, b, 'outputs'), ob: slotMap(b, a, 'outputs') };
+    function mapSlot(n, kind, i) {
+      if (n === a) return kind === 'in' ? maps.ia[i] : maps.oa[i];
+      if (n === b) return kind === 'in' ? maps.ib[i] : maps.ob[i];
+      return i;
+    }
+    /* every wire that touches either node, read before anything changes */
+    var wires = [];
+    [a, b].forEach(function (n) {
+      (n.inputs || []).forEach(function (inp, i) {
+        var l = (inp && inp.link != null) ? linkById(g, inp.link) : null;
+        var o = l && g.getNodeById(l.origin_id);
+        if (o) wires.push({ o: o, os: l.origin_slot, t: n, ts: i });
+      });
+      (n.outputs || []).forEach(function (out, j) {
+        ((out && out.links) || []).slice().forEach(function (lid) {
+          var l = linkById(g, lid);
+          var t = l && g.getNodeById(l.target_id);
+          if (t && t !== a && t !== b) wires.push({ o: n, os: j, t: t, ts: l.target_slot });
+        });
+      });
+    });
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    wires.forEach(function (w) { try { w.t.disconnectInput(w.ts); } catch (e) {} });
+    var pa = [a.pos[0], a.pos[1]], pb = [b.pos[0], b.pos[1]];
+    nodeMoveTo(a, pb[0], pb[1]);
+    nodeMoveTo(b, pa[0], pa[1]);
+    var lost = 0;
+    wires.forEach(function (w) {
+      var os = mapSlot(w.o, 'out', w.os), ts = mapSlot(w.t, 'in', w.ts), ok = null;
+      if (os != null && ts != null) {
+        try { ok = twin(w.o).connect(os, twin(w.t), ts); } catch (e) { ok = null; }
+      }
+      if (!ok) lost++;
+    });
+    try { if (g.afterChange) g.afterChange(); } catch (e) {}
+    hbWiggleNode(a);
+    hbWiggleNode(b);
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    setStatus(lost ? 'error' : 'ok', '⇄ Swapped ' + (a.title || a.type) + ' ↔ ' + (b.title || b.type)
+      + (lost ? ' · ' + lost + (lost === 1 ? ' wire had' : ' wires had') + ' no matching slot' : ''));
   }
 
   function hbCreate(type, node) {
@@ -4088,6 +4413,8 @@
       stitch:     { id: 'stitch',     icon: 'stitch',     label: 'Super Stitch',   kbd: '',  fn: function () { actStitch(node); } },
       stitchupd:  { id: 'stitchupd',  icon: 'sync',       label: 'Update Stitch',  kbd: '',  fn: function () { actStitchUpdate(node); } },
       stitchswap: { id: 'stitchswap', icon: 'swap',       label: 'Swap FG / BG',   kbd: '',  fn: function () { actStitchSwap(node); } },
+      swappair:   { id: 'swappair',   icon: 'swap',       label: 'Swap Nodes',     kbd: 'W', fn: function () { actSwapPair(); } },
+      magic:      { id: 'magic',      icon: 'wand',       label: 'Merge to Button', kbd: 'X', stayOpen: true, fn: function () { actMagic(node); } },
       seedtoggle: {
         id: 'seedtoggle',
         icon: 'seed',
@@ -4205,9 +4532,8 @@
         ids.push('cmp', 'saveimg');
       }
       if (hasVid) {
-        ids.push('gvc');
+        ids.push('savevid', 'gvc');
         if (batchType()) ids.push('batch');
-        ids.push('savevid');
       }
       if (hasImg && (canMake(CREATE_VIDEO_TYPE) || hasType(CREATE_VIDEO_TYPE))) {
         ids.push('mkvid');
@@ -4223,8 +4549,9 @@
     }).map(function (id) { return mt[id]; }).filter(Boolean);
   }
 
-  /* Resolve any bar item uid ('model:...', 'node:...', 'tool:...') into a unified renderable & executable item */
-  function resolveBarItem(uid, node) {
+  /* Resolve any bar item uid ('model:...', 'node:...', 'tool:...', 'tpl:...') into a unified renderable & executable
+     item. `loose` (a power tool dragged in from Settings) skips the "only where it applies" filter. */
+  function resolveBarItem(uid, node, loose) {
     if (!uid) return null;
     var u = String(uid);
     var customLbl = (S.customLabels && S.customLabels[u]) || '';
@@ -4237,7 +4564,7 @@
       /* A power tool switched off in Settings is gone everywhere */
       if (!hbToolOn(tid)) return null;
       /* Hide node-specific tools on empty canvas (unless in edit mode) to prevent bottom bar clutter */
-      if (!HB.editMode) {
+      if (!HB.editMode && !loose) {
         if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
           return null;
         }
@@ -4251,6 +4578,17 @@
           return null;
         }
         if (hbToolIsSelf(tid, node)) {
+          return null;
+        }
+        if (tid === 'swappair' && sel.length !== 2) {
+          return null;
+        }
+        if (tid === 'magic' && !sel.length && !node) {
+          return null;
+        }
+        if (tid === 'apibypass' && !allNodes(getGraph()).some(function (n) {
+          return !!(SRV.api && SRV.api[String(n.type || n.comfyClass || '')]);
+        })) {
           return null;
         }
       }
@@ -4268,6 +4606,24 @@
         cls: t.cls || '',
         stayOpen: !!t.stayOpen,
         run: t.fn
+      };
+    }
+
+    if (u.indexOf('tpl:') === 0) {
+      var tpl = tplById(u.slice(4));
+      if (!tpl) return null;
+      return {
+        uid: u,
+        kind: 'template',
+        id: tpl.id,
+        label: customLbl || tpl.name,
+        title: 'Drop ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ': ' + tpl.name + ' · click, or drag it onto the canvas',
+        icon: 'sparkles',
+        kbd: '',
+        cls: '',
+        count: tpl.count,
+        stayOpen: true,
+        run: function () { tplRunFromBar(u, tpl); }
       };
     }
 
@@ -4502,20 +4858,15 @@
       return (isCropNode(node) ? ctx : ctx.slice(0, 6)).map(function (t) { return 'tool:' + t.id; });
     }
     if (barName === 'bot') {
-      var out = [];
-      if (hbHasImage(node)) out.push('tool:loadcanvas');
-      if (node && (imageOutSlot(node) >= 0 || isPreviewNode(node))) out.push('tool:prev');
-      if (node && seedControls(node).length) out.push('tool:seedtoggle');
-      if (node) out.push('tool:bypass');
-      out.push('tool:zoom');
-      var hasApi = allNodes(getGraph()).some(function (n) {
-        return !!(SRV.api && SRV.api[String(n.type || n.comfyClass || '')]);
-      });
-      if (hasApi) out.push('tool:apibypass');
+      /* Every action is listed and each one shows only where it applies (resolveBarItem), so the first
+         customization, wherever it happens, keeps them all */
+      var out = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
+        'tool:swappair', 'tool:magic'];
       hbPinList(node).forEach(function (t) {
         var u = 'node:' + t;
         if (out.indexOf(u) < 0) out.push(u);
       });
+      (S.templates || []).forEach(function (t) { out.push('tpl:' + t.id); });
       return out;
     }
     return [];
@@ -4618,18 +4969,22 @@
 
   function renderBarItemHTML(item, barName, numKey) {
     var kbdStr = numKey ? String(numKey) : (item.kbd || '');
-    var isPin = barName === 'bot' && item.kind !== 'tool';
-    var btnCls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (isPin ? 'shb-pin' : (barName === 'bot' ? 'shb-act' : 'shb-tool')));
+    var isTpl = item.kind === 'template';
+    var isPin = (barName === 'bot' && item.kind !== 'tool') || isTpl;
+    var btnCls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (isPin ? 'shb-pin' : (barName === 'bot' ? 'shb-act' : 'shb-tool'))) + (isTpl ? ' shb-tpl' : '');
     if (barName === 'tools' && /^(cropedit|paintedit|lupa)$/.test(item.id)) btnCls += ' shb-btn-primary';
     if (item.id === 'apibypass') btnCls += ' shb-danger';
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
-      : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13));
-    var hint = isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove';
+      : (isTpl ? '<span class="shb-tpl-ico">' + ico('sparkles', hbIsFluid() ? 15 : 13) + '</span>'
+        : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13)));
+    var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
+      : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
     return '<span class="shb-item-wrap" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '">' +
       '<button type="button" class="' + btnCls + '" data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title + ' (' + hint + ')') + '">' +
         lead +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
+        (isTpl ? '<span class="shb-tpl-n">' + esc(item.count) + '</span>' : '') +
         (!numKey && !isPin && kbdStr ? '<span class="shb-key">' + esc(kbdStr) + '</span>' : '') +
         '<span class="shb-x" data-hb-rm="' + esc(item.uid) + '" data-hb-rmbar="' + esc(barName) + '" title="Remove">×</span>' +
       '</button>' +
@@ -4662,13 +5017,27 @@
       var allToolIds = [
         'crop', 'stitch', 'stitchupd', 'rsz', 'flip', 'paint', 'cmp', 'saveimg', 'prev', 'loadcanvas',
         'gvc', 'batch', 'mkvid', 'savevid', 'wf', 'seed', 'lupa', 'label',
-        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'apibypass', 'zoom', 'seedtoggle'
+        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'swappair', 'magic', 'apibypass', 'zoom', 'seedtoggle'
       ];
       var allToolsList = allToolIds.filter(hbToolOn).map(function (id) { return mt[id]; }).filter(Boolean);
       var filteredTools = allToolsList.filter(function (t) {
         return !q || t.label.toLowerCase().indexOf(q) >= 0 || t.id.toLowerCase().indexOf(q) >= 0;
       });
       var resizeList = resizeKinds();
+      var tplRows = (S.templates || []).filter(function (tp) {
+        return !q || String(tp.name || '').toLowerCase().indexOf(q) >= 0;
+      }).map(function (tp) {
+        var uid = 'tpl:' + tp.id;
+        var inBar = allPinned.indexOf(uid) >= 0;
+        return '<button type="button" class="shb-btn shb-btn-row shb-tpl" data-hb-run="' + esc(uid) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to drop the nodes" style="cursor:grab">' +
+          '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0"><span class="shb-tpl-ico">' + ico('sparkles') + '</span>' +
+            '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(tp.name) + '</span><span class="shb-tpl-n">' + esc(tp.count) + '</span></span>' +
+          '<span style="display:inline-flex;align-items:center;gap:4px">' +
+            (inBar ? '<span class="shb-inbar">✓</span>' : '') +
+            '<span class="shb-tpl-del" data-hb-tpldel="' + esc(tp.id) + '" title="Delete this template for good">' + ico('trash', 13) + '</span>' +
+          '</span>' +
+        '</button>';
+      }).join('');
       return '<div class="shb-drawer">' +
         '<div class="shb-card-hd"><span>Tools & Actions</span><span>' + filteredTools.length + '</span></div>' +
         drawerTabsHTML +
@@ -4685,6 +5054,7 @@
               '</span>' +
             '</button>';
           }).join('') +
+          (tplRows ? '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">Your Templates</div>' + tplRows : '') +
           (resizeList.length > 1 ? '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">Resizer Nodes</div>' +
             resizeList.map(function (r) {
               var rUid = 'node:' + r.type;
@@ -5192,6 +5562,8 @@
       if (hbToolOn('apibypass')) HB.keyMap['k'] = function () { hbClose(); actBypassApi(); };
       if (hbToolOn('lupa')) HB.keyMap['z'] = function () { hbClose(); actAltZ(node); };
       if (hbToolOn('zoom')) HB.keyMap['.'] = function () { hbClose(); actDotZoom(node); };
+      if (sel.length === 2) HB.keyMap['w'] = function () { hbClose(); actSwapPair(); };
+      if (sel.length || node) HB.keyMap['x'] = function () { actMagic(node); };
       if (toolItems[0] && toolItems[0].run) {
         HB.keyMap['c'] = function () {
           if (!toolItems[0].stayOpen) hbClose();
@@ -5573,7 +5945,8 @@
   }
 
   function hbUpdateBounds() {
-    var r = HB.node ? hbNodeRect(HB.node) : null;
+    /* after Merge to Button the node is gone, but the hotbox stays where it was (keepRect) */
+    var r = HB.node ? hbNodeRect(HB.node) : (HB.keepRect || null);
     var Z = parseFloat(S.hbScale) || 1;
     var gapBase = (S.hbGap !== undefined && S.hbGap !== null) ? Number(S.hbGap) : 28;
     var GAP = Math.round(gapBase * Z);
@@ -5877,6 +6250,7 @@
 
   function clearDrawerDrag() {
     if (!DRAWER_DRAG) return;
+    if (DRAWER_DRAG.st) DRAWER_DRAG.st.classList.remove('shb-st-dragging');
     if (DRAWER_DRAG.wrap && DRAWER_DRAG.wrap.parentNode) {
       DRAWER_DRAG.wrap.parentNode.removeChild(DRAWER_DRAG.wrap);
     }
@@ -5962,9 +6336,14 @@
       var ddist = Math.hypot(e.clientX - DRAWER_DRAG.x0, e.clientY - DRAWER_DRAG.y0);
       if (!DRAWER_DRAG.active) {
         if (ddist < 6) return;
-        var dItem = resolveBarItem(DRAWER_DRAG.uid, HB.node);
+        var dItem = resolveBarItem(DRAWER_DRAG.uid, HB.node, DRAWER_DRAG.loose);
         if (!dItem) { clearDrawerDrag(); return; }
         DRAWER_DRAG.active = true;
+        /* dragged in from Settings: the panel turns see-through so every bar is a target */
+        if (DRAWER_DRAG.st) {
+          tipHide();
+          DRAWER_DRAG.st.classList.add('shb-st-dragging');
+        }
         DRAWER_DRAG.item = dItem;
         var tmp = document.createElement('div');
         tmp.innerHTML = renderBarItemHTML(dItem, 'add', 0);
@@ -6045,11 +6424,15 @@
 
     var dragWrap = LP_DRAG.wrap;
     var out = distToNearestBar(HB.el, e.clientX, e.clientY) > 34 && !hbOverPlus(e.clientX, e.clientY, 16);
+    /* a template dragged onto the canvas drops its nodes there (edit mode still removes it) */
+    var drop = /^tpl:/.test(dragWrap.getAttribute('data-hb-uid') || '') && !HB.editMode;
     if (out !== !!LP_DRAG.outside) {
       LP_DRAG.outside = out;
-      dragWrap.classList.toggle('shb-collapsed', out);
+      if (!drop) dragWrap.classList.toggle('shb-collapsed', out);
     }
-    ghostMove(e.clientX, e.clientY, out ? 'Release to remove' : 'Drag out to remove', out ? 'rm' : '');
+    ghostMove(e.clientX, e.clientY,
+      drop ? (out ? 'Release to drop the nodes here' : 'Drag onto the canvas') : (out ? 'Release to remove' : 'Drag out to remove'),
+      out ? (drop ? 'over' : 'rm') : '');
     if (out) return;
 
     var under = null;
@@ -6079,6 +6462,7 @@
       var dd = DRAWER_DRAG;
       DRAWER_DRAG = null;
       ghostHide();
+      if (dd.st) dd.st.classList.remove('shb-st-dragging');
       if (dd.active && HB.el) {
         HB.suppressClickUntil = Date.now() + 260;
         HB.el.classList.remove('shb-dropping');
@@ -6089,7 +6473,9 @@
           commitDomBarsOrder(HB.el, HB.node);
           hbPaint();
           hbFlashUid(dd.uid);
-          setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"');
+          /* a power tool pinned where it does not apply waits, hidden, for the nodes it works on */
+          var shown = !!HB.el.querySelector('[data-hb-bar] > .shb-item-wrap[data-hb-uid="' + cssEsc(dd.uid) + '"]');
+          setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"' + (shown ? '' : ' · it shows up on the nodes it works on'));
         } else if (dw && dw.parentNode) {
           dw.parentNode.removeChild(dw);
         }
@@ -6136,6 +6522,13 @@
     var uid = w.getAttribute('data-hb-uid');
     var lbl = w.querySelector('.shb-lbl');
     var name = lbl ? lbl.textContent : uid;
+    if (lp.outside && /^tpl:/.test(uid) && !HB.editMode) {
+      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      var dropTpl = tplById(uid.slice(4));
+      hbClose();
+      tplRun(dropTpl, { x: e.clientX, y: e.clientY }, { x: e.clientX, y: e.clientY });
+      return;
+    }
     if (lp.outside) {
       if (w.parentNode) w.parentNode.removeChild(w);
       hbPoof(e.clientX, e.clientY, name);
@@ -6165,7 +6558,7 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
-    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
+    HB.el = null; HB.node = null; HB.rect = null; HB.keepRect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
     if (old) {
       old.removeAttribute('id');
       hbAnimateClose(old, cx, cy);
@@ -6279,7 +6672,7 @@
         return;
       }
 
-      if (t.closest('[data-hb-rm]') || t.closest('[data-hb-ren]')) return;
+      if (t.closest('[data-hb-rm]') || t.closest('[data-hb-ren]') || t.closest('[data-hb-tpldel]')) return;
 
       /* Drag item from Drawer into any Bar */
       var drwItem = t.closest('[data-drawer-uid]');
@@ -6306,7 +6699,7 @@
         y0: e.clientY,
         active: false,
         fired: false,
-        isPin: wrap.getAttribute('data-hb-bar') === 'bot' && wUid.indexOf('tool:') !== 0,
+        isPin: (wrap.getAttribute('data-hb-bar') === 'bot' && wUid.indexOf('tool:') !== 0) || wUid.indexOf('tpl:') === 0,
         timer: HB.editMode ? 0 : setTimeout(function () {
           if (!LP_DRAG || LP_DRAG.wrap !== wrap || !HB.el) return;
           LP_DRAG.timer = 0;
@@ -6384,6 +6777,21 @@
           var numIn = rowEl && rowEl.querySelector('.shb-ps-num');
           if (numIn) numIn.value = formatSliderVal(info, v);
         }
+        return;
+      }
+
+      var tDel = t.closest('[data-hb-tpldel]');
+      if (tDel) {
+        e.stopPropagation();
+        /* deleting a template is for good, so it takes a second click */
+        if (!tDel.classList.contains('shb-armed')) {
+          tDel.classList.add('shb-armed');
+          tDel.title = 'Click again to delete';
+          setStatus('error', 'Click the trash again to delete this template for good');
+          return;
+        }
+        tplDelete(tDel.getAttribute('data-hb-tpldel'));
+        hbPaint();
         return;
       }
 
@@ -6689,6 +7097,563 @@
   }, true);
 
   /* ---------------------------------------------------------------------
+   * 14b. MERGE TO BUTTON: the selection becomes one bar button that drops it back
+   * Templates are saved in the Hotbox file with everything else. The motion comes from the design
+   * handoff (Web Animations only): Fluid = gravity merge, Compact = shrinkwrap, Quiet = clean dissolve.
+   * LiteGraph draws nodes on a <canvas>, so the animation moves ghosts: a clone of each Vue node, or a
+   * snapshot of the canvas under a classic one.
+   * --------------------------------------------------------------------- */
+  var MG_SNAP = 'cubic-bezier(.2,.9,.1,1)';
+  var MG_LAV = 'oklch(0.8 0.12 300 / .8)';
+  var MG_PRESS = [{ transform: 'scale(1)' }, { transform: 'scale(.9)', offset: 0.35 }, { transform: 'scale(1.06)', offset: 0.7 }, { transform: 'scale(1)' }];
+  var MG_WIGGLE = [
+    { transform: 'rotate(0) scale(.96)' },
+    { transform: 'rotate(-2.2deg) scale(1.02)', offset: 0.3 },
+    { transform: 'rotate(1.3deg)', offset: 0.6 },
+    { transform: 'rotate(-.55deg)', offset: 0.85 },
+    { transform: 'rotate(0) scale(1)' }
+  ];
+  var MG_BUSY = false;
+
+  function mgTR(p, sx, sy, r) {
+    if (sx == null) sx = 1;
+    if (sy == null) sy = sx;
+    return 'translate(' + p.x + 'px,' + p.y + 'px) translate(-50%,-50%) rotate(' + (r || 0) + 'deg) scale(' + sx + ',' + sy + ')';
+  }
+
+  function mgCtr(r) { return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
+
+  function mgKit(ctx, opts) {
+    var pace = opts.pace == null ? 1 : opts.pace, delay = opts.delay || 0, anims = [], made = [];
+    var rr = ctx.root.getBoundingClientRect();
+    var sc = (rr.width / (ctx.root.offsetWidth || rr.width)) || 1;
+    var K = {};
+    K.rel = function (el) {
+      var r = el.getBoundingClientRect();
+      return { x: (r.left - rr.left) / sc, y: (r.top - rr.top) / sc, w: r.width / sc, h: r.height / sc };
+    };
+    K.A = function (el, kf, dur, dl, easing, fill) {
+      if (!el || !el.animate) return null;
+      var a = el.animate(kf, { duration: dur * pace, delay: (delay + (dl || 0)) * pace, easing: easing || 'linear', fill: fill || 'both' });
+      anims.push(a);
+      return a;
+    };
+    K.fx = function (css) {
+      var el = document.createElement('div');
+      el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;opacity:0;' + css;
+      ctx.fx.appendChild(el);
+      made.push(el);
+      return el;
+    };
+    K.fade = function (el, dur, dl) { return K.A(el, [{ opacity: 1 }, { opacity: 0 }], dur, dl, 'ease-out', 'forwards'); };
+    K.burst = function (p, n, dl, rad, up) {
+      for (var i = 0; i < n; i++) {
+        var a = (up ? Math.PI : 0) + (up ? Math.PI : Math.PI * 2) * (i + 0.5) / n;
+        var dx = Math.cos(a) * rad, dy = Math.sin(a) * rad * (up ? 1 : 0.8);
+        var el = K.fx('left:' + (p.x - 2) + 'px;top:' + (p.y - 2) + 'px;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 6px 2px ' + MG_LAV);
+        K.A(el, [
+          { transform: 'translate(0,0) scale(1)', opacity: 0 },
+          { transform: 'translate(' + dx * 0.4 + 'px,' + dy * 0.4 + 'px) scale(1.2)', opacity: 1, offset: 0.2 },
+          { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0)', opacity: 0 }
+        ], 440, dl + i * 8, 'cubic-bezier(.2,.8,.3,1)');
+      }
+    };
+    K.handle = function (total) {
+      var ms = (delay + total) * pace;
+      return {
+        duration: ms,
+        finished: new Promise(function (res) { setTimeout(res, ms); }),
+        cancel: function () {
+          anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+          made.forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+        }
+      };
+    };
+    return K;
+  }
+
+  function mgMeasure(ctx, K) {
+    var NR = ctx.nodes.map(K.rel);
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    NR.forEach(function (r) {
+      x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y);
+      x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h);
+    });
+    var sr = K.rel(ctx.slot);
+    /* the bottom bar is centered, so it grows both ways: the slot's left edge is the new button's final center */
+    return {
+      NR: NR,
+      G: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 },
+      S: { x: sr.x, y: sr.y + sr.h / 2 },
+      sr: sr,
+      cw: ctx.chip.offsetWidth + 2,
+      fw: ctx.fly.offsetWidth,
+      fh: ctx.fly.offsetHeight
+    };
+  }
+
+  function mgOpenSlot(ctx, K, cw, dl, dur) {
+    return K.A(ctx.slot, [{ maxWidth: '0px' }, { maxWidth: cw + 'px' }], dur, dl, MG_SNAP);
+  }
+
+  function mgArc(K, el, p0, p1, dur, dl, lift) {
+    var c = { x: p0.x + (p1.x - p0.x) * 0.15 - 40 * Math.sign((p1.x - p0.x) || 1), y: Math.min(p0.y, p1.y) - lift };
+    var kf = [];
+    for (var i = 0; i <= 12; i++) {
+      var t = i / 12, k = Math.sin(Math.PI * t);
+      var pt = {
+        x: (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p1.x,
+        y: (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p1.y
+      };
+      kf.push({ transform: mgTR(pt, 1 + 0.06 * k, 1 + 0.06 * k, -4 * k) });
+    }
+    K.A(el, kf, dur, dl, 'cubic-bezier(.5,0,.2,1)', 'forwards');
+  }
+
+  function mgLand(ctx, K, dl) {
+    K.A(ctx.fly, [{ opacity: 1 }, { opacity: 0 }], 70, dl, 'linear', 'forwards');
+    K.A(ctx.chip, [{ opacity: 0 }, { opacity: 1 }], 70, dl);
+    K.A(ctx.chip, MG_WIGGLE, 280, dl + 30, 'ease-out', 'none');
+  }
+
+  /* 4b clean (Quiet): the nodes drift toward the center while dissolving, a soft bloom, then the pill swoops into the bar */
+  function mgClean(ctx, K, m) {
+    var G = m.G;
+    K.fade(ctx.selection, 110, 30);
+    ctx.nodes.forEach(function (n, i) {
+      var c = mgCtr(m.NR[i]), dx = (G.x - c.x) * 0.35, dy = (G.y - c.y) * 0.35;
+      K.A(n, [
+        { transform: 'none', filter: 'blur(0px) brightness(1)', opacity: 1 },
+        { transform: 'scale(1.03)', filter: 'blur(0px) brightness(1.35)', opacity: 1, offset: 0.25 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.9)', filter: 'blur(10px) brightness(1.6)', opacity: 0 }
+      ], 240, 40 + i * 30, 'cubic-bezier(.4,0,.7,.2)', 'forwards');
+    });
+    var bloom = K.fx('left:' + (G.x - 60) + 'px;top:' + (G.y - 60) + 'px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(235,230,255,.35) 0%,rgba(200,190,255,.12) 40%,rgba(200,190,255,0) 70%)');
+    K.A(bloom, [{ transform: 'scale(.3)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.4 }, { transform: 'scale(1.4)', opacity: 0 }], 320, 200, 'ease-out');
+    K.A(ctx.fly, [{ transform: mgTR(G, 0.2), opacity: 0 }, { transform: mgTR(G, 1.12), opacity: 1, offset: 0.6 }, { transform: mgTR(G, 1), opacity: 1 }], 200, 260, MG_SNAP);
+    K.burst(G, 8, 280, 48);
+    mgArc(K, ctx.fly, G, m.S, 300, 470, 60);
+    mgOpenSlot(ctx, K, m.cw, 590, 120);
+    mgLand(ctx, K, 760);
+    return 1000;
+  }
+
+  /* 4c shrinkwrap (Compact): the dashed selection box shrinks into the button's footprint */
+  function mgShrinkwrap(ctx, K, m) {
+    ctx.nodes.forEach(function (n, i) {
+      K.A(n, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.97)' }], 160, 40 + i * 25, 'ease-out', 'forwards');
+    });
+    var s0 = K.rel(ctx.selection);
+    K.A(ctx.selection, [
+      { left: s0.x + 'px', top: s0.y + 'px', width: s0.w + 'px', height: s0.h + 'px', borderRadius: '16px' },
+      { left: (m.S.x - m.cw / 2) + 'px', top: (m.S.y - m.sr.h / 2 + 4) + 'px', width: m.cw + 'px', height: (m.sr.h - 8) + 'px', borderRadius: '17px' }
+    ], 320, 140, MG_SNAP);
+    mgOpenSlot(ctx, K, m.cw, 300, 120);
+    K.A(ctx.chip, [{ opacity: 0 }, { opacity: 1 }], 120, 460);
+    K.fade(ctx.selection, 120, 470);
+    return 620;
+  }
+
+  /* 4d gravity (Fluid, the default): the nodes accelerate into each other and merge into one card with a squash,
+     the card morphs into the pill and falls into the bar */
+  function mgGravity(ctx, K, m) {
+    var G = m.G, S = m.S, f = ctx.fly;
+    K.fade(ctx.selection, 110, 30);
+    ctx.nodes.forEach(function (n, i) {
+      var c = mgCtr(m.NR[i]), dx = G.x - c.x, dy = G.y - c.y;
+      K.A(n, [
+        { transform: 'none' },
+        { transform: 'translate(' + dx * 0.06 + 'px,' + dy * 0.06 + 'px) scale(.97)', offset: 0.35 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.5)' }
+      ], 230, 40, 'cubic-bezier(.55,0,1,.45)', 'forwards');
+      K.A(n, [{ opacity: 1 }, { opacity: 0 }], 50, 262, 'linear', 'forwards');
+    });
+    K.A(f, [
+      { width: '100px', height: '116px', borderRadius: '12px', backgroundColor: 'rgb(36,36,36)' },
+      { width: m.fw + 'px', height: m.fh + 'px', borderRadius: '17px', backgroundColor: 'rgba(48,48,54,.92)' }
+    ], 160, 400, MG_SNAP);
+    K.A(f, [
+      { transform: mgTR(G, 1), opacity: 0 },
+      { transform: mgTR(G, 1.16, 0.84), opacity: 1, offset: 0.25 },
+      { transform: mgTR(G, 0.95, 1.06), opacity: 1, offset: 0.6 },
+      { transform: mgTR(G, 1), opacity: 1 }
+    ], 200, 262, 'ease-out');
+    K.A(ctx.flyContent, [{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }], 160, 400);
+    var kf = [];
+    for (var i = 0; i <= 12; i++) {
+      var t = i / 12;
+      kf.push({ transform: mgTR({ x: G.x + (S.x - G.x) * (1 - (1 - t) * (1 - t)), y: G.y + (S.y - G.y) * t * t }, 1 - 0.06 * t, 1 + 0.1 * t) });
+    }
+    K.A(f, kf, 240, 570, 'linear', 'forwards');
+    mgOpenSlot(ctx, K, m.cw, 690, 120);
+    K.A(f, [{ opacity: 1 }, { opacity: 0 }], 60, 810, 'linear', 'forwards');
+    K.A(ctx.chip, [{ opacity: 0 }, { opacity: 1 }], 60, 810);
+    K.A(ctx.chip, [{ transform: 'scale(1.12,.84)' }, { transform: 'scale(.96,1.05)', offset: 0.5 }, { transform: 'scale(1)' }], 220, 810, 'ease-out', 'none');
+    return 1030;
+  }
+
+  function mgPlay(variant, ctx, opts) {
+    var K = mgKit(ctx, opts), m = mgMeasure(ctx, K);
+    if (ctx.trigger) {
+      K.A(ctx.trigger, MG_PRESS, 220, 0, 'ease-out', 'none');
+      if (variant === 'clean') {
+        var t = mgCtr(K.rel(ctx.trigger));
+        K.burst({ x: t.x, y: t.y - 8 }, 5, 20, 26, true);
+      }
+    }
+    var total = variant === 'shrinkwrap' ? mgShrinkwrap(ctx, K, m) : (variant === 'clean' ? mgClean(ctx, K, m) : mgGravity(ctx, K, m));
+    return K.handle(total);
+  }
+
+  /* A template drops back: each node springs out of the point `p` to its place */
+  function mgUnpack(ctx, p) {
+    var K = mgKit(ctx, { pace: ctx.pace });
+    ctx.nodes.forEach(function (n, i) {
+      var c = mgCtr(K.rel(n));
+      K.A(n, [
+        { transform: 'translate(' + (p.x - c.x) + 'px,' + (p.y - c.y) + 'px) scale(.12)', opacity: 0 },
+        { transform: 'translate(0px,0px) scale(1)', opacity: 1 }
+      ], 340, i * 45, 'cubic-bezier(.34,1.3,.64,1)');
+    });
+    return K.handle(400 + Math.max(0, ctx.nodes.length - 1) * 45);
+  }
+
+  /* Fluid = gravity (4d), Compact = shrinkwrap (4c), Quiet = clean (4b). Like the rest of the hotbox motion it
+     plays even with the OS "reduce motion" switch on, so each style always shows its own animation. */
+  function mgVariant() {
+    var t = hbTheme();
+    return { v: t === 'classic' ? 'shrinkwrap' : (t === 'quiet' ? 'clean' : 'gravity'), pace: 1 };
+  }
+
+  function mgOverlay() {
+    var root = owns(document.createElement('div'));
+    root.className = 'shb-magic ' + hbThemeCls();
+    root.innerHTML = '<div class="shb-mg-fx"></div>';
+    document.body.appendChild(root);
+    return root;
+  }
+
+  function isGraphNode(it) {
+    return !!(it && typeof it.connect === 'function' && it.pos);
+  }
+
+  function tplById(id) {
+    var list = Array.isArray(S.templates) ? S.templates : [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function clientToGraph(x, y) {
+    var c = getCanvas();
+    var el = c && c.canvas, ds = c && c.ds;
+    if (!el || !ds) return pasteAnchor(c);
+    var r = el.getBoundingClientRect(), sc = ds.scale || 1;
+    return [Math.round((x - r.left) / sc - ds.offset[0]), Math.round((y - r.top) / sc - ds.offset[1])];
+  }
+
+  function graphToClient(gx, gy) {
+    var c = getCanvas();
+    var el = c && c.canvas, ds = c && c.ds;
+    if (!el || !ds) return { x: gx, y: gy, s: 1 };
+    var r = el.getBoundingClientRect(), sc = ds.scale || 1;
+    return { x: r.left + (gx + ds.offset[0]) * sc, y: r.top + (gy + ds.offset[1]) * sc, s: sc };
+  }
+
+  /* What Merge to Button takes: the selection (a selected group brings what is inside it), else the node under the hotbox */
+  function mgItems(node) {
+    var c = getCanvas(), out = [];
+    function add(it) { if (it && out.indexOf(it) < 0) out.push(it); }
+    if (c && c.selectedItems && c.selectedItems.size) {
+      c.selectedItems.forEach(function (it) {
+        add(it);
+        if (it && !isGraphNode(it) && it.children && typeof it.recomputeInsideNodes === 'function') {
+          try { it.recomputeInsideNodes(); } catch (e) {}
+          it.children.forEach(add);
+        }
+      });
+    }
+    if (!out.length) selNodes().forEach(add);
+    if (!out.length && node) add(node);
+    return out;
+  }
+
+  /* Nodes, inner wires, groups and subgraphs as plain JSON (the same format ComfyUI's own copy uses) */
+  function mgSerialize(items) {
+    var c = getCanvas();
+    if (c && typeof c._serializeItems === 'function') return JSON.parse(JSON.stringify(c._serializeItems(items)));
+    /* older frontends: borrow the clipboard, then put the user's own back */
+    var KEY = 'litegrapheditor_clipboard', prev = null;
+    try { prev = localStorage.getItem(KEY); } catch (e) {}
+    try {
+      c.copyToClipboard(items.filter(isGraphNode));
+      return JSON.parse(localStorage.getItem(KEY));
+    } finally {
+      try { if (prev == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, prev); } catch (e) {}
+    }
+  }
+
+  function mgPaste(data, pos) {
+    var c = getCanvas();
+    var copy = JSON.parse(JSON.stringify(data));
+    if (c && typeof c._deserializeItems === 'function') {
+      var res = c._deserializeItems(copy, { position: pos });
+      return ((res && res.created) || []).filter(isGraphNode);
+    }
+    var KEY = 'litegrapheditor_clipboard', prev = null;
+    try { prev = localStorage.getItem(KEY); } catch (e) {}
+    try {
+      localStorage.setItem(KEY, JSON.stringify(copy));
+      if (c.graph_mouse) { c.graph_mouse[0] = pos[0]; c.graph_mouse[1] = pos[1]; }
+      c.pasteFromClipboard();
+      return selNodes();
+    } finally {
+      try { if (prev == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, prev); } catch (e) {}
+    }
+  }
+
+  function mgName(nodes, items) {
+    for (var i = 0; i < items.length; i++) {
+      if (!isGraphNode(items[i]) && items[i].children && items[i].title) return String(items[i].title).slice(0, 32);
+    }
+    /* the button's badge already shows how many nodes it holds */
+    return String(nodes[0].title || nodes[0].type || 'Node').slice(0, 32);
+  }
+
+  function mgCard(gh, title, color, sc) {
+    var LG = litegraph();
+    var th = Math.max(10, ((LG && LG.NODE_TITLE_HEIGHT) || 30) * (sc || 1));
+    gh.classList.add('shb-mg-card');
+    gh.innerHTML = '<div class="shb-mg-card-t" style="height:' + th + 'px;font-size:' + Math.max(8, Math.round(12 * (sc || 1))) + 'px' +
+      (color ? ';background:' + esc(color) : '') + '">' + esc(title) + '</div>';
+  }
+
+  /* A ghost of a node on screen, at its exact spot: Vue nodes are DOM (a clone keeps their look), classic
+     nodes are pixels on the canvas (a snapshot of that region) */
+  function mgGhost(root, node) {
+    var r = hbNodeRect(node);
+    if (!r || !r.w || !r.h) return null;
+    var gh = document.createElement('div');
+    gh.className = 'shb-mg-ghost';
+    gh.style.cssText = 'left:' + r.x + 'px;top:' + r.y + 'px;width:' + r.w + 'px;height:' + r.h + 'px';
+    var vEl = document.querySelector('.lg-node[data-node-id="' + cssEsc(node.id) + '"]');
+    try {
+      if (vEl) {
+        var cl = vEl.cloneNode(true);
+        var w = vEl.offsetWidth || r.w, h = vEl.offsetHeight || r.h;
+        cl.removeAttribute('data-node-id');
+        cl.style.cssText += ';position:absolute;left:0;top:0;margin:0;width:' + w + 'px;height:' + h + 'px;transform:scale(' + (r.w / w) + ');transform-origin:0 0;pointer-events:none';
+        gh.appendChild(cl);
+      } else {
+        var src = getCanvas().canvas;
+        var cr = src.getBoundingClientRect(), k = src.width / (cr.width || 1);
+        var snap = document.createElement('canvas');
+        snap.width = Math.max(1, Math.round(r.w * k));
+        snap.height = Math.max(1, Math.round(r.h * k));
+        snap.getContext('2d').drawImage(src, (r.x - cr.left) * k, (r.y - cr.top) * k, r.w * k, r.h * k, 0, 0, snap.width, snap.height);
+        snap.style.cssText = 'width:100%;height:100%;display:block';
+        gh.appendChild(snap);
+      }
+    } catch (e) {
+      gh.innerHTML = '';
+      mgCard(gh, node.title || node.type, node.color, 1);
+    }
+    root.appendChild(gh);
+    return gh;
+  }
+
+  /* Merge to Button: the selected nodes melt into one template button in the bottom bar */
+  function actMagic(node) {
+    var c = getCanvas(), g = getGraph();
+    if (!c || !g || MG_BUSY) return;
+    var items = mgItems(node);
+    var nodes = items.filter(isGraphNode);
+    if (!nodes.length) {
+      setStatus('error', 'Select the nodes to merge, or open the hotbox over one');
+      return;
+    }
+    var data = null;
+    try { data = mgSerialize(items); } catch (e) { data = null; }
+    if (!data || !data.nodes || !data.nodes.length) {
+      setStatus('error', 'Could not read those nodes');
+      return;
+    }
+    nodes.sort(function (a, b) { return (a.pos[0] - b.pos[0]) || (a.pos[1] - b.pos[1]); });
+    var tpl = {
+      id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name: mgName(nodes, items),
+      count: nodes.length,
+      at: new Date().toISOString(),
+      data: data
+    };
+    var uid = 'tpl:' + tpl.id;
+
+    /* ghosts first, while the nodes are still on screen */
+    var root = mgOverlay();
+    var ghosts = nodes.map(function (n) { return mgGhost(root, n); }).filter(Boolean);
+    var bar = HB.el && HB.el.querySelector('[data-hb-bar="bot"]');
+    var slot = null, chip = null;
+    if (bar && ghosts.length) {
+      slot = document.createElement('span');
+      slot.className = 'shb-mg-slot';
+      slot.innerHTML = renderBarItemHTML({ uid: uid, kind: 'template', id: tpl.id, label: tpl.name, title: tpl.name, icon: 'sparkles', kbd: '', cls: '', count: tpl.count }, 'bot', 0);
+      chip = slot.firstElementChild;
+      chip.style.width = 'max-content';
+      bar.appendChild(slot);
+    }
+
+    /* the template is saved right away (a bar that was never customized lists every template by itself) */
+    S.templates.push(tpl);
+    if (Array.isArray(S.customBotBar) && S.customBotBar.indexOf(uid) < 0) S.customBotBar.push(uid);
+    save();
+
+    /* then the real nodes go, through ComfyUI's own delete so Ctrl+Z brings them back */
+    try {
+      if (c.selectItems) c.selectItems(items);
+      else if (c.selectNodes) c.selectNodes(nodes);
+      if (c.deleteSelected) c.deleteSelected();
+      else nodes.forEach(function (n) { g.remove(n); });
+    } catch (e) {
+      nodes.forEach(function (n) { try { if (n.graph) g.remove(n); } catch (er) {} });
+    }
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    if (HB.node && nodes.indexOf(HB.node) >= 0) {
+      HB.keepRect = HB.rect;
+      HB.node = null;
+    }
+    setStatus('ok', '✨ ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ' merged into "' + tpl.name + '" · click it to drop them back (Ctrl+Z undoes)');
+
+    if (!chip) {
+      if (root.parentNode) root.parentNode.removeChild(root);
+      if (HB.el) hbPaint();
+      return;
+    }
+    var fly = document.createElement('div');
+    fly.className = 'shb-mg-fly';
+    fly.innerHTML = '<span class="shb-mg-flyc"><span class="shb-tpl-ico">' + ico('sparkles', hbIsFluid() ? 15 : 13) + '</span>' +
+      '<span>' + esc(tpl.name) + '</span><span class="shb-tpl-n">' + tpl.count + '</span></span>';
+    root.appendChild(fly);
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    ghosts.forEach(function (gh) {
+      var r = gh.getBoundingClientRect();
+      x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top);
+      x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+    });
+    var selBox = document.createElement('div');
+    selBox.className = 'shb-mg-sel';
+    selBox.style.cssText = 'left:' + (x0 - 10) + 'px;top:' + (y0 - 10) + 'px;width:' + (x1 - x0 + 20) + 'px;height:' + (y1 - y0 + 20) + 'px';
+    root.insertBefore(selBox, root.firstChild);
+
+    var mv = mgVariant();
+    MG_BUSY = true;
+    var h = mgPlay(mv.v, {
+      root: root,
+      nodes: ghosts,
+      selection: selBox,
+      slot: slot,
+      chip: chip,
+      fly: fly,
+      flyContent: fly.firstElementChild,
+      fx: root.querySelector('.shb-mg-fx'),
+      trigger: HB.el && HB.el.querySelector('[data-hb-run="tool:magic"]')
+    }, { pace: mv.pace });
+    h.finished.then(function () {
+      MG_BUSY = false;
+      /* the real button takes the place of the one that just landed */
+      if (HB.el) hbPaint();
+      h.cancel();
+      if (root.parentNode) root.parentNode.removeChild(root);
+    });
+  }
+
+  /* A template button was clicked: its nodes fly out of the button and land by the cursor */
+  function tplRunFromBar(uid, tpl) {
+    var b = HB.el && HB.el.querySelector('[data-hb-run="' + cssEsc(uid) + '"]');
+    var r = b && b.getBoundingClientRect();
+    var at = { x: HB.anchorX || HB_MX, y: HB.anchorY || HB_MY };
+    hbClose();
+    tplRun(tpl, (r && r.width) ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : at, at);
+  }
+
+  /* Drops a template: the block's top-left lands at screen point `at` (sliding down to a free spot), its nodes
+     springing out of screen point `from` */
+  function tplRun(tpl, from, at) {
+    var c = getCanvas(), g = getGraph();
+    if (!tpl || !tpl.data || !c || !g) return;
+    var data = tpl.data;
+    var LG = litegraph();
+    var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30;
+    var pos = clientToGraph(at.x, at.y);
+    /* the paste puts the block's top-left corner (nodes and groups) on `pos` */
+    var ox = 1e9, oy = 1e9;
+    (data.nodes || []).forEach(function (n) {
+      if (n.pos) { ox = Math.min(ox, +n.pos[0] || 0); oy = Math.min(oy, +n.pos[1] || 0); }
+    });
+    (data.groups || []).forEach(function (gr) {
+      var b = gr.bounding;
+      if (b) { ox = Math.min(ox, b[0]); oy = Math.min(oy, b[1]); }
+    });
+    if (ox === 1e9) { ox = 0; oy = 0; }
+    var boxes = (data.nodes || []).map(function (n) {
+      var collapsed = !!(n.flags && n.flags.collapsed);
+      var w = collapsed ? 190 : ((n.size && +n.size[0]) || 240), h = collapsed ? 0 : ((n.size && +n.size[1]) || 120);
+      var np = n.pos || [ox, oy];
+      return { n: n, x: np[0] - ox + pos[0], y: np[1] - oy + pos[1] - TH, w: w, h: h + TH };
+    });
+    var u = { x: 1e9, y: 1e9, r: -1e9, b: -1e9 };
+    boxes.forEach(function (b) {
+      u.x = Math.min(u.x, b.x); u.y = Math.min(u.y, b.y);
+      u.r = Math.max(u.r, b.x + b.w); u.b = Math.max(u.b, b.y + b.h);
+    });
+    var dy = boxes.length ? hbFreeDy(g, { x: u.x, y: u.y, w: u.r - u.x, h: u.b - u.y }, []) : 0;
+    pos[1] += dy;
+
+    var root = mgOverlay();
+    var ghosts = boxes.map(function (b) {
+      var p0 = graphToClient(b.x, b.y + dy);
+      var gh = document.createElement('div');
+      gh.className = 'shb-mg-ghost';
+      gh.style.cssText = 'left:' + p0.x + 'px;top:' + p0.y + 'px;width:' + (b.w * p0.s) + 'px;height:' + (b.h * p0.s) + 'px';
+      var def = SRV.types && SRV.types[b.n.type];
+      mgCard(gh, b.n.title || (def && def.display_name) || b.n.type, b.n.color, p0.s);
+      root.appendChild(gh);
+      return gh;
+    });
+    var h = mgUnpack({ root: root, nodes: ghosts, fx: root.querySelector('.shb-mg-fx'), pace: mgVariant().pace }, from);
+    /* the real nodes appear right under their ghosts just before the ghosts go */
+    setTimeout(function () {
+      var made = [];
+      try { made = mgPaste(data, pos); } catch (e) {
+        setStatus('error', 'Could not drop the template: ' + msgOf(e));
+        return;
+      }
+      try { g.setDirtyCanvas(true, true); } catch (e) {}
+      setStatus('ok', '✨ Dropped "' + tpl.name + '" (' + made.length + (made.length === 1 ? ' node)' : ' nodes)'));
+    }, Math.max(0, h.duration - 60));
+    h.finished.then(function () {
+      setTimeout(function () {
+        h.cancel();
+        if (root.parentNode) root.parentNode.removeChild(root);
+      }, 80);
+    });
+  }
+
+  function tplDelete(id) {
+    var t = tplById(id);
+    if (!t) return;
+    var uid = 'tpl:' + id;
+    function strip(list) { return Array.isArray(list) ? list.filter(function (u) { return u !== uid; }) : list; }
+    S.templates = S.templates.filter(function (x) { return x !== t; });
+    S.customBotBar = strip(S.customBotBar);
+    Object.keys(S.customToolsBar || {}).forEach(function (k) { S.customToolsBar[k] = strip(S.customToolsBar[k]); });
+    Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
+    if (S.customLabels) delete S.customLabels[uid];
+    save();
+    setStatus('ok', 'Deleted the template "' + t.name + '"');
+  }
+
+  /* ---------------------------------------------------------------------
    * 15. TOPBAR LOGO BUTTON (NEXT TO IMISSNUKE) & SETTINGS MODAL
    * --------------------------------------------------------------------- */
   function comboLabel(key, code, mods) {
@@ -6886,31 +7851,28 @@
     mountTopBarButton();
   }
 
+  /* Export hands over the Hotbox file itself: the same content as the file on disk */
   function exportCustomSettings() {
     try {
-      var payload = {
-        hotbox_version: 1,
-        exported_at: new Date().toISOString(),
-        settings: JSON.parse(JSON.stringify(S))
-      };
-      var jsonStr = JSON.stringify(payload, null, 2);
+      var jsonStr = JSON.stringify(cfgPayload(), null, 2);
       var blob = new Blob([jsonStr], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'hotbox_settings.json';
+      a.download = CFG.file;
       document.body.appendChild(a);
       a.click();
       setTimeout(function () {
         if (a.parentNode) a.parentNode.removeChild(a);
         URL.revokeObjectURL(url);
       }, 250);
-      setStatus('ok', '✓ Exported custom settings & buttons (.json)');
+      setStatus('ok', '✓ Exported ' + CFG.file);
     } catch (err) {
       setStatus('error', 'Export failed: ' + msgOf(err));
     }
   }
 
+  /* Import reads a Hotbox file, then asks: replace the one in use, or keep both as versions */
   function importCustomSettings(onDone) {
     var inp = document.createElement('input');
     inp.type = 'file';
@@ -6925,24 +7887,10 @@
         try {
           var parsed = JSON.parse(String(ev.target.result || '{}'));
           var src = (parsed && parsed.settings && typeof parsed.settings === 'object') ? parsed.settings : parsed;
-          if (!src || typeof src !== 'object') throw new Error('Invalid JSON format');
-          var count = 0;
-          for (var k in DEFAULTS) {
-            if (Object.prototype.hasOwnProperty.call(DEFAULTS, k) && src[k] !== undefined) {
-              S[k] = src[k];
-              count++;
-            }
-          }
-          if (hbKeyRefused(S.hbKey, S.hbCode)) {
-            S.hbKey = '`';
-            S.hbCode = 'Backquote';
-            S.hbMods = '';
-          }
-          save();
-          updateTopBarButtonState();
-          if (HB.el) hbPaint();
-          if (typeof onDone === 'function') onDone();
-          setStatus('ok', '✓ Imported custom settings & buttons (' + count + ' items)');
+          if (!src || typeof src !== 'object' || Array.isArray(src)) throw new Error('Invalid JSON format');
+          var known = Object.keys(src).filter(function (k) { return Object.prototype.hasOwnProperty.call(DEFAULTS, k); });
+          if (!known.length) throw new Error('this is not a Hotbox file');
+          importChoice(src, file.name, onDone);
         } catch (err) {
           setStatus('error', 'Import failed: ' + msgOf(err));
         }
@@ -6953,21 +7901,64 @@
     inp.click();
   }
 
-  /* The user's own power tools — each one can be switched off here, which also hides its hotbox buttons */
+  function importChoice(src, fname, onDone) {
+    var next = cfgNewVersionName();
+    var nTpl = Array.isArray(src.templates) ? src.templates.length : 0;
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg';
+    bg.innerHTML =
+      '<div class="shb-modal" style="width:min(420px,92vw)">' +
+        '<div class="shb-modal-t"><span>Import ' + esc(fname) + '</span></div>' +
+        '<div style="font-size:12px;color:#9a9a9a">' + (nTpl ? nTpl + (nTpl === 1 ? ' template, ' : ' templates, ') : '') + 'bars, labels and settings</div>' +
+        '<button type="button" class="shb-btn shb-btn-pri shb-imp-b" data-imp="replace">' + ico('sync', 15) +
+          '<span><b>Replace ' + esc(CFG.file) + '</b><small>What you have now is overwritten by this file</small></span></button>' +
+        (CFG.ready ? '<button type="button" class="shb-btn shb-btn-pri shb-imp-b" data-imp="version">' + ico('history', 15) +
+          '<span><b>Save as ' + esc(next) + '</b><small>A new version. ' + esc(CFG.file) + ' stays as it is, and Settings switches between them</small></span></button>' : '') +
+        '<div style="display:flex;justify-content:flex-end"><button type="button" class="shb-btn" data-imp="cancel">Cancel</button></div>' +
+      '</div>';
+    document.body.appendChild(bg);
+    function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
+    bg.onclick = function (ev) {
+      var b = ev.target && ev.target.closest ? ev.target.closest('[data-imp]') : null;
+      if (!b) return;
+      var how = b.getAttribute('data-imp');
+      close();
+      if (how === 'cancel') return;
+      applyConfig(src);
+      CFG.origin = 'browser';
+      if (how === 'version') {
+        CFG.file = next;
+        cfgWrite().then(function () { return cfgPut('active.json', { file: next }); }).then(cfgListVersions, cfgListVersions);
+      } else {
+        save();
+      }
+      cfgApplied();
+      if (typeof onDone === 'function') onDone();
+      setStatus('ok', how === 'version' ? '✓ Imported as ' + next + ' (now in use)' : '✓ Imported into ' + CFG.file);
+    };
+  }
+
+  /* The user's own power tools. Settings lists them as buttons to drag onto any hotbox bar; a pinned one only
+     shows up on the nodes it works on. */
   var POWER_TOOLS = [
-    { key: 'useAltZ', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
+    { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
-    { key: 'useAltN', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
+    { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
-    { key: 'useAltR', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
+    { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
       tip: 'Takes what the node is showing (Save / Preview Image, Save Video…), copies it into input/ and drops a Load Image — or a Load Video for videos — with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image or a video.' },
-    { key: 'useShiftR', icon: 'play', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
+    { uid: 'tool:render', icon: 'play', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
       tip: 'Renders only what you selected: the selected output nodes, or the output nodes downstream of the selection, with just the nodes they need. Nothing selected renders nothing, so a stray key never spends API credits on the whole graph. Uses rgthree\'s queue when it is installed.' },
-    { key: 'useStitch', icon: 'stitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
+    { uid: 'tool:stitch', icon: 'stitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
       tip: 'On a crop, on the plate it cuts, or on a result that came out of a crop: adds a fit (ImageScale, bicubic) that sizes your result back to the crop box and an ImageCompositeMasked that pastes it at the crop\'s x / y. Several crops of one plate chain into one result, a preview closes the chain, an empty "apinode / localmodel" group marks where the model goes, and every stitch keeps following its crop when you move or resize it.' },
-    { key: 'useKillApi', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
+    { uid: 'tool:swappair', icon: 'swap', name: 'Swap Nodes', keys: 'W', desc: 'Two selected nodes trade places and wires',
+      tip: 'Select two nodes and they trade places, each one taking over the other\'s connections (like Ctrl+Shift-dragging a node in Nuke). Wired or not, they always swap; slots are matched by name, then by type. Shows up in the bottom bar while exactly two nodes are selected.' },
+    { uid: 'tool:magic', icon: 'wand', name: 'Merge to Button', keys: 'X', desc: 'Turn the selection into a reusable button',
+      tip: 'Select any nodes (one or many, or a group) and they merge into a single button in the bottom bar, saved in your Hotbox file. Click the button to drop them back by the cursor, or drag it onto the canvas: their settings and inner wires come back exactly as they were. Ctrl+Z right after brings the originals back.' },
+    { uid: 'tool:apibypass', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
       tip: 'Bypasses every paid API node in the workflow for a cost-free test run; press it again to bring them back. Shows up in the bottom bar when the workflow has API nodes.' },
-    { key: 'dotZoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
+    { uid: 'tool:zoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
       tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' }
   ];
 
@@ -7061,6 +8052,16 @@
       '</button>';
     }
 
+    /* The saved versions of the Hotbox file: one button that steps through them, like the other choices */
+    function verBtn() {
+      var i = Math.max(0, CFG.versions.indexOf(CFG.file));
+      return '<button type="button" class="shb-btn shb-btn-pri shb-cycle" data-st-ver data-tip="Click to switch to the next saved version of your Hotbox file. Importing a file as a new version adds one.">' +
+        '<span class="shb-cycle-v">' + esc(CFG.file) + '</span>' +
+        '<span class="shb-cycle-dots">' + CFG.versions.map(function (v, j) { return '<i' + (j === i ? ' class="shb-on"' : '') + '></i>'; }).join('') + '</span>' +
+        ico('sync', 12) +
+      '</button>';
+    }
+
     function setLabel(icon, text, top) {
       return '<label class="shb-set-l' + (top ? ' shb-set-top' : '') + '">' + ico(icon, 14) + '<span>' + esc(text) + '</span></label>';
     }
@@ -7101,27 +8102,35 @@
             '</div>' +
             setLabel('tools', 'Power Tools', true) +
             '<div>' +
-              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Your own extras: switch each one on or off (hover a tool to see what it does)">' +
-                '<span class="shb-ptmenu-v">' + POWER_TOOLS.filter(function (pt) { return S[pt.key] !== false; }).length + ' of ' + POWER_TOOLS.length + ' on</span>' +
+              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto a hotbox bar. A pinned tool only shows up on the nodes it works on (hover one to see what it does)">' +
+                '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
                 ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
               '</button>' +
               (ptOpen ? '<div class="shb-pt">' +
                 POWER_TOOLS.map(function (pt) {
-                  var on = S[pt.key] !== false;
-                  return '<button type="button" class="shb-pt-row' + (on ? ' shb-on' : '') + '" data-st-toggle="' + pt.key + '" data-tip="' + esc(pt.tip) + '">' +
-                    '<span class="shb-pt-sw"></span>' +
+                  return '<div class="shb-pt-row" data-st-ptuid="' + esc(pt.uid) + '" data-tip="' + esc(pt.tip) + '">' +
+                    '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
                     ico(pt.icon, 15) +
                     '<span class="shb-pt-name">' + esc(pt.name) + '<small>' + esc(pt.desc) + '</small></span>' +
                     '<span class="shb-pt-key">' + esc(pt.keys) + '</span>' +
-                  '</button>';
+                  '</div>';
                 }).join('') +
               '</div>' : '') +
             '</div>' +
+            setLabel('folder', 'Saved In', true) +
+            '<div class="shb-cfg">' +
+              '<div class="shb-cfg-path" data-tip="Every change (moved or pinned buttons, bars, labels, templates and these settings) is written to this file in ComfyUI\'s user folder, so it follows you to any browser and survives clearing the cache.">' + esc(cfgPath()) + '</div>' +
+              '<div class="shb-cfg-row">' +
+                '<span data-st-cfgstate class="shb-cfg-state shb-cfg-' + esc(CFG.state) + '">' + esc(cfgStateText()) + '</span>' +
+                '<button type="button" class="shb-btn shb-btn-pri" data-st-copy data-tip="Copy the full path">' + ico('copy', 13) + '<span>Copy Path</span></button>' +
+              '</div>' +
+            '</div>' +
+            (CFG.versions.length > 1 ? setLabel('history', 'Version') + '<div>' + verBtn() + '</div>' : '') +
             setLabel('save', 'Custom Config') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-              '<button type="button" class="shb-btn shb-btn-pri" data-st-export title="Export all your custom buttons, bars, labels & settings to a .json file">' + ico('save', 13) + '<span>Export Settings (.json)</span></button>' +
-              '<button type="button" class="shb-btn shb-btn-pri" data-st-import title="Import custom buttons, bars & settings from a .json file">' + ico('loadCanvas', 13) + '<span>Import Settings (.json)</span></button>' +
-              '<button type="button" class="shb-btn" data-st-resetbars title="Reset custom bar buttons back to defaults">' + ico('sync', 13) + '<span>Reset Bars</span></button>' +
+              '<button type="button" class="shb-btn shb-btn-pri" data-st-export data-tip="Download a copy of your Hotbox file (' + esc(CFG.file) + ')">' + ico('save', 13) + '<span>Export .json</span></button>' +
+              '<button type="button" class="shb-btn shb-btn-pri" data-st-import data-tip="Load a Hotbox file: replace the one in use, or keep both as versions">' + ico('upload', 13) + '<span>Import .json</span></button>' +
+              '<button type="button" class="shb-btn" data-st-resetbars data-tip="Put every bar back to its default buttons (templates stay saved)">' + ico('sync', 13) + '<span>Reset Bars</span></button>' +
             '</div>' +
           '</div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid #333333">' +
@@ -7164,6 +8173,22 @@
         ptBtn.onclick = function () {
           ptOpen = !ptOpen;
           render();
+        };
+      }
+      var verB = wrap.querySelector('[data-st-ver]');
+      if (verB) {
+        verB.onclick = function () {
+          var i = CFG.versions.indexOf(CFG.file);
+          cfgSwitch(CFG.versions[(i + 1) % CFG.versions.length], render);
+        };
+      }
+      var copyB = wrap.querySelector('[data-st-copy]');
+      if (copyB) {
+        copyB.onclick = function () {
+          var path = cfgPath();
+          try {
+            navigator.clipboard.writeText(path).then(function () { setStatus('ok', '✓ Path copied'); }, function () { setStatus('ok', path); });
+          } catch (e) { setStatus('ok', path); }
         };
       }
       var sc = wrap.querySelector('[data-st-scale]');
@@ -7221,6 +8246,16 @@
         };
       }
     }
+
+    /* Power tools are dragged from here straight onto a hotbox bar */
+    wrap.addEventListener('pointerdown', function (e) {
+      var row = (e.button === 0 && e.target && e.target.closest) ? e.target.closest('[data-st-ptuid]') : null;
+      if (!row) return;
+      e.preventDefault();
+      if (!HB.el) hbOpen();
+      clearDrawerDrag();
+      DRAWER_DRAG = { uid: row.getAttribute('data-st-ptuid'), x0: e.clientX, y0: e.clientY, active: false, inBar: false, wrap: null, loose: true, st: wrap };
+    });
 
     document.body.appendChild(wrap);
     render();
@@ -7401,6 +8436,7 @@
     injectStyles();
     setupTopBarMounting();
     probe();
+    cfgBoot();
   }
 
   if (document.readyState === 'loading') {
@@ -7432,6 +8468,9 @@
     lupa: actAltZ,
     label: labelOpen,
     loadInCanvas: actLoadInCanvas,
-    zoom: actDotZoom
+    zoom: actDotZoom,
+    swapNodes: actSwapPair,
+    mergeToButton: actMagic,
+    configFile: function () { return cfgPath(); }
   };
 })();

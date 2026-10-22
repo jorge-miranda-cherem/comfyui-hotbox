@@ -15,6 +15,8 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 - **The big blue `+`** sits right beside the bottom bar. Hover it and the four categories fan out (`All Nodes F` · `Image / Video Kit N` · `Models & APIs A` · `Subgraphs G`); click it for All Nodes. Drag any result onto any bar to pin it, or **drop it on the `+`** to pin it to the bottom bar.
 - **A dock shortcut you choose.** The button at the end of the top dock opens one category (Models by default); its `▾` swaps it for the Kit, Subgraphs or All Nodes — or hides it.
 - **Drag a node onto the bar to pin it.** Grab any node by its title while the hotbox is open and drop it on the bottom bar (or the `+`). The node stays where it was; its type becomes a one-click button for that context.
+- **Merge to Button.** Select any nodes (one or many, or a group) and press **Merge to Button** (<kbd>X</kbd>): they melt into one button in the bottom bar. Click it to drop the nodes back by the cursor, or drag it onto the canvas to drop them right there — settings and inner wires come back exactly as they were. A reusable template, saved with the rest of your preferences.
+- **Swap Nodes.** Select two nodes and press **Swap Nodes** (<kbd>W</kbd>): they trade places and wires, like Ctrl+Shift-dragging a node in Nuke.
 - **Customize every bar, iOS style.** Long-press any button (or click the ✎ icon) to enter edit mode: buttons jiggle, tap **×** or drag a button out to remove it, drag to reorder, tap a button to rename it. **Reset** restores the defaults, **Done** / <kbd>Esc</kbd> / a click on the canvas exits.
 - **Works with both node renderers** — Nodes 2.0 (Vue) and the classic LiteGraph canvas.
 
@@ -28,7 +30,7 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 | **Context bar** | Tools for the node type — e.g. on a crop node: **Visual Crop `Z`**, **Super Stitch** and an aspect-ratio switch (`Free · 1:1 · 16:9 · 9:16 · 4:3 · 3:4`). |
 | **Left card** | `Rename F2` · `Add Label L` · `Magnifier / Visual Crop / Paint Z` · `Add Reroute R` · `Set / Get Bus S` + node color swatches and a custom color picker. |
 | **Right card** | **Pro Sliders** for the node's numeric widgets (drag to scrub, <kbd>Shift</kbd> fine, <kbd>Ctrl</kbd>+click previous value, double-click default, wheel to nudge, click the value to type). |
-| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image or a video) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Bypass All APIs K` (when the workflow has API nodes) + your pinned nodes, the edit and settings buttons, and the `+` with its category dial. |
+| **Bottom bar** | `Load in Canvas V` (only on nodes showing an image or a video) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Bypass All APIs K` (when the workflow has API nodes) · `Swap Nodes W` (two nodes selected) · `Merge to Button X` + your pinned nodes and templates, the edit and settings buttons, and the `+` with its category dial. |
 
 ---
 
@@ -36,15 +38,18 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 
 - **Empty canvas** — quick spawners (`Load Image`, `Load Checkpoint`, `KSampler`, …) and labels.
 - **Any node** — the dock suggests nodes that accept its outputs (multi-slot aware: a checkpoint loader suggests nodes for `MODEL` *and* `CLIP`) and wires them on click. It never offers the node you are standing on again, unless it is the kind that chains (LoRA loaders, ControlNet apply, conditioning combine…), and it never offers deprecated nodes. New nodes slide down until they don't overlap anything.
-- **API nodes and subgraphs** — saving comes first: **Save Video** when they output video, **Save Image** / Preview when they output images.
+- **API nodes and subgraphs** — saving comes first: **Save Video** when they output video, **Save Image** / Preview when they output images. Video and image generators keep separate bars, and a model only swaps to models of the same kind.
 - **Image / video loaders** — `[1]`–`[5]` add the model to the right and auto-wire `IMAGE` / `VIDEO` / `MASK`. A `LoadImage` node also offers **Read PNG metadata** (load workflow, copy seed).
 - **Two loaders selected** — the model is wired to both (reference + target / first + last frame), plus **Compare A/B**.
-- **Model / API node selected** — `[1]`–`[5]` **swap the model in place**, carrying over shared widgets (`prompt`, `seed`, `aspect_ratio`, …) and reconnecting links.
+- **Model / API node selected** — `[1]`–`[5]` **swap the model in place** (the new node keeps the old one's spot), carrying over shared widgets (`prompt`, `seed`, `aspect_ratio`, …) and reconnecting links.
 - **Crop node** — **Visual Crop editor** and **Super Stitch** (below).
 - **Stitch node** — **Update Stitch** (re-read the crop) and **Swap FG / BG**.
 
 ### Super Stitch
 Press it on a crop, on the plate it cuts, or on a result that came out of a crop. It adds a **fit** (`ImageScale`, bicubic, crop disabled) that sizes your result back to the crop box, and an `ImageCompositeMasked` that pastes it at the crop's `x / y` with the plate as destination. Several crops of one plate make **one chain**, a crop is never stitched twice, a preview closes the chain, an empty **apinode / localmodel** group marks where the model goes, and every stitch **keeps following its crop** when you move or resize it.
+
+### Merge to Button
+The animation follows your style: **Fluid** pulls the nodes together into one card that falls into the bar, **Compact** shrinks the selection box into the button, **Quiet** dissolves the nodes into a soft bloom. The nodes leave through ComfyUI's own delete, so <kbd>Ctrl</kbd>+<kbd>Z</kbd> right after brings them back. Every template is also listed under **Your Templates** in the Tools drawer (`N`), where it can be pinned to any bar or deleted (two clicks on the trash).
 
 ### Image & Video Kit (`N`)
 Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `ImageScaleBy`, `ImageScale`), Flip, Paint Mask/Plate, Compare A/B, Preview / Save Image, Framehold, Video → Frames, Create Video, Save Video, Set / Get nodes, Reroutes and labels — each spawned and wired to the current selection in one click.
@@ -69,7 +74,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 While the hotbox is open it owns these keys, so other extensions (or ComfyUI keybindings) on the same keys don't fire at the same time.
 
 ### Power Tools
-Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Bypass All APIs and Zoom to Selection can each be switched off in **Settings → Power Tools** (hover a row for what it does); switching one off also hides its hotbox buttons.
+Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Swap Nodes, Merge to Button, Bypass All APIs and Zoom to Selection are listed in **Settings → Power Tools** (hover one for what it does). **Drag any of them straight onto a hotbox bar**; a pinned tool only shows up on the nodes it works on.
 
 ---
 
@@ -84,9 +89,16 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/jorge-miranda-cherem/comfyui-hotbox.git
 ```
 
-Restart ComfyUI and refresh the browser. Look for the **H** button in the top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim, leader lines, UI scale, bar spacing, power tools, import / export of your bars), right-click it to enable or disable the hotbox.
+Restart ComfyUI and refresh the browser. Look for the **H** button in the top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim, leader lines, UI scale, bar spacing, power tools, where your preferences are saved), right-click it to enable or disable the hotbox.
 
-Settings live in the browser's `localStorage`. Use **Export / Import Settings** to move your bars between machines.
+### Your preferences file
+Everything you change — moved and pinned buttons, bars, labels, templates and settings — is saved to one file in ComfyUI's user folder:
+
+```
+ComfyUI/user/default/hotbox/hotbox.json
+```
+
+**Settings → Saved In** shows its full path. Because it lives with ComfyUI (not in the browser), your setup follows you to any browser and survives clearing the cache. **Export .json** downloads a copy of that file; **Import .json** either **replaces** it or saves the import as a **new version** (`hotbox_v2.json`, …) — the **Version** button in Settings switches between them. A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
 
 > Upgrading from *Super Hotbox*? Your settings are picked up automatically. Remove the old `super_hotbox` folder from `custom_nodes` so the two don't load side by side.
 
