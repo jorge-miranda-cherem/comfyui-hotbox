@@ -33,7 +33,7 @@
     hbDockCat: 'models',    /* category shortcut at the end of the dock: 'models' | 'tools' | 'subs' | 'search' | 'none' */
     hbEditAnim: 'jiggle',   /* edit-mode idle animation: 'jiggle' | 'tilt' | 'float' | 'outline' */
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
-    hbLeaders: true,        /* Quiet: hairlines from the cursor to each zone */
+    hbLeaders: false,       /* Quiet: hairlines from the cursor to each zone (off: they cover the node) */
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
@@ -57,7 +57,7 @@
     customToolsBar: {},     /* per-bucket array of item uids for Tools Bar */
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
-    templates: [],          /* Merge to Button: saved node selections, each one a bar button ('tpl:<id>') */
+    templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     cfgRev: 0,              /* config migrations already applied */
     lbLast: null
   };
@@ -79,13 +79,24 @@
         return u === 'tool:apibypass' ? 'tool:bypass' : u;
       });
     }
-    /* Swap Nodes and Merge to Button ride in the bottom bar (they only show while they apply) */
+    /* Swap Nodes and Save as Button ride in the bottom bar (they only show while they apply) */
     if (rev < 2 && Array.isArray(S.customBotBar)) {
       ['tool:swappair', 'tool:magic'].forEach(function (u) {
         if (S.customBotBar.indexOf(u) < 0) S.customBotBar.push(u);
       });
     }
-    S.cfgRev = 2;
+    /* Load in Canvas and Render Selected ride in the bottom bar too; the leader lines start off */
+    if (rev < 3) {
+      if (Array.isArray(S.customBotBar)) {
+        if (S.customBotBar.indexOf('tool:loadcanvas') < 0) S.customBotBar.unshift('tool:loadcanvas');
+        if (S.customBotBar.indexOf('tool:render') < 0) {
+          var at = S.customBotBar.indexOf('tool:magic');
+          S.customBotBar.splice(at < 0 ? S.customBotBar.length : at + 1, 0, 'tool:render');
+        }
+      }
+      S.hbLeaders = false;
+    }
+    S.cfgRev = 3;
     if (!Array.isArray(S.templates)) S.templates = [];
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
@@ -113,14 +124,17 @@
 
   /* ---------------------------------------------------------------------
    * 1b. THE HOTBOX FILE: <ComfyUI>/user/<user>/hotbox/hotbox.json
-   * Every preference (moved buttons, bars, labels, templates, settings) is written there through
-   * ComfyUI's user-data API, so it follows the user to any browser and survives cache clears.
-   * localStorage keeps a copy for an instant start. Importing a file can replace it or add a
-   * version (hotbox_v2.json, ...); active.json remembers which one is in use.
+   * Every preference (moved buttons, bars, labels, saved buttons, settings) is written there, so it
+   * follows the user to any browser and survives cache clears. Settings can move it to any folder
+   * (hotbox_files.py serves it); without that Python side, ComfyUI's user-data API is used.
+   * localStorage keeps a copy for an instant start. hotbox.json is the original: an import never
+   * overwrites it but becomes the next version (hotbox_v2.json, ...); active.json remembers which
+   * one is in use.
    * --------------------------------------------------------------------- */
   var CFG_DIR = 'hotbox';
   var CFG_NAME_RE = /^hotbox(?:_v(\d+))?\.json$/;
-  var CFG = { file: 'hotbox.json', ready: false, booted: false, timer: 0, state: 'local', err: '', savedAt: 0, versions: [], userDir: '', origin: 'browser' };
+  var CFG = { file: 'hotbox.json', ready: false, booted: false, timer: 0, state: 'local', err: '', savedAt: 0, versions: [], userDir: '', origin: 'browser',
+    srv: false, dir: '', defDir: '', custom: false, missing: '', sep: '/' };
   /* Set once this browser has read or written the file. A browser without it still carries its preferences
      from before the file existed. */
   var CFG_SYNCED_KEY = 'hotbox_cfg_synced';
@@ -130,7 +144,7 @@
   }
 
   function cfgUrl(name) {
-    return '/userdata/' + encodeURIComponent(CFG_DIR + '/' + name);
+    return CFG.srv ? '/hotbox/file/' + encodeURIComponent(name) : '/userdata/' + encodeURIComponent(CFG_DIR + '/' + name);
   }
 
   /* `origin: 'defaults'` marks a file that a fresh browser started from scratch */
@@ -143,6 +157,12 @@
     return m ? (+m[1] || 1) : 0;
   }
 
+  /* hotbox.json is the original; each import adds a numbered version beside it */
+  function cfgVerLabel(name) {
+    var n = cfgVerNum(name);
+    return n <= 1 ? 'Original' : 'Version ' + n;
+  }
+
   function cfgRead(name) {
     return apiFetch(cfgUrl(name), { cache: 'no-store' }).then(function (r) {
       if (r.status === 404) return null;
@@ -152,7 +172,7 @@
   }
 
   function cfgPut(name, obj) {
-    return apiFetch(cfgUrl(name) + '?overwrite=true', {
+    return apiFetch(cfgUrl(name) + (CFG.srv ? '' : '?overwrite=true'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(obj, null, 2)
@@ -179,13 +199,25 @@
     });
   }
 
-  /* Full path of the file on disk, as ComfyUI was started (falls back to the default layout) */
-  function cfgPath(name) {
+  /* The folder on disk: the one the Python side reports, else the default layout as ComfyUI was started */
+  function cfgFolder() {
+    if (CFG.dir) return CFG.dir.replace(/[\\/]+$/, '');
     var app = getApp();
     var api = (app && app.api) || (window.comfyAPI && window.comfyAPI.api && window.comfyAPI.api.api);
     var base = CFG.userDir || 'ComfyUI/user';
     var sep = base.indexOf('\\') >= 0 ? '\\' : '/';
-    return base.replace(/[\\/]+$/, '') + sep + ((api && api.user) || 'default') + sep + CFG_DIR + sep + (name || CFG.file);
+    return base.replace(/[\\/]+$/, '') + sep + ((api && api.user) || 'default') + sep + CFG_DIR;
+  }
+
+  function cfgPath(name) {
+    var dir = cfgFolder();
+    return dir + (CFG.dir ? CFG.sep : (dir.indexOf('\\') >= 0 ? '\\' : '/')) + (name || CFG.file);
+  }
+
+  function cfgCopy(text, what) {
+    try {
+      navigator.clipboard.writeText(text).then(function () { setStatus('ok', '✓ ' + what + ' copied'); }, function () { setStatus('ok', text); });
+    } catch (e) { setStatus('ok', text); }
   }
 
   function cfgStateText() {
@@ -212,9 +244,10 @@
   }
 
   function cfgListVersions() {
-    return apiFetch('/userdata?dir=' + encodeURIComponent(CFG_DIR)).then(function (r) {
-      return r.ok ? r.json() : [];
-    }).then(function (list) {
+    var req = CFG.srv
+      ? apiFetch('/hotbox/files', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { return (j && j.files) || []; })
+      : apiFetch('/userdata?dir=' + encodeURIComponent(CFG_DIR)).then(function (r) { return r.ok ? r.json() : []; });
+    return req.then(function (list) {
       var names = (Array.isArray(list) ? list : []).map(function (f) {
         return String((f && f.path) || f).split(/[\\/]/).pop();
       }).filter(function (f) { return CFG_NAME_RE.test(f); });
@@ -260,16 +293,41 @@
         CFG.userDir = String(a[bd + 1]).replace(/[\\/]+$/, '') + (String(a[bd + 1]).indexOf('\\') >= 0 ? '\\' : '/') + 'user';
       }
     }).catch(function () {});
-    cfgRead('active.json').catch(function () { return null; }).then(function (act) {
+    cfgFolderInfo().then(function () { return cfgLoad(true); });
+  }
+
+  /* Where the files live, from the Python side (hotbox_files.py). Without it, ComfyUI's user-data API is used */
+  function cfgFolderInfo() {
+    return apiFetch('/hotbox/folder', { cache: 'no-store' }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(cfgTakeFolder).catch(function () {});
+  }
+
+  function cfgTakeFolder(j) {
+    if (!j || !j.folder) return;
+    CFG.srv = true;
+    CFG.dir = String(j.folder);
+    CFG.defDir = String(j.default || j.folder);
+    CFG.custom = !!j.custom;
+    CFG.missing = String(j.missing || '');
+    CFG.sep = j.sep || (CFG.dir.indexOf('\\') >= 0 ? '\\' : '/');
+  }
+
+  /* Reads the file in use (active.json says which version) */
+  function cfgLoad(boot) {
+    CFG.file = 'hotbox.json';
+    return cfgRead('active.json').catch(function () { return null; }).then(function (act) {
       if (act && CFG_NAME_RE.test(String(act.file || ''))) CFG.file = act.file;
       return cfgRead(CFG.file);
     }).then(function (raw) {
       CFG.ready = true;
       var local = null, synced = false;
-      try {
-        local = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-        synced = !!localStorage.getItem(CFG_SYNCED_KEY);
-      } catch (e) {}
+      if (boot) {
+        try {
+          local = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+          synced = !!localStorage.getItem(CFG_SYNCED_KEY);
+        } catch (e) {}
+      }
       if (raw && !(local && !synced && raw.origin === 'defaults')) {
         applyConfig(raw);
         CFG.origin = raw.origin || 'browser';
@@ -277,7 +335,7 @@
         CFG.savedAt = Date.parse(raw.saved_at) || Date.now();
         cfgMarkSynced();
         cfgApplied();
-      } else if (local) {
+      } else if (local || !boot) {
         /* This browser's preferences from before the file existed become the file. They also win over a
            file that a fresh browser started from scratch, so moved buttons are never lost. */
         CFG.origin = 'browser';
@@ -291,6 +349,43 @@
       CFG.state = 'error';
       CFG.err = msgOf(err);
       cfgShow();
+    });
+  }
+
+  /* Moves Hotbox to another folder ('' = back to the default one). Files already there are used as they are;
+     otherwise the Python side copies the current ones in first */
+  function cfgSetFolder(path, onDone) {
+    var flush = CFG.timer ? cfgWrite() : Promise.resolve();
+    flush.then(function () {
+      return apiFetch('/hotbox/folder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: path }) });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+        return j;
+      });
+    }).then(function (j) {
+      cfgTakeFolder(j);
+      return cfgLoad(false).then(function () {
+        setStatus('ok', j.found ? '✓ Using the Hotbox files already in ' + CFG.dir : '✓ Your Hotbox files now live in ' + CFG.dir);
+      });
+    }).catch(function (err) {
+      setStatus('error', 'Could not use that folder: ' + msgOf(err));
+    }).then(function () {
+      if (typeof onDone === 'function') onDone();
+    });
+  }
+
+  /* Opens the folder in Explorer / Finder (ComfyUI on this computer), else copies its path */
+  function cfgOpenFolder() {
+    if (!CFG.srv) { cfgCopy(cfgFolder(), 'Folder path'); return; }
+    apiFetch('/hotbox/folder/open', { method: 'POST' }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+        setStatus('ok', '📂 Opened ' + (j.folder || cfgFolder()));
+      });
+    }).catch(function (err) {
+      try { navigator.clipboard.writeText(cfgFolder()); } catch (e) {}
+      setStatus('error', 'Could not open the folder (' + msgOf(err) + ') · its path is copied');
     });
   }
 
@@ -583,7 +678,11 @@
       '.shb-ps-lbl{pointer-events:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:ew-resize}',
       '.shb-ps-num{pointer-events:auto;width:64px;border:0;outline:none;background:transparent;color:inherit;font:inherit;text-align:right;padding:0;cursor:text;font-variant-numeric:tabular-nums}',
       '.shb-ps-fill{position:absolute;left:0;top:0;bottom:0;pointer-events:none}',
-      '.shb-ps-list{display:flex;flex-direction:column}',
+      '.shb-ps-list{display:flex;flex-direction:column;position:relative}',
+      '.shb-ps-scroll{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent}',
+      '.shb-ps-scroll.shb-ps-more-dn{-webkit-mask-image:linear-gradient(#000 calc(100% - 22px),transparent);mask-image:linear-gradient(#000 calc(100% - 22px),transparent)}',
+      '.shb-ps-scroll.shb-ps-more-up{-webkit-mask-image:linear-gradient(transparent,#000 22px);mask-image:linear-gradient(transparent,#000 22px)}',
+      '.shb-ps-scroll.shb-ps-more-up.shb-ps-more-dn{-webkit-mask-image:linear-gradient(transparent,#000 22px,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(transparent,#000 22px,#000 calc(100% - 22px),transparent)}',
 
       /* Standalone "+" button, drag ghost & remove poof */
       '.shb-plus{display:grid;place-items:center;border:0;cursor:pointer;padding:0;transition:transform 70ms cubic-bezier(.34,1.56,.64,1),box-shadow 80ms,background 60ms,border-color 60ms}',
@@ -617,6 +716,17 @@
       '.shb-cfg-state{font-size:11px;color:#8a8a8a}',
       '.shb-cfg-saved{color:#7fbf8f}',
       '.shb-cfg-error{color:#e8735f}',
+      '.shb-cfg-btns{display:flex;flex-wrap:wrap;gap:6px}',
+      '.shb-cfg-warn{font-size:11px;color:#e8b45f;line-height:1.35}',
+      '.shb-cfg-edit{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid #333;border-radius:6px;background:#1b1b1b}',
+      '.shb-cfg-edit input{width:100%;box-sizing:border-box;font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#e6e6e6;background:#111;border:1px solid #3a3a3a;border-radius:5px;padding:6px 8px;outline:none}',
+      '.shb-cfg-edit input:focus{border-color:#64a8f0}',
+      '.shb-cfg-edit small{font-size:11px;color:#8a8a8a;line-height:1.4}',
+      /* Saved buttons in Settings: the same draggable rows as the power tools */
+      '.shb-sb-list{max-height:260px;overflow-y:auto;scrollbar-width:thin}',
+      '.shb-sb-empty{font-size:11.5px;color:#8a8a8a;padding:8px 4px;line-height:1.4}',
+      '.shb-sb-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid #2c2c2c;font-size:11px;color:#8a8a8a;min-width:0}',
+      '.shb-sb-foot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.shb-imp-b{width:100%;justify-content:flex-start;text-align:left;padding:10px 12px;gap:10px;white-space:normal;height:auto}',
       '.shb-imp-b b{display:block;font-weight:600}',
       '.shb-imp-b small{display:block;font-weight:400;font-size:11px;color:#9a9a9a;margin-top:3px;line-height:1.35}',
@@ -646,7 +756,7 @@
       '.shb-leaders{position:fixed;left:0;top:0;pointer-events:none;z-index:1;overflow:visible}',
       '.shb-leaders line{stroke:rgba(255,255,255,.22);stroke-width:1;stroke-dasharray:1;stroke-dashoffset:0}',
 
-      /* Merge to Button: overlay, node ghosts, the flying pill and the template buttons */
+      /* Save as Button: overlay, node ghosts, the flying pill and the saved buttons */
       '.shb-magic{position:fixed;inset:0;pointer-events:none;z-index:2147482600}',
       '.shb-mg-fx{position:absolute;inset:0;pointer-events:none}',
       '.shb-mg-ghost{position:absolute;pointer-events:none;transform-origin:50% 50%;will-change:transform,opacity,filter}',
@@ -853,7 +963,7 @@
       '.shb-modal{width:min(540px,94vw);max-height:90vh;overflow-y:auto;background:var(--shb-bg);border:1px solid var(--shb-border);border-radius:8px;padding:16px 18px;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}',
       '.shb-modal-t{font:600 14px/1.2 Inter,system-ui,sans-serif;color:var(--shb-fg);display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #333333}',
       '.shb-grid{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:9px 12px}',
-      '.shb-settings .shb-grid{grid-template-columns:128px 1fr}',
+      '.shb-settings .shb-grid{grid-template-columns:128px minmax(0,1fr)}',
       '.shb-grid label{color:var(--shb-fg-muted);font-weight:500;font-size:12px}',
       '.shb-input,.shb-select{width:100%;box-sizing:border-box;padding:6px 10px;border-radius:6px;border:1px solid var(--shb-border);background:var(--shb-bg-input);color:var(--shb-fg);font:400 12px/1.2 Inter,system-ui,sans-serif;outline:none}',
       '.shb-input:focus,.shb-select:focus{border-color:var(--shb-accent)}',
@@ -1087,16 +1197,24 @@
     return false;
   }
 
+  /* A node's body in graph units. A Vue node can be drawn bigger than its `size` (an image preview, a crop
+     widget), so its element is measured too: offsetWidth/Height ignore the canvas zoom, and the height
+     includes the title bar */
   function visBox(n) {
     var p = (n && n.pos) || [0, 0];
     var s = (n && n.size) || [240, 120];
     var collapsed = !!(n && n.flags && n.flags.collapsed);
-    return {
-      x: +p[0] || 0,
-      y: +p[1] || 0,
-      w: collapsed ? 190 : Math.max(140, +s[0] || 240),
-      h: collapsed ? 32 : Math.max(60, +s[1] || 120)
-    };
+    var w = collapsed ? 190 : Math.max(140, +s[0] || 240);
+    var h = collapsed ? 32 : Math.max(60, +s[1] || 120);
+    if (!collapsed && n && n.id != null) {
+      var el = document.querySelector('.lg-node[data-node-id="' + cssEsc(n.id) + '"]');
+      if (el && el.offsetWidth) {
+        var LG = litegraph();
+        w = Math.max(w, el.offsetWidth);
+        h = Math.max(h, el.offsetHeight - ((LG && LG.NODE_TITLE_HEIGHT) || 30));
+      }
+    }
+    return { x: +p[0] || 0, y: +p[1] || 0, w: w, h: h };
   }
 
   function pasteAnchor(canvas) {
@@ -1643,8 +1761,8 @@
     return made;
   }
 
-  /* A new node (or a dropped block of nodes) never lands on top of another one: it slides down, past
-     whatever it would cover, until its spot (title bars included, plus a small gap) is free */
+  /* A new node (or a dropped block of nodes) never lands on top of another one: it slides right or down,
+     whichever is the shorter way, until its spot (title bars included, plus a small gap) is free */
   function hbTitledBox(n) {
     var LG = litegraph();
     var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30;
@@ -1652,21 +1770,33 @@
     return { x: b.x, y: b.y - TH, w: b.w, h: b.h + TH };
   }
 
-  /* How far down the box `me` (graph units, title included) must slide to cover no node outside `skip` */
-  function hbFreeDy(graph, me, skip) {
+  /* How far the box `me` (graph units, title included) must slide, down (axis 1) or right (axis 0), to cover
+     no node outside `skip` */
+  function hbFreeShift(graph, me, skip, axis) {
     var GAP = 30;
     var others = allNodes(graph).filter(function (n) { return skip.indexOf(n) < 0 && n.pos; }).map(hbTitledBox);
-    var y = me.y;
+    var x = me.x, y = me.y;
     for (var i = 0; i < 80; i++) {
       var hit = null;
       for (var k = 0; k < others.length && !hit; k++) {
         var o = others[k];
-        if (me.x < o.x + o.w + GAP && me.x + me.w + GAP > o.x && y < o.y + o.h + GAP && y + me.h + GAP > o.y) hit = o;
+        if (x < o.x + o.w + GAP && x + me.w + GAP > o.x && y < o.y + o.h + GAP && y + me.h + GAP > o.y) hit = o;
       }
       if (!hit) break;
-      y = hit.y + hit.h + GAP;
+      if (axis) y = hit.y + hit.h + GAP;
+      else x = hit.x + hit.w + GAP;
     }
-    return y - me.y;
+    return axis ? y - me.y : x - me.x;
+  }
+
+  function hbFreeDy(graph, me, skip) { return hbFreeShift(graph, me, skip, 1); }
+
+  /* The shorter way out: a node spawned beside a tall one only steps right instead of dropping below it */
+  function hbFreeMove(graph, me, skip) {
+    var dy = hbFreeShift(graph, me, skip, 1);
+    if (!dy) return { dx: 0, dy: 0 };
+    var dx = hbFreeShift(graph, me, skip, 0);
+    return dx < dy ? { dx: dx, dy: 0 } : { dx: 0, dy: dy };
   }
 
   function hbAvoidOverlap(graph, made) {
@@ -1678,8 +1808,8 @@
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
       x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
     });
-    var dy = hbFreeDy(graph, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, list);
-    if (dy) list.forEach(function (n) { nodeMoveTo(n, n.pos[0], n.pos[1] + dy); });
+    var mv = hbFreeMove(graph, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, list);
+    if (mv.dx || mv.dy) list.forEach(function (n) { nodeMoveTo(n, n.pos[0] + mv.dx, n.pos[1] + mv.dy); });
   }
 
   /* Connect all compatible slots between srcNode and dstNode (multi-slot aware, e.g. MODEL + CLIP) */
@@ -4414,7 +4544,7 @@
       stitchupd:  { id: 'stitchupd',  icon: 'sync',       label: 'Update Stitch',  kbd: '',  fn: function () { actStitchUpdate(node); } },
       stitchswap: { id: 'stitchswap', icon: 'swap',       label: 'Swap FG / BG',   kbd: '',  fn: function () { actStitchSwap(node); } },
       swappair:   { id: 'swappair',   icon: 'swap',       label: 'Swap Nodes',     kbd: 'W', fn: function () { actSwapPair(); } },
-      magic:      { id: 'magic',      icon: 'wand',       label: 'Merge to Button', kbd: 'X', stayOpen: true, fn: function () { actMagic(node); } },
+      magic:      { id: 'magic',      icon: 'wand',       label: 'Save as Button', kbd: 'X', stayOpen: true, fn: function () { actMagic(node); } },
       seedtoggle: {
         id: 'seedtoggle',
         icon: 'seed',
@@ -4574,7 +4704,8 @@
         if (node && tid === 'seedtoggle' && !seedControls(node).length) {
           return null;
         }
-        if (tid === 'loadcanvas' && !hbHasImage(node)) {
+        /* on any Preview / Save Image / Save Video, or on a node already showing an image or a video */
+        if (tid === 'loadcanvas' && !(hbHasImage(node) || isPreviewNode(node) || outKind(node) === 'save')) {
           return null;
         }
         if (hbToolIsSelf(tid, node)) {
@@ -4617,7 +4748,7 @@
         kind: 'template',
         id: tpl.id,
         label: customLbl || tpl.name,
-        title: 'Drop ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ': ' + tpl.name + ' · click, or drag it onto the canvas',
+        title: 'Adds ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ': ' + tpl.name + ' · click, or drag it onto the canvas',
         icon: 'sparkles',
         kbd: '',
         cls: '',
@@ -4861,7 +4992,7 @@
       /* Every action is listed and each one shows only where it applies (resolveBarItem), so the first
          customization, wherever it happens, keeps them all */
       var out = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
-        'tool:swappair', 'tool:magic'];
+        'tool:swappair', 'tool:magic', 'tool:render'];
       hbPinList(node).forEach(function (t) {
         var u = 'node:' + t;
         if (out.indexOf(u) < 0) out.push(u);
@@ -5029,12 +5160,12 @@
       }).map(function (tp) {
         var uid = 'tpl:' + tp.id;
         var inBar = allPinned.indexOf(uid) >= 0;
-        return '<button type="button" class="shb-btn shb-btn-row shb-tpl" data-hb-run="' + esc(uid) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to drop the nodes" style="cursor:grab">' +
+        return '<button type="button" class="shb-btn shb-btn-row shb-tpl" data-hb-run="' + esc(uid) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to add the nodes" style="cursor:grab">' +
           '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0"><span class="shb-tpl-ico">' + ico('sparkles') + '</span>' +
             '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(tp.name) + '</span><span class="shb-tpl-n">' + esc(tp.count) + '</span></span>' +
           '<span style="display:inline-flex;align-items:center;gap:4px">' +
             (inBar ? '<span class="shb-inbar">✓</span>' : '') +
-            '<span class="shb-tpl-del" data-hb-tpldel="' + esc(tp.id) + '" title="Delete this template for good">' + ico('trash', 13) + '</span>' +
+            '<span class="shb-tpl-del" data-hb-tpldel="' + esc(tp.id) + '" title="Delete this saved button for good">' + ico('trash', 13) + '</span>' +
           '</span>' +
         '</button>';
       }).join('');
@@ -5054,7 +5185,7 @@
               '</span>' +
             '</button>';
           }).join('') +
-          (tplRows ? '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">Your Templates</div>' + tplRows : '') +
+          (tplRows ? '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">Saved Buttons</div>' + tplRows : '') +
           (resizeList.length > 1 ? '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">Resizer Nodes</div>' +
             resizeList.map(function (r) {
               var rUid = 'node:' + r.type;
@@ -5573,6 +5704,7 @@
 
       el.className = 'shb-wrap ' + hbThemeCls() + (HB.editMode ? ' shb-editing' : '');
       hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, S.hbStyle === 'classic');
+      hbFitSliders(el);
 
       hbPlace();
       hbSyncEditAnim();
@@ -5697,7 +5829,24 @@
       });
     });
 
-    return list.slice(0, 8);
+    return list.slice(0, 40);
+  }
+
+  /* Four Pro Sliders show at once; more scroll inside the card, which fades at the edge that has more */
+  var PS_VISIBLE = 4;
+  function hbFitSliders(el) {
+    var list = el.querySelector('.shb-ps-list');
+    var rows = list ? list.children : [];
+    if (rows.length <= PS_VISIBLE) return;
+    var last = rows[PS_VISIBLE - 1];
+    list.style.maxHeight = (last.offsetTop + last.offsetHeight - rows[0].offsetTop) + 'px';
+    list.classList.add('shb-ps-scroll');
+    function edges() {
+      list.classList.toggle('shb-ps-more-dn', list.scrollTop + list.clientHeight < list.scrollHeight - 2);
+      list.classList.toggle('shb-ps-more-up', list.scrollTop > 2);
+    }
+    list.onscroll = edges;
+    edges();
   }
 
   function formatSliderVal(info, v) {
@@ -5730,12 +5879,13 @@
   function buildProSlidersHTML(node) {
     var numWidgets = getNumericWidgets(node);
     if (!numWidgets.length) return '';
+    var wheel = numWidgets.length > PS_VISIBLE ? 'Wheel on the number = nudge' : 'Wheel = nudge';
     return '<div class="shb-ps-list">' +
       numWidgets.map(function (it) {
         var span = (it.sMax - it.sMin) || 1;
         var pct = Math.max(0, Math.min(100, ((it.val - it.sMin) / span) * 100));
         return '<div class="shb-ps" data-ps-row="' + it.wIdx + '">' +
-          '<div class="shb-ps-track" data-ps-track="' + it.wIdx + '" title="Drag to scrub · Shift = fine · Ctrl+Click = previous value · Double-click = default (' + esc(formatSliderVal(it, it.defVal)) + ') · Wheel = nudge">' +
+          '<div class="shb-ps-track" data-ps-track="' + it.wIdx + '" title="Drag to scrub · Shift = fine · Ctrl+Click = previous value · Double-click = default (' + esc(formatSliderVal(it, it.defVal)) + ') · ' + wheel + '">' +
             '<div class="shb-ps-line"><div class="shb-ps-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
             '<div class="shb-ps-txt">' +
               '<span class="shb-ps-lbl" data-ps-reset="' + it.wIdx + '">' + esc(it.label) + '</span>' +
@@ -5945,8 +6095,7 @@
   }
 
   function hbUpdateBounds() {
-    /* after Merge to Button the node is gone, but the hotbox stays where it was (keepRect) */
-    var r = HB.node ? hbNodeRect(HB.node) : (HB.keepRect || null);
+    var r = HB.node ? hbNodeRect(HB.node) : null;
     var Z = parseFloat(S.hbScale) || 1;
     var gapBase = (S.hbGap !== undefined && S.hbGap !== null) ? Number(S.hbGap) : 28;
     var GAP = Math.round(gapBase * Z);
@@ -6382,7 +6531,7 @@
       }
       DRAWER_DRAG.inBar = !!target;
       hbSetBotDrop(!!(target && target === botC), false);
-      ghostMove(px, py, target ? 'Release to pin' : 'Drag onto a bar or +', target ? 'over' : '');
+      ghostMove(px, py, target ? 'Release to pin' : (/^tpl:/.test(DRAWER_DRAG.uid) ? 'Release to add the nodes here' : 'Drag onto a bar or +'), target ? 'over' : '');
       return;
     }
 
@@ -6476,8 +6625,14 @@
           /* a power tool pinned where it does not apply waits, hidden, for the nodes it works on */
           var shown = !!HB.el.querySelector('[data-hb-bar] > .shb-item-wrap[data-hb-uid="' + cssEsc(dd.uid) + '"]');
           setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"' + (shown ? '' : ' · it shows up on the nodes it works on'));
-        } else if (dw && dw.parentNode) {
-          dw.parentNode.removeChild(dw);
+        } else {
+          if (dw && dw.parentNode) dw.parentNode.removeChild(dw);
+          /* a saved button let go over the canvas adds its nodes right there */
+          var dTpl = /^tpl:/.test(dd.uid) && tplById(dd.uid.slice(4));
+          if (dTpl) {
+            hbClose();
+            tplRun(dTpl, { x: e.clientX, y: e.clientY }, { x: e.clientX, y: e.clientY });
+          }
         }
       }
       return;
@@ -6558,7 +6713,7 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
-    HB.el = null; HB.node = null; HB.rect = null; HB.keepRect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
+    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
     if (old) {
       old.removeAttribute('id');
       hbAnimateClose(old, cx, cy);
@@ -6728,14 +6883,16 @@
       }
     });
 
-    /* Mouse wheel over a Pro Slider row nudges the value smoothly */
+    /* Mouse wheel over a Pro Slider row nudges the value smoothly; when the sliders scroll, the wheel scrolls
+       them and only nudges over the number itself */
     el.addEventListener('wheel', function (e) {
       var t = e.target;
       if (!t || !t.closest || !HB.node) return;
       var rowEl = t.closest('.shb-ps[data-ps-row]');
       if (!rowEl) return;
-      e.preventDefault();
       e.stopPropagation();
+      if (t.closest('.shb-ps-scroll') && !t.closest('.shb-ps-num')) return;
+      e.preventDefault();
       var wIdx = +rowEl.getAttribute('data-ps-row');
       var info = findNumWidgetInfo(HB.node, wIdx);
       if (!info) return;
@@ -6783,11 +6940,11 @@
       var tDel = t.closest('[data-hb-tpldel]');
       if (tDel) {
         e.stopPropagation();
-        /* deleting a template is for good, so it takes a second click */
+        /* deleting a saved button is for good, so it takes a second click */
         if (!tDel.classList.contains('shb-armed')) {
           tDel.classList.add('shb-armed');
           tDel.title = 'Click again to delete';
-          setStatus('error', 'Click the trash again to delete this template for good');
+          setStatus('error', 'Click the trash again to delete this saved button for good');
           return;
         }
         tplDelete(tDel.getAttribute('data-hb-tpldel'));
@@ -7097,11 +7254,12 @@
   }, true);
 
   /* ---------------------------------------------------------------------
-   * 14b. MERGE TO BUTTON: the selection becomes one bar button that drops it back
-   * Templates are saved in the Hotbox file with everything else. The motion comes from the design
-   * handoff (Web Animations only): Fluid = gravity merge, Compact = shrinkwrap, Quiet = clean dissolve.
-   * LiteGraph draws nodes on a <canvas>, so the animation moves ghosts: a clone of each Vue node, or a
-   * snapshot of the canvas under a classic one.
+   * 14b. SAVE AS BUTTON: a copy of the selection becomes one bar button that adds those nodes again
+   * Saved buttons (`templates` in the settings) live in the Hotbox file with everything else. The motion
+   * comes from the design handoff (Web Animations only): Fluid = gravity merge, Compact = shrinkwrap,
+   * Quiet = clean dissolve. LiteGraph draws nodes on a <canvas>, so the animation moves ghosts (a clone of
+   * each Vue node, or a snapshot of the canvas under a classic one) while the real nodes step aside, and
+   * they come back once the button has landed: saving never removes anything.
    * --------------------------------------------------------------------- */
   var MG_SNAP = 'cubic-bezier(.2,.9,.1,1)';
   var MG_LAV = 'oklch(0.8 0.12 300 / .8)';
@@ -7361,7 +7519,7 @@
     return { x: r.left + (gx + ds.offset[0]) * sc, y: r.top + (gy + ds.offset[1]) * sc, s: sc };
   }
 
-  /* What Merge to Button takes: the selection (a selected group brings what is inside it), else the node under the hotbox */
+  /* What Save as Button takes: the selection (a selected group brings what is inside it), else the node under the hotbox */
   function mgItems(node) {
     var c = getCanvas(), out = [];
     function add(it) { if (it && out.indexOf(it) < 0) out.push(it); }
@@ -7413,12 +7571,162 @@
     }
   }
 
-  function mgName(nodes, items) {
-    for (var i = 0; i < items.length; i++) {
-      if (!isGraphNode(items[i]) && items[i].children && items[i].title) return String(items[i].title).slice(0, 32);
+  /* Model families, read from the model file a loader holds (or from the node types) */
+  var MG_FAMILIES = [
+    [/kontext/i, 'Flux Kontext'], [/flux/i, 'Flux'], [/qwen/i, 'Qwen'], [/hidream/i, 'HiDream'], [/chroma/i, 'Chroma'],
+    [/wan[_\-. ]?2|\bwan/i, 'Wan'], [/ltx/i, 'LTX'], [/hunyuan/i, 'Hunyuan'], [/cosmos/i, 'Cosmos'], [/mochi/i, 'Mochi'],
+    [/lumina/i, 'Lumina'], [/sd3|sd_3/i, 'SD3'], [/sdxl|sd_xl|xl_base|pony|illustrious|noobai/i, 'SDXL'],
+    [/sd15|sd_15|v1-5|sd1\.5/i, 'SD 1.5']
+  ];
+  var MG_MODEL_FILE = /\.(safetensors|ckpt|gguf|sft|pt|pth|bin)$/i;
+
+  function mgFamilyOf(text) {
+    for (var i = 0; i < MG_FAMILIES.length; i++) {
+      if (MG_FAMILIES[i][0].test(text)) return MG_FAMILIES[i][1];
     }
-    /* the button's badge already shows how many nodes it holds */
-    return String(nodes[0].title || nodes[0].type || 'Node').slice(0, 32);
+    return '';
+  }
+
+  /* "Flux" from flux1-dev.safetensors; an unknown file gives its first word ("Anima" from animaOfficial_v3) */
+  function mgFamily(nodes, types) {
+    var file = '';
+    nodes.forEach(function (n) {
+      var t = nodeTypeOf(n);
+      if (file || !/checkpoint|unet|diffusion|gguf|modelloader/i.test(t) || /upscale/i.test(t)) return;
+      (n.widgets || []).forEach(function (w) {
+        if (!file && typeof w.value === 'string' && MG_MODEL_FILE.test(w.value)) file = w.value;
+      });
+    });
+    if (file) {
+      var base = file.split(/[\\/]/).pop().replace(MG_MODEL_FILE, '');
+      var fam = mgFamilyOf(base);
+      if (fam) return fam;
+      var word = base.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s_\-.]+/)[0] || '';
+      if (/^[a-z]{3,}$/i.test(word) && !/^(model|models|diffusion|unet|checkpoint|ckpt|base|final|v\d+)$/i.test(word)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+    }
+    return mgFamilyOf(types.join(' '));
+  }
+
+  /* What a set of nodes does together, from their types: "Text to Image", "Image to Video", "Upscale"... */
+  function mgJob(types, nodes) {
+    function has(re) { return types.some(function (t) { return re.test(t); }); }
+    function count(re) { return types.filter(function (t) { return re.test(t); }).length; }
+    var samplers = count(/KSampler|SamplerCustom/i);
+    var lora = count(/lora/i);
+    var cnet = has(/controlnet/i);
+    var upscale = has(/upscale/i);
+    if (samplers) {
+      var imgIn = has(/^LoadImage/i);
+      var job = has(/video|ImageToVideo|LTXV|^Wan|EmptyMochi|CosmosImage/i) ? (imgIn ? 'Image to Video' : 'Text to Video')
+        : has(/ImageEdit|ReferenceLatent|Kontext/i) ? 'Image Edit'
+        : has(/inpaint|SetLatentNoiseMask/i) ? 'Inpaint'
+        : (imgIn && has(/^VAEEncode/i)) ? 'Image to Image'
+        : (samplers > 1 && upscale) ? 'Hires Fix'
+        : 'Text to Image';
+      return job + (cnet ? ' + ControlNet' : (lora ? ' + LoRA' : ''));
+    }
+    for (var i = 0; i < nodes.length; i++) {
+      var def = SRV.api && SRV.api[types[i]] && SRV.types && SRV.types[types[i]];
+      if (def) return { api: String(def.display_name || types[i]).replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\bAPI\b/g, '').replace(/\s+/g, ' ').trim() };
+    }
+    if (upscale) return 'Upscale';
+    if (cnet) return 'ControlNet';
+    if (lora === types.length) return 'LoRA Stack';
+    if (types.every(function (t) { return /loader|^Load(Checkpoint|Diffusion)/i.test(t); })) return 'Loaders';
+    if (types.every(function (t) { return /TextEncode|prompt|conditioning/i.test(t); })) return 'Prompts';
+    return '';
+  }
+
+  /* No known job: the chain, left to right ("Load Image → Crop → Preview") */
+  function mgChain(nodes) {
+    var names = [];
+    nodes.forEach(function (n) {
+      var t = String(n.title || n.type || '').trim();
+      if (t && names.indexOf(t) < 0) names.push(t);
+    });
+    if (names.length <= 3) {
+      var full = names.join(' → ');
+      if (full.length <= 34) return full;
+      var short = names.map(function (t, i) { return i ? (t.replace(/\s+(image|video|node)$/i, '') || t) : t; }).join(' → ');
+      if (short.length <= 34) return short;
+    }
+    return names[0] + ' → ' + names[names.length - 1];
+  }
+
+  /* A saved button is named after what it holds: a titled group, the one node, or what the nodes do together
+     ("Flux · Text to Image + LoRA") */
+  function mgName(nodes, items) {
+    var name = '';
+    for (var i = 0; i < items.length && !name; i++) {
+      var tt = String((!isGraphNode(items[i]) && items[i].children && items[i].title) || '').trim();
+      if (tt && !/^group$/i.test(tt)) name = tt;
+    }
+    if (!name && nodes.length === 1) name = String(nodes[0].title || nodes[0].type || 'Node');
+    if (!name) {
+      var types = nodes.map(nodeTypeOf);
+      var job = mgJob(types, nodes);
+      if (job && job.api) name = job.api;
+      else if (job) {
+        var fam = mgFamily(nodes, types);
+        name = fam ? fam + ' · ' + job : job;
+      } else name = mgChain(nodes);
+    }
+    name = name.slice(0, 40);
+    var taken = (S.templates || []).map(function (t) { return t.name; });
+    for (var k = 2, base = name; taken.indexOf(name) >= 0; k++) name = base + ' ' + k;
+    return name;
+  }
+
+  /* While the ghosts fly, the real nodes step aside; restore() fades them back in where they were */
+  function mgHideNodes(nodes) {
+    var c = getCanvas(), g = getGraph(), ids = {}, els = [], holds = [], alpha = 0, done = false;
+    nodes.forEach(function (n) {
+      ids[n.id] = 1;
+      var el = document.querySelector('.lg-node[data-node-id="' + cssEsc(n.id) + '"]');
+      if (el && el.animate) {
+        els.push(el);
+        holds.push(el.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 60000, fill: 'forwards' }));
+      }
+    });
+    /* classic nodes are pixels on the canvas: skip drawing them, then draw them fading in */
+    var own = c && Object.prototype.hasOwnProperty.call(c, 'drawNode') ? c.drawNode : null;
+    var base = c && c.drawNode;
+    if (base) {
+      c.drawNode = function (node, ctx) {
+        if (!ids[node.id]) return base.apply(this, arguments);
+        if (alpha <= 0) return;
+        var ga = ctx.globalAlpha;
+        ctx.globalAlpha = ga * alpha;
+        try { return base.apply(this, arguments); } finally { ctx.globalAlpha = ga; }
+      };
+      try { g.setDirtyCanvas(true, true); } catch (e) {}
+    }
+    var safety = setTimeout(restore, 4000);
+    function restore() {
+      if (done) return;
+      done = true;
+      clearTimeout(safety);
+      els.forEach(function (el, i) {
+        try {
+          holds[i].cancel();
+          el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: i * 35, easing: 'ease-out', fill: 'backwards' });
+          var inner = el.querySelector('[data-testid="node-inner-wrapper"]') || el.firstElementChild;
+          if (inner) inner.animate([{ transform: 'scale(.94)' }, { transform: 'scale(1)' }], { duration: 420, delay: i * 35, easing: 'cubic-bezier(.34,1.4,.64,1)', fill: 'backwards' });
+        } catch (e) {}
+      });
+      if (!base) return;
+      var t0 = performance.now();
+      (function step() {
+        alpha = Math.min(1, (performance.now() - t0) / 300);
+        try { g.setDirtyCanvas(true, true); } catch (e) {}
+        if (alpha < 1) { requestAnimationFrame(step); return; }
+        if (own) c.drawNode = own;
+        else delete c.drawNode;
+      })();
+    }
+    return { restore: restore };
   }
 
   function mgCard(gh, title, color, sc) {
@@ -7463,14 +7771,15 @@
     return gh;
   }
 
-  /* Merge to Button: the selected nodes melt into one template button in the bottom bar */
+  /* Save as Button: a copy of the selected nodes melts into one button in the bottom bar, and the nodes
+     themselves come back once it has landed */
   function actMagic(node) {
     var c = getCanvas(), g = getGraph();
     if (!c || !g || MG_BUSY) return;
     var items = mgItems(node);
     var nodes = items.filter(isGraphNode);
     if (!nodes.length) {
-      setStatus('error', 'Select the nodes to merge, or open the hotbox over one');
+      setStatus('error', 'Select the nodes to save, or open the hotbox over one');
       return;
     }
     var data = null;
@@ -7503,32 +7812,18 @@
       bar.appendChild(slot);
     }
 
-    /* the template is saved right away (a bar that was never customized lists every template by itself) */
+    /* the button is saved right away (a bar that was never customized lists every saved button by itself) */
     S.templates.push(tpl);
     if (Array.isArray(S.customBotBar) && S.customBotBar.indexOf(uid) < 0) S.customBotBar.push(uid);
     save();
-
-    /* then the real nodes go, through ComfyUI's own delete so Ctrl+Z brings them back */
-    try {
-      if (c.selectItems) c.selectItems(items);
-      else if (c.selectNodes) c.selectNodes(nodes);
-      if (c.deleteSelected) c.deleteSelected();
-      else nodes.forEach(function (n) { g.remove(n); });
-    } catch (e) {
-      nodes.forEach(function (n) { try { if (n.graph) g.remove(n); } catch (er) {} });
-    }
-    try { g.setDirtyCanvas(true, true); } catch (e) {}
-    if (HB.node && nodes.indexOf(HB.node) >= 0) {
-      HB.keepRect = HB.rect;
-      HB.node = null;
-    }
-    setStatus('ok', '✨ ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ' merged into "' + tpl.name + '" · click it to drop them back (Ctrl+Z undoes)');
+    setStatus('ok', '✨ Saved ' + tpl.count + (tpl.count === 1 ? ' node' : ' nodes') + ' as "' + tpl.name + '" · click it, or drag it onto the canvas, to add them again');
 
     if (!chip) {
       if (root.parentNode) root.parentNode.removeChild(root);
       if (HB.el) hbPaint();
       return;
     }
+    var hidden = mgHideNodes(nodes);
     var fly = document.createElement('div');
     fly.className = 'shb-mg-fly';
     fly.innerHTML = '<span class="shb-mg-flyc"><span class="shb-tpl-ico">' + ico('sparkles', hbIsFluid() ? 15 : 13) + '</span>' +
@@ -7560,10 +7855,11 @@
     }, { pace: mv.pace });
     h.finished.then(function () {
       MG_BUSY = false;
-      /* the real button takes the place of the one that just landed */
+      /* the real button takes the place of the one that just landed, and the nodes come back */
       if (HB.el) hbPaint();
       h.cancel();
       if (root.parentNode) root.parentNode.removeChild(root);
+      hidden.restore();
     });
   }
 
@@ -7625,11 +7921,11 @@
     setTimeout(function () {
       var made = [];
       try { made = mgPaste(data, pos); } catch (e) {
-        setStatus('error', 'Could not drop the template: ' + msgOf(e));
+        setStatus('error', 'Could not add the saved nodes: ' + msgOf(e));
         return;
       }
       try { g.setDirtyCanvas(true, true); } catch (e) {}
-      setStatus('ok', '✨ Dropped "' + tpl.name + '" (' + made.length + (made.length === 1 ? ' node)' : ' nodes)'));
+      setStatus('ok', '✨ Added "' + tpl.name + '" (' + made.length + (made.length === 1 ? ' node)' : ' nodes)'));
     }, Math.max(0, h.duration - 60));
     h.finished.then(function () {
       setTimeout(function () {
@@ -7650,7 +7946,7 @@
     Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
     if (S.customLabels) delete S.customLabels[uid];
     save();
-    setStatus('ok', 'Deleted the template "' + t.name + '"');
+    setStatus('ok', 'Deleted the saved button "' + t.name + '"');
   }
 
   /* ---------------------------------------------------------------------
@@ -7851,28 +8147,38 @@
     mountTopBarButton();
   }
 
-  /* Export hands over the Hotbox file itself: the same content as the file on disk */
+  /* Export hands over the Hotbox file in use (the same content as on disk), named after its version and the
+     moment it left: hotbox_original_2026-10-22_0915.json, hotbox_v2_..., so no two exports share a name */
+  function exportName() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    var v = cfgVerNum(CFG.file);
+    return 'hotbox_' + (v > 1 ? 'v' + v : 'original') + '_' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+      '_' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+  }
+
   function exportCustomSettings() {
     try {
+      var name = exportName();
       var jsonStr = JSON.stringify(cfgPayload(), null, 2);
       var blob = new Blob([jsonStr], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = CFG.file;
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       setTimeout(function () {
         if (a.parentNode) a.parentNode.removeChild(a);
         URL.revokeObjectURL(url);
       }, 250);
-      setStatus('ok', '✓ Exported ' + CFG.file);
+      setStatus('ok', '✓ Exported ' + name);
     } catch (err) {
       setStatus('error', 'Export failed: ' + msgOf(err));
     }
   }
 
-  /* Import reads a Hotbox file, then asks: replace the one in use, or keep both as versions */
+  /* Import reads a Hotbox file and adds it as the next version: the file in use (and the original) stay as they are */
   function importCustomSettings(onDone) {
     var inp = document.createElement('input');
     inp.type = 'file';
@@ -7890,7 +8196,7 @@
           if (!src || typeof src !== 'object' || Array.isArray(src)) throw new Error('Invalid JSON format');
           var known = Object.keys(src).filter(function (k) { return Object.prototype.hasOwnProperty.call(DEFAULTS, k); });
           if (!known.length) throw new Error('this is not a Hotbox file');
-          importChoice(src, file.name, onDone);
+          importAsVersion(src, file.name, onDone);
         } catch (err) {
           setStatus('error', 'Import failed: ' + msgOf(err));
         }
@@ -7901,7 +8207,11 @@
     inp.click();
   }
 
-  function importChoice(src, fname, onDone) {
+  function importAsVersion(src, fname, onDone) {
+    if (!CFG.ready) {
+      setStatus('error', 'Import needs ComfyUI running, so the file can be kept as a new version');
+      return;
+    }
     var next = cfgNewVersionName();
     var nTpl = Array.isArray(src.templates) ? src.templates.length : 0;
     var bg = owns(document.createElement('div'));
@@ -7909,11 +8219,9 @@
     bg.innerHTML =
       '<div class="shb-modal" style="width:min(420px,92vw)">' +
         '<div class="shb-modal-t"><span>Import ' + esc(fname) + '</span></div>' +
-        '<div style="font-size:12px;color:#9a9a9a">' + (nTpl ? nTpl + (nTpl === 1 ? ' template, ' : ' templates, ') : '') + 'bars, labels and settings</div>' +
-        '<button type="button" class="shb-btn shb-btn-pri shb-imp-b" data-imp="replace">' + ico('sync', 15) +
-          '<span><b>Replace ' + esc(CFG.file) + '</b><small>What you have now is overwritten by this file</small></span></button>' +
-        (CFG.ready ? '<button type="button" class="shb-btn shb-btn-pri shb-imp-b" data-imp="version">' + ico('history', 15) +
-          '<span><b>Save as ' + esc(next) + '</b><small>A new version. ' + esc(CFG.file) + ' stays as it is, and Settings switches between them</small></span></button>' : '') +
+        '<div style="font-size:12px;color:#9a9a9a">' + (nTpl ? nTpl + (nTpl === 1 ? ' saved button, ' : ' saved buttons, ') : '') + 'bars, labels and settings</div>' +
+        '<button type="button" class="shb-btn shb-btn-pri shb-imp-b" data-imp="version">' + ico('history', 15) +
+          '<span><b>Add as ' + esc(cfgVerLabel(next)) + ' (' + esc(next) + ')</b><small>It becomes the one in use. ' + esc(cfgVerLabel(CFG.file)) + ' (' + esc(CFG.file) + ') is kept exactly as it is: Settings → Version switches back any time</small></span></button>' +
         '<div style="display:flex;justify-content:flex-end"><button type="button" class="shb-btn" data-imp="cancel">Cancel</button></div>' +
       '</div>';
     document.body.appendChild(bg);
@@ -7922,20 +8230,22 @@
     bg.onclick = function (ev) {
       var b = ev.target && ev.target.closest ? ev.target.closest('[data-imp]') : null;
       if (!b) return;
-      var how = b.getAttribute('data-imp');
       close();
-      if (how === 'cancel') return;
-      applyConfig(src);
-      CFG.origin = 'browser';
-      if (how === 'version') {
+      if (b.getAttribute('data-imp') !== 'version') return;
+      /* whatever is pending goes to the file in use first, then the import gets its own file */
+      var flush = CFG.timer ? cfgWrite() : Promise.resolve();
+      flush.then(function () {
+        applyConfig(src);
+        CFG.origin = 'browser';
         CFG.file = next;
-        cfgWrite().then(function () { return cfgPut('active.json', { file: next }); }).then(cfgListVersions, cfgListVersions);
-      } else {
-        save();
-      }
-      cfgApplied();
-      if (typeof onDone === 'function') onDone();
-      setStatus('ok', how === 'version' ? '✓ Imported as ' + next + ' (now in use)' : '✓ Imported into ' + CFG.file);
+        cfgApplied();
+        return cfgWrite();
+      }).then(function () {
+        return cfgPut('active.json', { file: next });
+      }).then(cfgListVersions, cfgListVersions).then(function () {
+        if (typeof onDone === 'function') onDone();
+        setStatus('ok', '✓ Imported as ' + cfgVerLabel(next) + ' (' + next + ') · the Original (hotbox.json) is untouched');
+      });
     };
   }
 
@@ -7947,15 +8257,15 @@
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
     { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
-      tip: 'Takes what the node is showing (Save / Preview Image, Save Video…), copies it into input/ and drops a Load Image — or a Load Video for videos — with it right under the node, in its own INPUT group. The [V] button only shows up on nodes that are showing an image or a video.' },
+      tip: 'Takes what the node is showing (Save / Preview Image, Save Video…), copies it into input/ and drops a Load Image — or a Load Video for videos — with it right under the node, in its own INPUT group. The [V] button shows up in the bottom bar on Preview, Save Image and Save Video nodes, and on any node that is showing an image or a video.' },
     { uid: 'tool:render', icon: 'play', name: 'Render Selected', keys: 'Shift+R', desc: 'Queue only the selected outputs',
       tip: 'Renders only what you selected: the selected output nodes, or the output nodes downstream of the selection, with just the nodes they need. Nothing selected renders nothing, so a stray key never spends API credits on the whole graph. Uses rgthree\'s queue when it is installed.' },
     { uid: 'tool:stitch', icon: 'stitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
       tip: 'On a crop, on the plate it cuts, or on a result that came out of a crop: adds a fit (ImageScale, bicubic) that sizes your result back to the crop box and an ImageCompositeMasked that pastes it at the crop\'s x / y. Several crops of one plate chain into one result, a preview closes the chain, an empty "apinode / localmodel" group marks where the model goes, and every stitch keeps following its crop when you move or resize it.' },
     { uid: 'tool:swappair', icon: 'swap', name: 'Swap Nodes', keys: 'W', desc: 'Two selected nodes trade places and wires',
       tip: 'Select two nodes and they trade places, each one taking over the other\'s connections (like Ctrl+Shift-dragging a node in Nuke). Wired or not, they always swap; slots are matched by name, then by type. Shows up in the bottom bar while exactly two nodes are selected.' },
-    { uid: 'tool:magic', icon: 'wand', name: 'Merge to Button', keys: 'X', desc: 'Turn the selection into a reusable button',
-      tip: 'Select any nodes (one or many, or a group) and they merge into a single button in the bottom bar, saved in your Hotbox file. Click the button to drop them back by the cursor, or drag it onto the canvas: their settings and inner wires come back exactly as they were. Ctrl+Z right after brings the originals back.' },
+    { uid: 'tool:magic', icon: 'wand', name: 'Save as Button', keys: 'X', desc: 'Keep a copy of the selection as a button',
+      tip: 'Select any nodes (one or many, or a group) and a copy of them becomes one button in the bottom bar, saved in your Hotbox file; the nodes themselves stay where they are. Click the button to add them again by the cursor, or drag it onto the canvas: their settings and inner wires come back exactly as they were. The name says what they do (e.g. "Flux · Text to Image"); rename it in edit mode.' },
     { uid: 'tool:apibypass', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
       tip: 'Bypasses every paid API node in the workflow for a cost-free test run; press it again to bring them back. Shows up in the bottom bar when the workflow has API nodes.' },
     { uid: 'tool:zoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
@@ -8031,11 +8341,11 @@
       hbHold: { opts: [false, true], names: ['Toggle on Press', 'Hold & Release'],
         tip: 'Toggle: press the hotkey to open, press again to close. Hold & Release: Maya / Nuke style, open while held.' },
       hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
-        tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels with hairline leaders. Tab also switches it.' },
+        tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels, smaller and plainer. Tab also switches it.' },
       hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
         tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' }
     };
-    var ptOpen = false;
+    var ptOpen = false, sbOpen = false, dirEdit = false;
 
     function cycleCur(key) {
       var c = CYCLES[key];
@@ -8055,8 +8365,8 @@
     /* The saved versions of the Hotbox file: one button that steps through them, like the other choices */
     function verBtn() {
       var i = Math.max(0, CFG.versions.indexOf(CFG.file));
-      return '<button type="button" class="shb-btn shb-btn-pri shb-cycle" data-st-ver data-tip="Click to switch to the next saved version of your Hotbox file. Importing a file as a new version adds one.">' +
-        '<span class="shb-cycle-v">' + esc(CFG.file) + '</span>' +
+      return '<button type="button" class="shb-btn shb-btn-pri shb-cycle" data-st-ver data-tip="Click to switch to the next version of your Hotbox file. The Original is hotbox.json; every import adds a version and never overwrites it.">' +
+        '<span class="shb-cycle-v">' + esc(cfgVerLabel(CFG.file)) + ' <small style="font-weight:400;opacity:.6">' + esc(CFG.file) + '</small></span>' +
         '<span class="shb-cycle-dots">' + CFG.versions.map(function (v, j) { return '<i' + (j === i ? ' class="shb-on"' : '') + '></i>'; }).join('') + '</span>' +
         ico('sync', 12) +
       '</button>';
@@ -8064,6 +8374,42 @@
 
     function setLabel(icon, text, top) {
       return '<label class="shb-set-l' + (top ? ' shb-set-top' : '') + '">' + ico(icon, 14) + '<span>' + esc(text) + '</span></label>';
+    }
+
+    /* "Load Image · Crop Image · Preview Image" for a saved button's row */
+    function tplSummary(tp) {
+      var names = [];
+      ((tp.data && tp.data.nodes) || []).forEach(function (n) {
+        var def = SRV.types && SRV.types[n.type];
+        var t = String(n.title || (def && def.display_name) || n.type || '');
+        if (t && names.indexOf(t) < 0) names.push(t);
+      });
+      return names.slice(0, 3).join(' · ') + (names.length > 3 ? ' +' + (names.length - 3) : '');
+    }
+
+    /* Every saved button, draggable into the hotbox like the power tools */
+    function savedButtonsHTML() {
+      var list = Array.isArray(S.templates) ? S.templates : [];
+      return '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-sbmenu data-tip="Every set of nodes saved with Save as Button (X). Drag one onto a hotbox bar to pin it, or onto the canvas to add its nodes there.">' +
+          '<span class="shb-ptmenu-v">' + list.length + ' saved · drag into the hotbox</span>' +
+          ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
+        '</button>' +
+        (sbOpen ? '<div class="shb-pt">' +
+          (list.length ? '<div class="shb-sb-list">' + list.map(function (tp) {
+            var when = Date.parse(tp.at);
+            return '<div class="shb-pt-row" data-st-ptuid="tpl:' + esc(tp.id) + '" data-tip="' + esc(tp.count + (tp.count === 1 ? ' node' : ' nodes') + ': ' + tplSummary(tp) + (when ? ' · saved ' + new Date(when).toLocaleString() : '')) + '">' +
+              '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
+              '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' +
+              '<span class="shb-pt-name">' + esc(tp.name) + '<small>' + esc(tplSummary(tp)) + '</small></span>' +
+              '<span class="shb-tpl-n">' + esc(tp.count) + '</span>' +
+              '<span class="shb-tpl-del" data-st-tpldel="' + esc(tp.id) + '" title="Delete this saved button for good">' + ico('trash', 13) + '</span>' +
+            '</div>';
+          }).join('') + '</div>'
+          : '<div class="shb-sb-empty">Nothing saved yet. Select some nodes and press X (Save as Button) in the hotbox.</div>') +
+          '<div class="shb-sb-foot"><span title="' + esc(cfgPath()) + '">Kept inside ' + esc(CFG.file) + ' · ' + esc(cfgFolder()) + '</span>' +
+            '<button type="button" class="shb-btn shb-btn-pri" data-st-open data-tip="Open this folder in your file browser">' + ico('folder', 13) + '<span>Show Folder</span></button>' +
+          '</div>' +
+        '</div>' : '');
     }
 
     function render() {
@@ -8085,10 +8431,12 @@
             setLabel('pointer', 'Launch Mode') + '<div>' + cycleBtn('hbHold') + '</div>' +
             setLabel('palette', 'UI Style') + '<div>' + cycleBtn('hbStyle') + '</div>' +
             setLabel('edit', 'Edit Mode') + '<div>' + cycleBtn('hbEditAnim') + '</div>' +
+            /* each style has its own effect, so only the one that shows is offered */
             setLabel('sparkles', 'Effects') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-              '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" data-tip="Fluid & Compact: a soft dim behind the hotbox (never blurred)">' + ico('moon', 13) + '<span>Canvas Dim</span></button>' +
-              '<button class="shb-btn ' + (S.hbLeaders !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbLeaders" data-tip="Quiet: hairlines from the cursor to each zone">' + ico('leaders', 13) + '<span>Leader Lines</span></button>' +
+              (hbTheme() === 'quiet'
+                ? '<button class="shb-btn ' + (S.hbLeaders !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbLeaders" data-tip="Quiet only: thin lines from the cursor to the top and bottom bars and the side cards (off by default: they cross the node)">' + ico('leaders', 13) + '<span>Leader Lines</span></button>'
+                : '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" data-tip="Fluid & Compact: a soft dim behind the hotbox (never blurred)">' + ico('moon', 13) + '<span>Canvas Dim</span></button>') +
             '</div>' +
             setLabel('resize', 'UI Scale') +
             '<div style="display:flex;align-items:center;gap:8px">' +
@@ -8117,20 +8465,33 @@
                 }).join('') +
               '</div>' : '') +
             '</div>' +
+            setLabel('wand', 'Saved Buttons', true) +
+            '<div>' + savedButtonsHTML() + '</div>' +
             setLabel('folder', 'Saved In', true) +
             '<div class="shb-cfg">' +
-              '<div class="shb-cfg-path" data-tip="Every change (moved or pinned buttons, bars, labels, templates and these settings) is written to this file in ComfyUI\'s user folder, so it follows you to any browser and survives clearing the cache.">' + esc(cfgPath()) + '</div>' +
-              '<div class="shb-cfg-row">' +
-                '<span data-st-cfgstate class="shb-cfg-state shb-cfg-' + esc(CFG.state) + '">' + esc(cfgStateText()) + '</span>' +
+              '<div class="shb-cfg-path" data-tip="Every change (moved or pinned buttons, bars, labels, saved buttons and these settings) is written to this file, so it follows you to any browser and survives clearing the cache. By default it sits in ComfyUI\'s user folder, on Windows, macOS and Linux alike.">' + esc(cfgPath()) + '</div>' +
+              (CFG.missing ? '<div class="shb-cfg-warn">The folder you picked is not there right now (' + esc(CFG.missing) + '), so the default one is in use.</div>' : '') +
+              '<span data-st-cfgstate class="shb-cfg-state shb-cfg-' + esc(CFG.state) + '">' + esc(cfgStateText()) + '</span>' +
+              '<div class="shb-cfg-btns">' +
                 '<button type="button" class="shb-btn shb-btn-pri" data-st-copy data-tip="Copy the full path">' + ico('copy', 13) + '<span>Copy Path</span></button>' +
+                '<button type="button" class="shb-btn shb-btn-pri" data-st-open data-tip="Open this folder in your file browser">' + ico('folder', 13) + '<span>Show Folder</span></button>' +
+                (CFG.srv ? '<button type="button" class="shb-btn' + (dirEdit ? ' shb-btn-on' : ' shb-btn-pri') + '" data-st-dir data-tip="Keep the Hotbox files in another folder (a synced drive, a shared team folder…)">' + ico('edit', 13) + '<span>Change Folder</span></button>' : '') +
               '</div>' +
+              (dirEdit ? '<div class="shb-cfg-edit">' +
+                '<input type="text" data-st-dirin spellcheck="false" value="' + esc(CFG.dir) + '" placeholder="Full path of a folder">' +
+                '<div class="shb-cfg-btns">' +
+                  '<button type="button" class="shb-btn shb-btn-on" data-st-dirok>' + ico('check', 13) + '<span>Use This Folder</span></button>' +
+                  (CFG.custom ? '<button type="button" class="shb-btn shb-btn-pri" data-st-dirdef>' + ico('sync', 13) + '<span>Back to Default</span></button>' : '') +
+                '</div>' +
+                '<small>Hotbox files already in that folder are used as they are; otherwise yours are copied there. Default: ' + esc(CFG.defDir) + '</small>' +
+              '</div>' : '') +
             '</div>' +
             (CFG.versions.length > 1 ? setLabel('history', 'Version') + '<div>' + verBtn() + '</div>' : '') +
             setLabel('save', 'Custom Config') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-              '<button type="button" class="shb-btn shb-btn-pri" data-st-export data-tip="Download a copy of your Hotbox file (' + esc(CFG.file) + ')">' + ico('save', 13) + '<span>Export .json</span></button>' +
-              '<button type="button" class="shb-btn shb-btn-pri" data-st-import data-tip="Load a Hotbox file: replace the one in use, or keep both as versions">' + ico('upload', 13) + '<span>Import .json</span></button>' +
-              '<button type="button" class="shb-btn" data-st-resetbars data-tip="Put every bar back to its default buttons (templates stay saved)">' + ico('sync', 13) + '<span>Reset Bars</span></button>' +
+              '<button type="button" class="shb-btn shb-btn-pri" data-st-export data-tip="Download a dated copy of the version in use (' + esc(exportName()) + ')">' + ico('save', 13) + '<span>Export .json</span></button>' +
+              '<button type="button" class="shb-btn shb-btn-pri" data-st-import data-tip="Load a Hotbox file as a new version. It never overwrites the Original (hotbox.json) or any other version">' + ico('upload', 13) + '<span>Import .json</span></button>' +
+              '<button type="button" class="shb-btn" data-st-resetbars data-tip="Put every bar back to its default buttons (saved buttons stay saved)">' + ico('sync', 13) + '<span>Reset Bars</span></button>' +
             '</div>' +
           '</div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid #333333">' +
@@ -8184,13 +8545,60 @@
       }
       var copyB = wrap.querySelector('[data-st-copy]');
       if (copyB) {
-        copyB.onclick = function () {
-          var path = cfgPath();
-          try {
-            navigator.clipboard.writeText(path).then(function () { setStatus('ok', '✓ Path copied'); }, function () { setStatus('ok', path); });
-          } catch (e) { setStatus('ok', path); }
+        copyB.onclick = function () { cfgCopy(cfgPath(), 'Path'); };
+      }
+      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-open]'), function (b) {
+        b.onclick = cfgOpenFolder;
+      });
+      var sbBtn = wrap.querySelector('[data-st-sbmenu]');
+      if (sbBtn) {
+        sbBtn.onclick = function () {
+          sbOpen = !sbOpen;
+          render();
         };
       }
+      var dirB = wrap.querySelector('[data-st-dir]');
+      if (dirB) {
+        dirB.onclick = function () {
+          dirEdit = !dirEdit;
+          render();
+          var inp = wrap.querySelector('[data-st-dirin]');
+          if (inp) { inp.focus(); inp.select(); }
+        };
+      }
+      var dirIn = wrap.querySelector('[data-st-dirin]');
+      function useDir(path) {
+        dirEdit = false;
+        cfgSetFolder(path, render);
+      }
+      var dirOk = wrap.querySelector('[data-st-dirok]');
+      if (dirOk && dirIn) {
+        dirOk.onclick = function () { useDir(dirIn.value.trim()); };
+        dirIn.onkeydown = function (ev) {
+          ev.stopPropagation();
+          if (ev.key === 'Enter') useDir(dirIn.value.trim());
+          else if (ev.key === 'Escape') { dirEdit = false; render(); }
+        };
+      }
+      var dirDef = wrap.querySelector('[data-st-dirdef]');
+      if (dirDef) {
+        dirDef.onclick = function () { useDir(''); };
+      }
+      /* deleting a saved button is for good, so it takes a second click */
+      Array.prototype.forEach.call(wrap.querySelectorAll('[data-st-tpldel]'), function (b) {
+        b.onclick = function (ev) {
+          ev.stopPropagation();
+          if (!b.classList.contains('shb-armed')) {
+            b.classList.add('shb-armed');
+            b.title = 'Click again to delete';
+            setStatus('error', 'Click the trash again to delete this saved button for good');
+            return;
+          }
+          tplDelete(b.getAttribute('data-st-tpldel'));
+          if (HB.el) hbPaint();
+          render();
+        };
+      });
       var sc = wrap.querySelector('[data-st-scale]');
       var scVal = wrap.querySelector('[data-st-scale-val]');
       if (sc) {
@@ -8247,10 +8655,10 @@
       }
     }
 
-    /* Power tools are dragged from here straight onto a hotbox bar */
+    /* Power tools and saved buttons are dragged from here straight onto a hotbox bar */
     wrap.addEventListener('pointerdown', function (e) {
       var row = (e.button === 0 && e.target && e.target.closest) ? e.target.closest('[data-st-ptuid]') : null;
-      if (!row) return;
+      if (!row || e.target.closest('[data-st-tpldel]')) return;
       e.preventDefault();
       if (!HB.el) hbOpen();
       clearDrawerDrag();
