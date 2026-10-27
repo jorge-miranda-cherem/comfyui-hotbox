@@ -497,6 +497,8 @@
     more: '<circle cx="12" cy="5" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/>',
     chevDown: '<path d="M6 9l6 6 6-6"/>',
     chevRight: '<path d="M9 6l6 6-6 6"/>',
+    chevUp: '<path d="M6 15l6-6 6 6"/>',
+    group: '<rect x="3" y="4" width="18" height="16" rx="2" stroke-dasharray="3 2.6"/><path d="M3 9h18"/>',
     crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
     stitch: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
     resize: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
@@ -590,11 +592,16 @@
       '.shb-zone-bot{transform:translate(-50%,0);align-items:center}',
       '.shb-zone-left{transform:translate(-100%,-50%);align-items:flex-end}',
       '.shb-zone-right{transform:translate(0,-50%);align-items:flex-start}',
-      '.shb-zone-bot > .shb-plus-wrap{position:absolute;left:100%;top:50%;margin-left:12px;transform:translateY(-50%);display:flex}',
-      '.shb-zone-bot.shb-plus-left > .shb-plus-wrap{left:auto;right:100%;margin-left:0;margin-right:12px}',
+      /* the bottom bar and its "+" ride one row, so the "+" stays centered on the bar when the Custom Bar sits above it */
+      '.shb-botrow{position:relative;display:flex;justify-content:center}',
+      '.shb-botrow > .shb-plus-wrap{position:absolute;left:100%;top:50%;margin-left:12px;transform:translateY(-50%);display:flex}',
+      '.shb-zone-bot.shb-plus-left .shb-botrow > .shb-plus-wrap{left:auto;right:100%;margin-left:0;margin-right:12px}',
+      /* Custom Bar: buttons other extensions hand to the hotbox (window.__hotboxBars), above the bottom bar */
+      '.shb-cbar-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}',
+      '.shb-editing .shb-cbar{opacity:.4;pointer-events:none}',
       '.shb-zone-drawer{transform:none;z-index:30}',
       '.shb-zone-catmenu{transform:none;z-index:31}',
-      '.shb-bar,.shb-card,.shb-drawer,.shb-editbar,.shb-plus,.shb-dial-in,.shb-catmenu{zoom:var(--shb-zoom,1)}',
+      '.shb-bar,.shb-card,.shb-drawer,.shb-editbar,.shb-plus,.shb-dial-in,.shb-catmenu,.shb-wmenu{zoom:var(--shb-zoom,1)}',
 
       /* Shared structure (both themes) */
       '.shb-bar{display:flex;align-items:center;gap:3px;padding:5px 8px;flex-wrap:wrap;justify-content:center;max-width:84vw}',
@@ -606,7 +613,7 @@
       '.shb-bar-items{display:inline-flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:center}',
       '.shb-bar-items:empty{display:none}',
       '.shb-editing .shb-bar-items:empty,.shb-dropping .shb-bar-items:empty{display:inline-flex;min-width:28px;min-height:28px}',
-      '.shb-wrap:not(.shb-editing):not(.shb-dropping) .shb-ctx:not(:has(.shb-item-wrap,.shb-segc)){display:none}',
+      '.shb-wrap:not(.shb-editing):not(.shb-dropping) .shb-ctx:not(:has(.shb-item-wrap,.shb-segc,.shb-w-host)){display:none}',
       '.shb-rows{position:relative;display:flex;flex-direction:column}',
       '.shb-hl{position:absolute;left:0;right:0;top:0;height:34px;pointer-events:none;opacity:0}',
       '.shb-row{position:relative;display:flex;align-items:center;width:100%;border:0;background:transparent;cursor:pointer;text-align:left;box-sizing:border-box}',
@@ -651,6 +658,38 @@
       /* Ratio segmented control with sliding thumb */
       '.shb-segc{position:relative;display:flex}',
       '.shb-segc-b{position:relative;border:0;background:transparent;cursor:pointer;padding:0}',
+
+      /* Bar widgets (Label bar, extension bars): groups, fields, steppers, sliders, swatches, segments, menus */
+      '.shb-w-host{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center}',
+      '.shb-w-wrap{display:inline-flex;align-items:center;gap:6px}',
+      '.shb-w-cap{white-space:nowrap}',
+      '.shb-w-grp{display:inline-flex;align-items:center;gap:2px}',
+      '.shb-w-in{box-sizing:border-box;outline:none;user-select:text;min-width:0}',
+      '.shb-w-num{display:inline-flex;align-items:center;gap:3px}',
+      '.shb-w-nin{text-align:center;font-variant-numeric:tabular-nums}',
+      '.shb-w-step{display:grid;place-items:center;border:0;cursor:pointer;padding:0}',
+      '.shb-w-step .shb-ico{color:inherit}',
+      '.shb-w-range{display:inline-flex;align-items:center;gap:7px}',
+      '.shb-w-range input{-webkit-appearance:none;appearance:none;margin:0;height:16px;background:transparent;cursor:ew-resize}',
+      '.shb-w-range input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--shb-w-track)}',
+      '.shb-w-range input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:var(--shb-w-thumb);box-shadow:0 1px 4px rgba(0,0,0,.45)}',
+      '.shb-w-range input::-moz-range-track{height:4px;border-radius:2px;background:var(--shb-w-track)}',
+      '.shb-w-range input::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--shb-w-thumb)}',
+      '.shb-w-val{min-width:40px;font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.shb-w-sw,.shb-w-seg{display:inline-flex;align-items:center}',
+      '.shb-w-segb{border:0;background:transparent;cursor:pointer;white-space:nowrap}',
+      '.shb-w-field{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;white-space:nowrap}',
+      '.shb-w-car{display:inline-grid;place-items:center;opacity:.6}',
+      '.shb-w-car .shb-ico{color:inherit}',
+      '.shb-w-badge{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 5px;box-sizing:border-box;border-radius:8px;font:600 10px/1 Inter,system-ui,sans-serif}',
+      '.shb-w-info{display:inline-flex;align-items:center;gap:6px;max-width:260px;padding:0 6px;white-space:nowrap;overflow:hidden;cursor:default}',
+      '.shb-w-info span{overflow:hidden;text-overflow:ellipsis}',
+      '.shb-zone-wmenu{transform:none;z-index:32}',
+      '.shb-wmenu{display:flex;flex-direction:column;gap:4px;min-width:200px;max-width:340px;box-sizing:border-box}',
+      '.shb-wmenu-list{display:flex;flex-direction:column;max-height:320px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}',
+      '.shb-w-hint{padding-left:10px;white-space:nowrap;opacity:.55;font-size:11px}',
+      '.shb-w-empty{padding:10px;opacity:.6;font-size:12px;white-space:nowrap}',
+      '.shb-gets{max-height:206px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}',
 
       /* Color swatches & pipette */
       '.shb-colors{display:flex;align-items:center;flex-wrap:nowrap}',
@@ -770,12 +809,13 @@
 
       /* ---------- 1a FLUID: frosted glass, spring motion, sliding highlights ---------- */
       '.shb-fluid{--shb-glass:rgba(38,38,42,.6);--shb-t1:#f2f2f5;--shb-t2:rgba(235,235,245,.7);--shb-t3:rgba(235,235,245,.5);--shb-blue:#2f86e0;--shb-blue2:#5aa2f0;--shb-danger:#e8735f}',
-      '.shb-fluid .shb-bar,.shb-fluid .shb-card,.shb-fluid .shb-drawer,.shb-fluid .shb-editbar,.shb-fluid .shb-dial-in,.shb-fluid .shb-catmenu{background:var(--shb-glass);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 50px rgba(0,0,0,.45);color:var(--shb-t1)}',
+      '.shb-fluid .shb-bar,.shb-fluid .shb-card,.shb-fluid .shb-drawer,.shb-fluid .shb-editbar,.shb-fluid .shb-dial-in,.shb-fluid .shb-catmenu,.shb-fluid .shb-wmenu{background:var(--shb-glass);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 50px rgba(0,0,0,.45);color:var(--shb-t1)}',
       '.shb-fluid .shb-scrim{position:fixed;inset:0;background:rgba(8,8,10,.16);pointer-events:none;z-index:0}',
       '.shb-fluid .shb-bar{gap:2px;padding:5px;max-width:92vw}',
       '.shb-fluid .shb-dock{border-radius:18px}',
       '.shb-fluid .shb-ctx{border-radius:15px;padding:4px;gap:6px}',
       '.shb-fluid .shb-botbar{border-radius:24px}',
+      '.shb-fluid .shb-cbar{border-radius:22px}',
       '.shb-fluid .shb-bar.shb-drop-over{border-color:rgba(255,255,255,.35)}',
       '.shb-fluid .shb-vsep{height:20px;background:rgba(255,255,255,.12)}',
       '.shb-fluid .shb-btn{gap:8px;padding:9px 13px;border:0;border-radius:13px;background:transparent;color:var(--shb-t1);font:500 13px/1 Inter,system-ui,sans-serif;transition:transform 45ms cubic-bezier(.34,1.56,.64,1),background 26ms}',
@@ -862,6 +902,28 @@
       '.shb-fluid .shb-drawer .shb-seg button{border-radius:9px;color:var(--shb-t2);font:600 12px/1 Inter,system-ui,sans-serif;padding:7px 6px}',
       '.shb-fluid .shb-drawer .shb-seg button.shb-on{background:rgba(255,255,255,.16);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}',
       '.shb-fluid .shb-drawer-hint{color:var(--shb-t3)}',
+      '.shb-fluid{--shb-w-track:rgba(255,255,255,.16);--shb-w-thumb:#fff}',
+      '.shb-fluid .shb-w-cap{font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--shb-t3);padding-left:6px}',
+      '.shb-fluid .shb-w-grp{padding:2px;border-radius:13px;background:rgba(0,0,0,.22)}',
+      '.shb-fluid .shb-w-grp > .shb-w-cap{padding:0 6px 0 8px}',
+      '.shb-fluid .shb-w-in{height:32px;padding:0 11px;border-radius:11px;border:1px solid rgba(255,255,255,.09);background:rgba(0,0,0,.25);color:var(--shb-t1);font:500 13px/1 Inter,system-ui,sans-serif}',
+      '.shb-fluid .shb-w-in:focus{border-color:rgba(90,162,240,.7)}',
+      '.shb-fluid .shb-w-step{width:26px;height:32px;border-radius:9px;background:rgba(255,255,255,.07);color:var(--shb-t2);transition:background 26ms}',
+      '.shb-fluid .shb-w-step:hover{background:rgba(255,255,255,.14);color:#fff}',
+      '.shb-fluid .shb-w-step:active{transform:scale(.92)}',
+      '.shb-fluid .shb-w-val{font:500 11.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--shb-t2)}',
+      '.shb-fluid .shb-w-sw{gap:7px;padding:0 6px}',
+      '.shb-fluid .shb-w-seg{padding:2px;border-radius:11px;background:rgba(0,0,0,.25)}',
+      '.shb-fluid .shb-w-segb{padding:8px 11px;border-radius:9px;color:var(--shb-t2);font:600 12px/1 Inter,system-ui,sans-serif;transition:background 30ms}',
+      '.shb-fluid .shb-w-segb:hover{color:#fff}',
+      '.shb-fluid .shb-w-segb.shb-on{background:rgba(255,255,255,.16);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}',
+      '.shb-fluid .shb-w-field{height:32px;padding:0 9px 0 11px;border-radius:11px;background:rgba(0,0,0,.25);color:var(--shb-t1);font:500 13px/1 Inter,system-ui,sans-serif}',
+      '.shb-fluid .shb-w-field .shb-w-cap{padding:0}',
+      '.shb-fluid .shb-w-field:hover,.shb-fluid .shb-w-open{background:rgba(255,255,255,.12)}',
+      '.shb-fluid .shb-w-badge{background:rgba(255,255,255,.12);color:var(--shb-t2)}',
+      '.shb-fluid .shb-w-info{font:500 12px/1 Inter,system-ui,sans-serif;color:var(--shb-t3)}',
+      '.shb-fluid .shb-wmenu{padding:6px;border-radius:18px;background:rgba(38,38,42,.82)}',
+      '.shb-fluid .shb-wmenu-hd{padding:8px 10px 4px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--shb-t3)}',
       '.shb-ghost.shb-fluid{padding:9px 13px;border-radius:18px;background:rgba(48,48,54,.8);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.18);box-shadow:0 14px 34px rgba(0,0,0,.5);font:500 13px/1 Inter,system-ui,sans-serif;color:#fff;transform:translate(-50%,-50%) rotate(-3deg) scale(1.04);transition:transform 70ms cubic-bezier(.34,1.56,.64,1),background 60ms}',
       '.shb-ghost.shb-fluid .shb-ghost-dot{width:7px;height:7px;border-radius:50%;background:#64a8f0}',
       '.shb-ghost.shb-fluid .shb-ghost-hint{font:500 11px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.6)}',
@@ -871,7 +933,7 @@
 
       /* ---------- 1b QUIET: native ComfyUI panels, hairline leaders, monospace keys ---------- */
       '.shb-quiet{--shb-qbg:#1f1f1f;--shb-qbd:#303030;--shb-qhover:#2a2a2a;--shb-qmuted:#6f6f6f;--shb-qblue:#64a8f0;--shb-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace}',
-      '.shb-quiet .shb-bar,.shb-quiet .shb-card,.shb-quiet .shb-drawer,.shb-quiet .shb-editbar,.shb-quiet .shb-dial-in,.shb-quiet .shb-catmenu{background:var(--shb-qbg);border:1px solid var(--shb-qbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);color:#d6d6d6}',
+      '.shb-quiet .shb-bar,.shb-quiet .shb-card,.shb-quiet .shb-drawer,.shb-quiet .shb-editbar,.shb-quiet .shb-dial-in,.shb-quiet .shb-catmenu,.shb-quiet .shb-wmenu{background:var(--shb-qbg);border:1px solid var(--shb-qbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);color:#d6d6d6}',
       '.shb-quiet .shb-bar{padding:3px;gap:1px}',
       '.shb-quiet .shb-bar.shb-drop-over{border-color:#4a4a4a}',
       '.shb-quiet .shb-dial-in,.shb-quiet .shb-catmenu{padding:4px}',
@@ -893,6 +955,7 @@
       '.shb-quiet .shb-danger .shb-ico{color:#e8735f}',
       '.shb-quiet .shb-pin{cursor:grab;touch-action:none}',
       '.shb-quiet .shb-pin-dot{width:5px;height:5px;background:var(--shb-qblue);flex-shrink:0}',
+      '.shb-quiet .shb-cbar-dot{width:5px;height:5px}',
       '.shb-quiet .shb-ibtn:hover{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-drop-gap{flex:none;width:0;height:26px;border-radius:5px;border:1px dashed #555;box-sizing:border-box;opacity:0;transition:width 100ms cubic-bezier(.2,0,0,1),opacity 80ms}',
       '.shb-quiet .shb-drop-gap.shb-gap-open{width:104px;opacity:1;margin:0 2px}',
@@ -940,6 +1003,28 @@
       '.shb-quiet .shb-drawer .shb-seg{border:1px solid var(--shb-qbd);border-radius:6px;background:#161616}',
       '.shb-quiet .shb-drawer .shb-seg button{font:500 11px/1 var(--shb-mono);color:#7d7d7d;padding:6px 4px}',
       '.shb-quiet .shb-drawer .shb-seg button.shb-on{color:#fff;background:var(--shb-qhover)}',
+      '.shb-quiet{--shb-w-track:#363636;--shb-w-thumb:#64a8f0}',
+      '.shb-quiet .shb-w-cap{font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted);padding-left:5px}',
+      '.shb-quiet .shb-w-grp{padding:1px;border-radius:6px;background:#181818;border:1px solid #2a2a2a}',
+      '.shb-quiet .shb-w-in{height:27px;padding:0 8px;border-radius:5px;border:1px solid var(--shb-qbd);background:#161616;color:#e6e6e6;font:400 12px/1 Inter,system-ui,sans-serif}',
+      '.shb-quiet .shb-w-in:focus{border-color:#3d5f86}',
+      '.shb-quiet .shb-w-nin{font-family:var(--shb-mono)}',
+      '.shb-quiet .shb-w-step{width:22px;height:27px;border-radius:5px;background:transparent;color:#8a8a8a}',
+      '.shb-quiet .shb-w-step:hover{background:var(--shb-qhover);color:#fff}',
+      '.shb-quiet .shb-w-range input::-webkit-slider-runnable-track{height:2px;border-radius:1px}',
+      '.shb-quiet .shb-w-range input::-webkit-slider-thumb{width:10px;height:10px;margin-top:-4px;box-shadow:none}',
+      '.shb-quiet .shb-w-val{font:500 11px/1 var(--shb-mono);color:#bdbdbd}',
+      '.shb-quiet .shb-w-sw{gap:6px;padding:0 5px}',
+      '.shb-quiet .shb-w-seg{border:1px solid var(--shb-qbd);border-radius:6px;background:#161616}',
+      '.shb-quiet .shb-w-segb{padding:6px 8px;font:500 11px/1 var(--shb-mono);color:#7d7d7d}',
+      '.shb-quiet .shb-w-segb:hover{color:#fff}',
+      '.shb-quiet .shb-w-segb.shb-on{color:#fff;background:var(--shb-qhover)}',
+      '.shb-quiet .shb-w-field{height:27px;padding:0 7px 0 8px;border-radius:5px;background:#161616;border:1px solid var(--shb-qbd);color:#d6d6d6;font:500 12px/1 Inter,system-ui,sans-serif}',
+      '.shb-quiet .shb-w-field:hover,.shb-quiet .shb-w-open{background:var(--shb-qhover);color:#fff}',
+      '.shb-quiet .shb-w-badge{background:none;color:var(--shb-qmuted);font-family:var(--shb-mono);padding:0;min-width:0}',
+      '.shb-quiet .shb-w-info{font:500 11px/1 var(--shb-mono);color:var(--shb-qmuted)}',
+      '.shb-quiet .shb-wmenu{padding:4px}',
+      '.shb-quiet .shb-wmenu-hd{padding:7px 9px 4px;font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted)}',
       '.shb-ghost.shb-quiet{padding:7px 10px;border-radius:6px;background:#262626;border:1px solid #3a3a3a;box-shadow:0 8px 24px rgba(0,0,0,.45);font:500 12.5px/1 Inter,system-ui,sans-serif;color:#e6e6e6}',
       '.shb-ghost.shb-quiet .shb-ghost-dot{width:5px;height:5px;background:#64a8f0}',
       '.shb-ghost.shb-quiet .shb-ghost-hint{font:500 10.5px/1 var(--shb-mono);color:#7d7d7d}',
@@ -1936,10 +2021,37 @@
       return null;
     }
     var wired = wireNodesSmart(node, made, vb);
+    var chained = hbChainLora(g, node, made);
     try { if (c && c.selectNodes) c.selectNodes([made]); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    setStatus('ok', '⊕ Added ' + (made.title || made.type) + (wired ? ' (wired → ' + wired + ')' : ''));
+    setStatus('ok', '⊕ Added ' + (made.title || made.type) + (chained ? ' (chained · ' + chained + (chained === 1 ? ' wire moved' : ' wires moved') + ' after it)'
+      : (wired ? ' (wired → ' + wired + ')' : '')));
     return made;
+  }
+
+  /* A LoRA added after a model source joins the chain instead of branching off it (like an insert in Nuke):
+     it takes the source's MODEL / CLIP, and whatever the source fed through those slots now hangs off the LoRA */
+  var LORA_CHAIN_TYPES = { MODEL: 1, CLIP: 1 };
+
+  function hbChainLora(g, src, made) {
+    if (!g || !src || !made || !/lora/i.test(nodeTypeOf(made))) return 0;
+    var moved = 0;
+    (made.inputs || []).forEach(function (inp) {
+      var l = (inp && inp.link != null) ? linkById(g, inp.link) : null;
+      var T = String((inp && inp.type) || '').toUpperCase();
+      if (!l || String(l.origin_id) !== String(src.id) || !LORA_CHAIN_TYPES[T]) return;
+      var mo = -1;
+      (made.outputs || []).forEach(function (o, j) { if (mo < 0 && String((o && o.type) || '').toUpperCase() === T) mo = j; });
+      var out = src.outputs && src.outputs[l.origin_slot];
+      if (mo < 0 || !out) return;
+      (out.links || []).slice().forEach(function (lid) {
+        var dl = linkById(g, lid);
+        var tgt = dl && String(dl.target_id) !== String(made.id) ? g.getNodeById(dl.target_id) : null;
+        if (!tgt) return;
+        try { if (made.connect(mo, tgt, dl.target_slot)) moved++; } catch (e) {}
+      });
+    });
+    return moved;
   }
 
   function addModelPair(nodes, type) {
@@ -2923,6 +3035,88 @@
     return made;
   }
 
+  /* Get for a bus by name, dropped where the hotbox was opened (the Canvas card lists every Set) */
+  function addGetNamed(nm) {
+    var t = (canMake('GetNode') || hasType('GetNode')) ? 'GetNode'
+      : ((canMake('easy getNode') || hasType('easy getNode')) ? 'easy getNode' : '');
+    if (!t) {
+      setStatus('error', 'GetNode (KJNodes / Easy-Use) is not installed');
+      return null;
+    }
+    var p = clientToGraph(HB.anchorX || HB_MX, HB.anchorY || HB_MY);
+    var made = createNodeOrSubgraph(t, [p[0] - 60, p[1] - 15]);
+    if (!made) return null;
+    setNameOn(made, nm);
+    var c = getCanvas(), g = getGraph();
+    try { if (c && c.selectNodes) c.selectNodes([made]); } catch (e) {}
+    try { if (g) g.setDirtyCanvas(true, true); } catch (e) {}
+    setStatus('ok', '⊕ Get_' + nm);
+    return made;
+  }
+
+  /* The wire color of a Set's bus, for the dot beside its Get row */
+  function setBusColor(nm) {
+    var c = getCanvas(), LGC = window.LGraphCanvas || (window.comfyAPI && window.comfyAPI.litegraph && window.comfyAPI.litegraph.LGraphCanvas);
+    var type = '';
+    allNodes(getGraph()).forEach(function (n) {
+      if (!type && isSetNode(n) && setGetName(n) === nm) type = String((n.inputs && n.inputs[0] && n.inputs[0].type) || '');
+    });
+    var map = (c && c.default_connection_color_byType) || (LGC && LGC.link_type_colors) || {};
+    return (type && type !== '*' && map[type]) || '';
+  }
+
+  /* G: groups the selection (or the node under the hotbox) through ComfyUI's own Group Selected Nodes, so
+     its padding setting and title editor apply; the group is named from what it holds, like a saved button */
+  function actGroup(node) {
+    var g = getGraph(), c = getCanvas(), app = getApp();
+    if (!g || !c) return null;
+    var list = selNodes();
+    if (!list.length && node) {
+      try { c.selectNodes([node]); } catch (e) {}
+      list = [node];
+    }
+    if (!list.length) {
+      setStatus('error', 'Select the nodes to group');
+      return null;
+    }
+    var name = mgSmartName(list, list);
+    var before = (g._groups || g.groups || []).slice();
+    function fresh() {
+      return (g._groups || g.groups || []).filter(function (gr) { return before.indexOf(gr) < 0; })[0] || null;
+    }
+    function named(gr) {
+      try { gr.title = name; } catch (e) {}
+      try { g.setDirtyCanvas(true, true); } catch (e) {}
+      setStatus('ok', '▢ Grouped ' + list.length + (list.length === 1 ? ' node' : ' nodes') + ' · "' + name + '"');
+      return gr;
+    }
+    function byHand() {
+      var LG = litegraph();
+      if (!LG || !LG.LGraphGroup) return null;
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, PAD = 10, HEAD = 46;
+      list.forEach(function (n) {
+        var b = hbTitledBox(n);
+        x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+        x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+      });
+      var gr = new LG.LGraphGroup();
+      gr.configure({ title: name, bounding: [x0 - PAD, y0 - PAD - HEAD, x1 - x0 + PAD * 2, y1 - y0 + PAD * 2 + HEAD] });
+      g.add(gr);
+      try { gr.recomputeInsideNodes(); } catch (e) {}
+      return named(gr);
+    }
+    var cmd = app && app.extensionManager && app.extensionManager.command;
+    var run = null;
+    try { if (cmd && cmd.execute) run = cmd.execute('Comfy.Graph.GroupSelectedNodes'); } catch (e) { run = null; }
+    var made = fresh();
+    if (made) return named(made);
+    if (run && run.then) {
+      run.then(function () { var gr = fresh(); if (gr) named(gr); else byHand(); });
+      return null;
+    }
+    return byHand();
+  }
+
   function actSetInherit(node) {
     if (!isSetNode(node)) return false;
     var orig = imageOrigin(getGraph(), node);
@@ -3626,6 +3820,78 @@
     wrap.addEventListener('mousedown', function (ev) { if (ev.target === wrap) close(); });
     updatePreview();
     try { inp.focus(); inp.select(); } catch (e) {}
+  }
+
+  /* Label bar: with a Label (rgthree) under the hotbox, Label Studio's controls ride the Context bar and
+     change the label live (the Nuke2Comfy builder's label strip) */
+  function labelRead(n) {
+    var p = n.properties || {};
+    var o = {
+      text: String(n.title || ''), size: +p.fontSize || 72, font: String(p.fontFamily || LABEL_PIX_FONT),
+      bg: String(p.backgroundColor || LABEL_COLORS[0].bg), fg: String(p.fontColor || LABEL_COLORS[0].fg),
+      pad: p.padding != null ? (+p.padding || 0) : 20, shine: p._shb_shine == null ? true : !!p._shb_shine
+    };
+    var half = Math.round(labelBox(o)[1] / 2), r = +p.borderRadius || 0;
+    o.edge = r < 1 ? 'square' : (r >= half - 1 ? 'round' : 'semi');
+    return o;
+  }
+
+  var LB_SAVE = 0;
+
+  function labelWrite(n, o) {
+    var ef = 0.4, ci = 0;
+    LABEL_EDGES.forEach(function (e) { if (e.k === o.edge) ef = e.f; });
+    o.radius = Math.round(Math.max(1, Math.round(labelBox(o)[1] / 2)) * ef);
+    labelApplyRg(n, o);
+    var g = getGraph();
+    if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
+    /* the next new label starts from this look */
+    LABEL_COLORS.forEach(function (c, i) { if (c.bg.toLowerCase() === String(o.bg).toLowerCase()) ci = i; });
+    S.lbLast = { size: o.size, font: o.font, ci: ci, pad: o.pad, edge: o.edge, shine: o.shine };
+    clearTimeout(LB_SAVE);
+    LB_SAVE = setTimeout(save, 700);
+  }
+
+  /* A quick icon is the label's leading symbol, as Label Studio writes it */
+  function labelIconOf(text) {
+    var m = String(text || '').match(/^([^\w\s]+)\s/);
+    return m ? m[1] : '';
+  }
+
+  function hbLabelBarItems(node) {
+    if (!labelIsRg(node)) return [];
+    var o = labelRead(node);
+    function set(k, v) {
+      var cur = labelRead(node);
+      cur[k] = v;
+      labelWrite(node, cur);
+    }
+    var bgNow = o.bg.toLowerCase(), icon = labelIconOf(o.text);
+    return [
+      { type: 'text', label: 'Label', value: o.text, width: 160, placeholder: 'Label text', title: 'Label text (live) · Enter to finish',
+        onChange: function (v) { set('text', v); } },
+      { type: 'swatches', title: 'Label color', colors: LABEL_COLORS.map(function (c) { return c.bg; }),
+        value: (LABEL_COLORS.filter(function (c) { return c.bg.toLowerCase() === bgNow; })[0] || {}).bg || '',
+        onChange: function (bg) {
+          var cur = labelRead(node);
+          LABEL_COLORS.forEach(function (c) { if (c.bg === bg) { cur.bg = c.bg; cur.fg = c.fg; } });
+          labelWrite(node, cur);
+        } },
+      { type: 'select', title: 'Quick icon at the start of the label', value: icon, display: (icon || '◇') + ' icon',
+        options: [{ value: '', label: '∅  none' }].concat(LABEL_ICONS.map(function (ic) { return { value: ic.g, label: ic.g + '  ' + ic.name }; })),
+        onChange: function (gl) {
+          var clean = labelRead(node).text.replace(/^[^\w\s]+\s*/, '');
+          set('text', gl ? gl + ' ' + clean : clean);
+        } },
+      { type: 'toggle', label: '✦', title: 'Top shine', value: o.shine, onChange: function (v) { set('shine', v); } },
+      { type: 'segment', title: 'Corners', value: o.edge, options: LABEL_EDGES.map(function (e) { return { value: e.k, label: e.label }; }),
+        onChange: function (v) { set('edge', v); } },
+      { type: 'range', label: 'Size', min: 14, max: 260, step: 2, unit: 'px', value: o.size, onChange: function (v) { set('size', v); } },
+      { type: 'range', label: 'Spacing', min: 0, max: 80, step: 2, unit: 'px', value: o.pad, onChange: function (v) { set('pad', v); } },
+      { type: 'select', title: 'Font', value: o.font, display: 'Aa  ' + (o.font === LABEL_PIX_FONT ? 'Segoe UI' : o.font.split(',')[0].replace(/['"]/g, '')),
+        options: LABEL_FONTS.map(function (f) { return { value: f, label: f === LABEL_PIX_FONT ? 'Segoe UI' : f }; }),
+        onChange: function (f) { set('font', f); } }
+    ];
   }
 
   /* ---------------------------------------------------------------------
@@ -4554,7 +4820,7 @@
       reroute:    { id: 'reroute',    icon: 'reroute',    label: 'Add Reroute',    kbd: 'R', fn: function () { addReroute(node); } },
       set:        { id: 'set',        icon: 'set',        label: 'Set / Get Bus',  kbd: 'S', fn: function () { addSetNode(node); } },
       setinh:     { id: 'setinh',     icon: 'set',        label: 'Inherit Name',   kbd: 'C', fn: function () { actSetInherit(node); } },
-      addget:     { id: 'addget',     icon: 'plus',       label: 'Paired Get',     kbd: 'G', fn: function () { addGetNode(node); } },
+      addget:     { id: 'addget',     icon: 'plus',       label: 'Paired Get',     kbd: '',  fn: function () { addGetNode(node); } },
       bypass:     { id: 'bypass',     icon: 'bypass',     label: 'Bypass',         kbd: 'B', cls: (node && node.mode === 4) ? 'shb-btn-on' : '', fn: function () { actBypass(node); } },
       mute:       { id: 'mute',       icon: 'bypass',     label: 'Mute Node',      kbd: 'M', cls: (node && node.mode === 2) ? 'shb-btn-on' : '', fn: function () { actMute(node); } },
       apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Bypass All APIs', kbd: 'K', fn: function () { actBypassApi(); } },
@@ -5503,7 +5769,7 @@
     add('[data-zone="top"] > .shb-dock', 'translateY(60px) scale(.55)', 'translateY(5px)', 20, 0);
     add('[data-zone="top"] > .shb-ctx', 'translateY(60px) scale(.55)', 'translateY(5px)', 60, 40);
     add('[data-zone="right"] > .shb-card', 'translateX(-80px) scale(.55)', 'translateX(-5px)', 30, 0);
-    add('[data-zone="bot"] > .shb-bar', 'translateY(-60px) scale(.55)', 'translateY(-5px)', 50, 40);
+    add('[data-zone="bot"] .shb-bar', 'translateY(-60px) scale(.55)', 'translateY(-5px)', 50, 40);
     add('[data-zone="bot"] .shb-plus', 'translateY(-40px) scale(.4)', 'translateY(-5px)', 70, 40);
     return out;
   }
@@ -5593,7 +5859,7 @@
     if (rl && rl.right < cx - R) segs.push([cx - R, cy, rl.right, clamp(cy, rl.top + 8, rl.bottom - 8)]);
     var rr = rectOf('[data-zone="right"] > .shb-card');
     if (rr && rr.left > cx + R) segs.push([cx + R, cy, rr.left, clamp(cy, rr.top + 8, rr.bottom - 8)]);
-    var rb = rectOf('[data-zone="bot"] > .shb-bar');
+    var rb = rectOf('[data-zone="bot"] .shb-bar');
     if (rb && rb.top > cy + R) segs.push([cx, cy + R, clamp(cx, rb.left + 8, rb.right - 8), rb.top]);
     svg.innerHTML = segs.map(function (s) {
       return '<line x1="' + s[0].toFixed(1) + '" y1="' + s[1].toFixed(1) + '" x2="' + s[2].toFixed(1) + '" y2="' + s[3].toFixed(1) + '" pathLength="1"></line>';
@@ -5609,7 +5875,7 @@
   }
 
   function hbBotBarEl() {
-    return HB.el ? HB.el.querySelector('[data-zone="bot"] > .shb-bar') : null;
+    return HB.el ? HB.el.querySelector('[data-zone="bot"] .shb-botbar') : null;
   }
 
   function hbPlusEl() {
@@ -5693,6 +5959,8 @@
       var sel = selNodes();
       var isPair = sel.length >= 2 && isAdd;
       HB.keyMap = {};
+      HB.wItems = [];
+      HB.wMenu = null;
 
       /* Register instant single-key shortcuts [1]..[9] for Top Add Bar items */
       addItems.slice(0, 9).forEach(function (it, idx) {
@@ -5706,6 +5974,7 @@
       HB.keyMap['f2'] = function () { hbClose(); actRenameNode(node); };
       HB.keyMap['r'] = function () { hbClose(); addReroute(node); };
       HB.keyMap['s'] = function () { hbClose(); addSetNode(node); };
+      if (sel.length || node) HB.keyMap['g'] = function () { hbClose(); actGroup(node); };
       if (hbToolOn('loadcanvas')) HB.keyMap['v'] = function () { hbClose(); actLoadInCanvas(node); };
       HB.keyMap['t'] = function () { hbClose(); addPreview(node); };
       HB.keyMap['b'] = function () { hbClose(); actBypass(node); };
@@ -5929,12 +6198,378 @@
     }
   }
 
+  /* ---------------------------------------------------------------------
+   * BAR WIDGETS: what a Context bar or Custom Bar can hold besides Hotbox's own buttons. The Label bar is
+   * built from them, and so is any bar an extension hands over:
+   *   window.__hotboxBars['my-tool'] = { name: 'My Tool', where: 'bottom' | 'context', items: function (ctx) { return [...]; } };
+   * (or the function alone, for the bottom). Items: button, group, menu, select, text, number, range,
+   * swatches, segment, toggle, info, sep — CUSTOM_BAR.md has the whole contract. A plain object on window,
+   * so it can be filled before or after Hotbox loads; it is read every time the hotbox paints, and each
+   * paint registers the items in HB.wItems, which data-hb-w="<index>" points back into.
+   * --------------------------------------------------------------------- */
+  window.__hotboxBars = window.__hotboxBars || {};
+
+  var W_TYPES = { button: 1, group: 1, menu: 1, select: 1, text: 1, number: 1, range: 1, swatches: 1, segment: 1, toggle: 1, info: 1, sep: 1 };
+
+  function wType(it) {
+    var t = (it && typeof it === 'object') ? String(it.type || 'button') : '';
+    return W_TYPES[t] ? t : '';
+  }
+
+  function wFn(f) { return typeof f === 'function'; }
+
+  function wHas(v) { return v != null && v !== ''; }
+
+  /* Drops what a bar cannot draw (a button without run, a group inside a group…), so one bad item never
+     takes the hotbox down */
+  function wClean(list, inGroup) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (it) {
+      var t = wType(it), ok = false;
+      if (t === 'button') ok = wHas(it.label) && wFn(it.run);
+      else if (t === 'group') {
+        var kids = inGroup ? [] : wClean(it.items, true);
+        if (kids.length) { it = Object.assign({}, it, { items: kids }); ok = true; }
+      }
+      else if (t === 'menu') ok = wHas(it.label) && (Array.isArray(it.items) || wFn(it.items));
+      else if (t === 'select' || t === 'segment') ok = Array.isArray(it.options) && it.options.length > 0 && wFn(it.onChange);
+      else if (t === 'swatches') ok = Array.isArray(it.colors) && it.colors.length > 0 && wFn(it.onChange);
+      else if (t === 'text') ok = wFn(it.onChange) || wFn(it.onCommit);
+      else if (t === 'number' || t === 'range') ok = wFn(it.onChange);
+      else if (t === 'toggle') ok = wHas(it.label) && wFn(it.onChange);
+      else if (t === 'info') ok = wHas(it.text);
+      else if (t === 'sep') ok = true;
+      if (ok) out.push(it);
+    });
+    return out;
+  }
+
+  function wOpts(it) {
+    return (it.options || []).map(function (o) {
+      return (o && typeof o === 'object')
+        ? { value: o.value, label: String(wHas(o.label) ? o.label : o.value), hint: o.hint || '' }
+        : { value: o, label: String(o), hint: '' };
+    });
+  }
+
+  function wColor(c) {
+    return /^[#a-z0-9(),.%\s-]{3,40}$/i.test(String(c || '')) ? String(c) : '';
+  }
+
+  function wNum(it, v) {
+    var n = Number(v);
+    if (!isFinite(n)) n = Number(it.value) || 0;
+    if (wHas(it.min) && n < +it.min) n = +it.min;
+    if (wHas(it.max) && n > +it.max) n = +it.max;
+    return n;
+  }
+
+  function wNumText(it, v) {
+    var s = String(v);
+    for (var pad = +it.pad || 0; pad && /^\d+$/.test(s) && s.length < pad;) s = '0' + s;
+    return (it.prefix || '') + s;
+  }
+
+  /* What a provider and every callback get: the node the hotbox opened on, the selection, and two helpers */
+  function wCtx(where) {
+    return {
+      node: HB.node || null,
+      nodes: selNodes(),
+      where: where || '',
+      style: !hbIsFluid() ? 'quiet' : (S.hbStyle === 'classic' ? 'compact' : 'fluid'),
+      repaint: function () { setTimeout(function () { if (HB.el) hbPaint(); }, 0); },
+      close: function () { hbClose(); }
+    };
+  }
+
+  function wErr(it, err) {
+    setStatus('error', (it.label || it.text || 'Hotbox bar') + ': ' + ((err && err.message) || err));
+  }
+
+  function wHTML(it, base) {
+    var t = wType(it);
+    if (t === 'sep') return '<span class="shb-vsep"></span>';
+    if (t === 'group') {
+      return '<span class="shb-w-grp"' + (it.title ? ' title="' + esc(it.title) + '"' : '') + '>' +
+        (wHas(it.label) ? '<span class="shb-w-cap">' + esc(it.label) + '</span>' : '') +
+        it.items.map(function (k) { return wHTML(k, 'shb-tool'); }).join('') +
+      '</span>';
+    }
+    var i = HB.wItems.push(it) - 1, at = ' data-hb-w="' + i + '"';
+    var isz = hbIsFluid() ? 14 : 13;
+    var tip = ' title="' + esc(it.title || it.label || it.text || '') + '"';
+    var cap = wHas(it.label) ? '<span class="shb-w-cap">' + esc(it.label) + '</span>' : '';
+    var icon = (it.icon && ICONS[it.icon]) ? ico(it.icon, isz) : '';
+    var col = wColor(it.color);
+    var dot = col ? '<i class="shb-cbar-dot" style="background:' + esc(col) + '"></i>' : '';
+    var badge = wHas(it.badge) ? '<span class="shb-w-badge">' + esc(it.badge) + '</span>' : '';
+    var car = '<span class="shb-w-car">' + ico('chevDown', 11) + '</span>';
+    if (t === 'info') return '<span class="shb-w-info"' + at + tip + '>' + icon + '<span>' + esc(it.text) + '</span></span>';
+    if (t === 'button' || t === 'toggle' || t === 'menu') {
+      var on = t === 'toggle' ? !!it.value : !!it.active;
+      return '<button type="button" class="shb-btn ' + base + (on ? ' shb-btn-on' : '') + '"' + at + tip + (it.disabled ? ' disabled' : '') + '>' +
+        dot + icon + '<span class="shb-lbl">' + esc(it.label) + '</span>' + badge + (t === 'menu' ? car : '') +
+      '</button>';
+    }
+    if (t === 'select') {
+      var cur = null;
+      wOpts(it).forEach(function (o) { if (!cur && o.value === it.value) cur = o; });
+      var shown = wHas(it.display) ? String(it.display) : (cur ? cur.label : String(wHas(it.value) ? it.value : ''));
+      return '<button type="button" class="shb-w-field"' + at + ' title="' + esc(it.title || it.label || 'Choose') + '">' +
+        dot + icon + cap + '<span class="shb-w-v">' + esc(shown || '—') + '</span>' + car +
+      '</button>';
+    }
+    if (t === 'text') {
+      return '<label class="shb-w-wrap"' + tip + '>' + cap +
+        '<input type="text" class="shb-w-in" spellcheck="false" autocomplete="off"' + at +
+          ' value="' + esc(wHas(it.value) ? it.value : '') + '" placeholder="' + esc(it.placeholder || '') + '"' +
+          ' style="width:' + Math.max(48, Math.min(420, +it.width || 150)) + 'px">' +
+      '</label>';
+    }
+    if (t === 'number') {
+      var nTxt = wNumText(it, wNum(it, it.value));
+      return '<span class="shb-w-wrap"' + tip + '>' + cap +
+        '<span class="shb-w-num">' +
+          '<input type="text" inputmode="decimal" class="shb-w-in shb-w-nin" spellcheck="false" autocomplete="off"' + at +
+            ' value="' + esc(nTxt) + '" style="width:' + Math.max(40, Math.min(140, +it.width || (nTxt.length * 9 + 24))) + 'px">' +
+          '<button type="button" class="shb-w-step"' + at + ' data-hb-wstep="1" title="Up · Shift ×10">' + ico('chevUp', 12) + '</button>' +
+          '<button type="button" class="shb-w-step"' + at + ' data-hb-wstep="-1" title="Down · Shift ×10">' + ico('chevDown', 12) + '</button>' +
+        '</span>' +
+      '</span>';
+    }
+    if (t === 'range') {
+      var rv = wNum(it, it.value);
+      return '<label class="shb-w-range"' + tip + '>' + cap +
+        '<input type="range"' + at + ' min="' + esc(wHas(it.min) ? it.min : 0) + '" max="' + esc(wHas(it.max) ? it.max : 100) + '"' +
+          ' step="' + esc(it.step || 1) + '" value="' + esc(rv) + '" style="width:' + Math.max(60, Math.min(260, +it.width || 96)) + 'px">' +
+        '<span class="shb-w-val">' + esc(rv + (it.unit || '')) + '</span>' +
+      '</label>';
+    }
+    if (t === 'swatches') {
+      var sv = String(it.value || '').toLowerCase();
+      return '<span class="shb-w-wrap"' + (it.title ? tip : '') + '>' + cap + '<span class="shb-w-sw">' +
+        it.colors.map(function (c, k) {
+          var cc = wColor(c);
+          return cc ? '<i class="shb-cdot' + (cc.toLowerCase() === sv ? ' shb-cdot-on' : '') + '"' + at + ' data-hb-wv="' + k + '" style="background:' + esc(cc) + '" title="' + esc(cc) + '"></i>' : '';
+        }).join('') +
+      '</span></span>';
+    }
+    if (t === 'segment') {
+      return '<span class="shb-w-wrap"' + (it.title ? tip : '') + '>' + cap + '<span class="shb-w-seg">' +
+        wOpts(it).map(function (o, k) {
+          return '<button type="button" class="shb-w-segb' + (o.value === it.value ? ' shb-on' : '') + '"' + at + ' data-hb-wv="' + k + '"' +
+            (o.hint ? ' title="' + esc(o.hint) + '"' : '') + '>' + esc(o.label) + '</button>';
+        }).join('') +
+      '</span></span>';
+    }
+    return '';
+  }
+
+  /* Hotbox's own bars come first, then the extensions', each in the place it asked for:
+     'context' (the Context bar, under the dock) or 'bottom' (the Custom Bar, above the bottom bar) */
+  var HB_OWN_BARS = {
+    'hotbox-label': { where: 'context', items: function (ctx) { return hbLabelBarItems(ctx.node); } }
+  };
+
+  function hbBarGroups(where) {
+    var groups = [];
+    function take(id, p) {
+      var fn = wFn(p) ? p : (p && p.items);
+      if (!wFn(fn)) return;
+      var pw = (p && typeof p === 'object' && p.where === 'context') ? 'context' : 'bottom';
+      if (pw !== where) return;
+      var list = [];
+      try { list = wClean(fn(wCtx(where))); } catch (e) { console.warn('[Hotbox] bar "' + id + '" failed:', e); }
+      if (list.length) groups.push({ id: id, name: (p && typeof p === 'object' && p.name) || '', items: list });
+    }
+    Object.keys(HB_OWN_BARS).forEach(function (id) { take(id, HB_OWN_BARS[id]); });
+    var reg = window.__hotboxBars;
+    if (reg && typeof reg === 'object') Object.keys(reg).forEach(function (id) { take(id, reg[id]); });
+    return groups;
+  }
+
+  function hbBarGroupsHTML(groups, base) {
+    return groups.map(function (g, gi) {
+      return (gi ? '<span class="shb-vsep"></span>' : '') +
+        (g.name ? '<span class="shb-dock-mode">' + esc(g.name) + '</span>' : '') +
+        g.items.map(function (it) { return wHTML(it, base); }).join('');
+    }).join('');
+  }
+
+  function hbCustomBarHTML() {
+    var groups = hbBarGroups('bottom');
+    return groups.length ? '<div class="shb-bar shb-cbar">' + hbBarGroupsHTML(groups, 'shb-act') + '</div>' : '';
+  }
+
+  /* A menu or a select opens a small list under its button; a long one gets a filter field */
+  function wMenuRows(it) {
+    if (wType(it) === 'select') {
+      return wOpts(it).map(function (o) {
+        return { label: o.label, hint: o.hint, active: o.value === it.value, stayOpen: true, run: function (ctx) { it.onChange(o.value, ctx); } };
+      });
+    }
+    var rows = [];
+    try { rows = wFn(it.items) ? it.items(wCtx('menu')) : it.items; } catch (e) { wErr(it, e); }
+    return (Array.isArray(rows) ? rows : []).filter(function (r) {
+      return r && (r.type === 'header' || r.type === 'sep' || (wHas(r.label) && wFn(r.run)));
+    });
+  }
+
+  function wMenuListHTML(rows, q) {
+    var ql = String(q || '').trim().toLowerCase(), html = '', fl = hbIsFluid();
+    rows.forEach(function (r) {
+      if (r.type === 'sep') { if (!ql) html += '<div class="shb-sep"></div>'; return; }
+      if (r.type === 'header') { if (!ql) html += '<div class="shb-wmenu-hd">' + esc(r.label || '') + '</div>'; return; }
+      if (ql && (r.label + ' ' + (r.hint || '')).toLowerCase().indexOf(ql) < 0) return;
+      var i = HB.wItems.push(r) - 1, col = wColor(r.color);
+      html += '<button type="button" class="shb-row' + (r.active ? ' shb-active' : '') + '" data-hb-w="' + i + '" data-hb-wrow title="' + esc(r.title || r.label) + '">' +
+        ((r.icon && ICONS[r.icon]) ? ico(r.icon, fl ? 15 : 13) : (col ? '<i class="shb-cbar-dot" style="background:' + esc(col) + '"></i>' : '')) +
+        '<span class="shb-row-l">' + esc(r.label) + '</span>' +
+        (r.hint ? '<span class="shb-w-hint">' + esc(r.hint) + '</span>' : '') +
+        (r.active ? ico('check', 13) : '') +
+      '</button>';
+    });
+    return html || '<div class="shb-w-empty">' + (ql ? 'Nothing matches “' + esc(q) + '”' : 'Nothing here') + '</div>';
+  }
+
+  function hbMenuClose() {
+    if (!HB.wMenu) return;
+    var z = HB.el && HB.el.querySelector('[data-zone="wmenu"]');
+    if (z && z.parentNode) z.parentNode.removeChild(z);
+    if (HB.wMenu.anchor) HB.wMenu.anchor.classList.remove('shb-w-open');
+    HB.wMenu = null;
+  }
+
+  function hbMenuOpen(idx, anchor) {
+    var it = HB.wItems[idx];
+    if (!HB.el || !it) return;
+    var rows = wMenuRows(it);
+    var count = rows.filter(function (r) { return r.type !== 'header' && r.type !== 'sep'; }).length;
+    var search = it.search === true || (it.search !== false && count > 10);
+    var z = document.createElement('div');
+    z.className = 'shb-zone shb-zone-wmenu';
+    z.setAttribute('data-zone', 'wmenu');
+    z.innerHTML = '<div class="shb-wmenu">' +
+      (search ? '<input class="shb-search" data-hb-wq placeholder="' + esc(it.placeholder || ('Filter ' + count + '…')) + '" spellcheck="false" autocomplete="off">' : '') +
+      '<div class="shb-wmenu-list" data-hb-wlist>' + wMenuListHTML(rows, '') + '</div>' +
+    '</div>';
+    HB.el.appendChild(z);
+    HB.wMenu = { idx: idx, rows: rows, anchor: anchor };
+    anchor.classList.add('shb-w-open');
+    var W = window.innerWidth || 1600, H = window.innerHeight || 900;
+    var r = anchor.getBoundingClientRect(), m = z.getBoundingClientRect();
+    var y = r.bottom + 6;
+    if (y + m.height > H - 10 && r.top - 6 - m.height > 10) y = r.top - 6 - m.height;
+    z.style.left = Math.round(Math.max(10, Math.min(W - 10 - m.width, r.left))) + 'px';
+    z.style.top = Math.round(Math.max(10, y)) + 'px';
+    var q = z.querySelector('[data-hb-wq]');
+    if (q) { try { q.focus(); } catch (e) {} }
+    try {
+      z.firstChild.animate([{ opacity: 0, transform: 'translateY(-4px) scale(.98)' }, { opacity: 1, transform: 'none' }],
+        { duration: 110, easing: 'cubic-bezier(.2,.9,.1,1)' });
+    } catch (e) {}
+  }
+
+  /* A click on any widget. Buttons and menu rows close the hotbox unless they say stayOpen; settings-like
+     changes (a swatch, a segment, a toggle, a select row) keep it open and repaint it */
+  function hbWClick(wEl, e) {
+    var idx = +wEl.getAttribute('data-hb-w');
+    var it = HB.wItems[idx];
+    if (!it || HB.editMode || wEl.disabled) return;
+    var t = wEl.hasAttribute('data-hb-wrow') ? 'row' : wType(it);
+    if (t === 'text' || t === 'range' || t === 'info') return;
+    if (t === 'number') {
+      var st = +wEl.getAttribute('data-hb-wstep');
+      if (st) wNumSet(it, wNum(it, (Number(it.value) || 0) + st * (+it.step || 1) * (e.shiftKey ? 10 : 1)), wEl.closest('.shb-w-num'));
+      return;
+    }
+    if (t === 'menu' || t === 'select') {
+      var again = HB.wMenu && HB.wMenu.idx === idx;
+      hbMenuClose();
+      if (!again) hbMenuOpen(idx, wEl);
+      return;
+    }
+    if (t === 'swatches') return wSet(it, it.colors[+wEl.getAttribute('data-hb-wv')]);
+    if (t === 'segment') return wSet(it, (wOpts(it)[+wEl.getAttribute('data-hb-wv')] || {}).value);
+    if (t === 'toggle') return wSet(it, !it.value);
+    hbMenuClose();
+    var ctx = wCtx('');
+    if (!it.stayOpen) hbClose();
+    try { it.run(ctx); } catch (err) { wErr(it, err); }
+    if (it.stayOpen && HB.el) hbPaint();
+  }
+
+  function wSet(it, v) {
+    try { it.onChange(v, wCtx('')); } catch (err) { wErr(it, err); }
+    if (HB.el) hbPaint();
+  }
+
+  function wNumSet(it, v, box) {
+    it.value = v;
+    var inp = box && box.querySelector('.shb-w-nin');
+    if (inp) { inp.value = wNumText(it, v); inp.defaultValue = inp.value; }
+    try { it.onChange(v, wCtx('')); } catch (err) { wErr(it, err); }
+  }
+
+  /* Typing: text fields and sliders report live; a number waits for Enter, the arrows or leaving the field */
+  function hbWInput(inp) {
+    var it = HB.wItems[+inp.getAttribute('data-hb-w')];
+    var t = wType(it);
+    if (t === 'text' && wFn(it.onChange)) {
+      try { it.onChange(inp.value, wCtx('')); } catch (err) { wErr(it, err); }
+    } else if (t === 'range') {
+      var v = wNum(it, inp.value);
+      it.value = v;
+      var out = inp.parentNode.querySelector('.shb-w-val');
+      if (out) out.textContent = v + (it.unit || '');
+      try { it.onChange(v, wCtx('')); } catch (err) { wErr(it, err); }
+    }
+  }
+
+  function wCommit(inp) {
+    var it = HB.wItems[+inp.getAttribute('data-hb-w')];
+    var t = wType(it);
+    if (t === 'number') {
+      var v = wNum(it, String(inp.value).replace(/[^\d.\-]/g, ''));
+      if (v !== Number(it.value)) wNumSet(it, v, inp.closest('.shb-w-num'));
+      else inp.value = wNumText(it, v);
+    } else if (t === 'text' && wFn(it.onCommit) && inp.value !== inp.defaultValue) {
+      try { it.onCommit(inp.value, wCtx('')); } catch (err) { wErr(it, err); }
+    }
+    inp.defaultValue = inp.value;
+  }
+
+  function hbWKey(inp, e) {
+    var it = HB.wItems[+inp.getAttribute('data-hb-w')];
+    var t = wType(it);
+    if (t === 'range' || !it) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      inp.value = inp.defaultValue;
+      if (t === 'text' && wFn(it.onChange)) { try { it.onChange(inp.value, wCtx('')); } catch (err) {} }
+      inp.blur();
+    } else if (t === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      wNumSet(it, wNum(it, (Number(it.value) || 0) + (e.key === 'ArrowUp' ? 1 : -1) * (+it.step || 1) * (e.shiftKey ? 10 : 1)), inp.closest('.shb-w-num'));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      wCommit(inp);
+      inp.blur();
+      setTimeout(function () { if (HB.el) hbPaint(); }, 0);
+    }
+  }
+
+  /* hotbox:open / hotbox:close on window, so other tools can step aside while it is up */
+  function hbEmit(what, node) {
+    try { window.dispatchEvent(new CustomEvent('hotbox:' + what, { detail: { node: node || null } })); } catch (e) {}
+  }
+
   /* The four Add categories: they fan out above the "+", and one of them can live at the end of the dock */
   var HB_CATS = {
     search: { icon: 'search', label: 'All Nodes', short: 'All Nodes', key: 'F' },
     tools: { icon: 'crop', label: 'Image / Video Kit', short: 'Kit', key: 'N' },
     models: { icon: 'star', label: 'Models & APIs', short: 'Models', key: 'A' },
-    subs: { icon: 'subgraph', label: 'Subgraphs', short: 'Subgraphs', key: 'G' }
+    subs: { icon: 'subgraph', label: 'Subgraphs', short: 'Subgraphs', key: 'U' }
   };
 
   function hbDockCat() {
@@ -5991,7 +6626,8 @@
       if (crop && it.kind === 'tool' && /^ar_/.test(it.id)) ratioItems.push(it);
       else ctxItems.push(it);
     });
-    if (ctxItems.length || ratioItems.length || HB.editMode) {
+    var ctxGroups = hbBarGroups('context');
+    if (ctxItems.length || ratioItems.length || HB.editMode || ctxGroups.length) {
       var segHTML = '';
       if (ratioItems.length) {
         var cb = cropBox(node);
@@ -6004,6 +6640,8 @@
         '</div>';
       }
       topHTML += '<div class="shb-bar shb-ctx">' +
+        (ctxGroups.length ? '<span class="shb-w-host">' + hbBarGroupsHTML(ctxGroups, 'shb-tool') + '</span>' +
+          (ctxItems.length || ratioItems.length ? '<span class="shb-vsep"></span>' : '') : '') +
         '<div class="shb-bar-items" data-hb-bar="tools">' +
           ctxItems.map(function (it) {
             return renderBarItemHTML(it, 'tools', 0);
@@ -6029,11 +6667,22 @@
         leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R'));
         leftRows.push(rowHTML('data-hb-act="set"', 'set', 'Set / Get Bus', 'S'));
       }
+      if (node || sel.length) leftRows.push(rowHTML('data-hb-act="group"', 'group', sel.length > 1 ? 'Group ' + sel.length + ' Nodes' : 'Group', 'G'));
+      /* On the bare canvas every Set bus offers its Get, dropped right where the hotbox opened */
+      var getRows = node ? [] : setNames().map(function (nm) {
+        var col = setBusColor(nm);
+        return '<button type="button" class="shb-row" data-hb-getbus="' + esc(nm) + '" title="Add Get_' + esc(nm) + ' here">' +
+          ico('set', icoSz) + '<span class="shb-row-l">Get ' + esc(nm) + '</span>' +
+          (col ? '<i class="shb-cbar-dot" style="background:' + esc(col) + '"></i>' : '') +
+        '</button>';
+      });
       var hdTitle = fl ? nodeTitle : String(nodeTitle).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
       leftHTML = '<div class="shb-zone shb-zone-left" data-zone="left">' +
         '<div class="shb-card shb-card-left">' +
           headHTML((hdTitle || 'node').slice(0, 28), node ? '<span class="shb-hd-id">#' + esc(node.id) + '</span>' : '') +
           rowsHTML(leftRows) +
+          (getRows.length ? '<div class="shb-sep"></div>' + headHTML(fl ? 'Get Bus' : 'get_bus', '<span class="shb-hd-note">' + getRows.length + '</span>') +
+            '<div class="shb-gets">' + rowsHTML(getRows) + '</div>' : '') +
           (node ? '<div class="shb-sep"></div>' +
             '<div class="shb-colors">' +
               HB_SWATCHES.map(function (sw, i) {
@@ -6070,6 +6719,8 @@
       })) +
     '</div></div>';
     var botHTML = '<div class="shb-zone shb-zone-bot" data-zone="bot">' +
+      hbCustomBarHTML() +
+      '<div class="shb-botrow">' +
       '<div class="shb-bar shb-botbar">' +
         '<div class="shb-bar-items" data-hb-bar="bot">' +
           actItems.map(function (it) {
@@ -6088,6 +6739,7 @@
       '<div class="shb-plus-wrap' + (HB.drawer ? ' shb-drawer-open' : '') + '">' +
         dialHTML +
         '<button type="button" class="shb-plus' + (HB.drawer ? ' shb-plus-on' : '') + '" data-hb-plus title="Add any node (+) · Hover for categories · Drop a node here to pin it">' + ico('plus', fl ? 22 : 18) + '</button>' +
+      '</div>' +
       '</div>' +
     '</div>';
 
@@ -6275,7 +6927,7 @@
     /* The standalone "+" sits right of the bottom bar; flip it to the left side near the screen edge */
     if (zBot) {
       zBot.classList.remove('shb-plus-left');
-      var pEl = zBot.querySelector(':scope > .shb-plus-wrap');
+      var pEl = zBot.querySelector('.shb-plus-wrap');
       if (pEl && pEl.getBoundingClientRect().right > W - EDGE) zBot.classList.add('shb-plus-left');
     }
     hbDrawLeaders();
@@ -6733,10 +7385,11 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
-    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false;
+    HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false; HB.wItems = []; HB.wMenu = null;
     if (old) {
       old.removeAttribute('id');
       hbAnimateClose(old, cx, cy);
+      hbEmit('close', null);
     }
   }
 
@@ -6765,8 +7418,11 @@
     hbUpdateBounds();
 
     document.body.appendChild(el);
+    /* told before the first paint, so a tool that hides its own copy of the Custom Bar's buttons is gone by the bloom */
+    hbEmit('open', HB.node);
     hbPaint();
     hbAnimateOpen();
+    hbWireWidgetFields(el);
 
     /* One sliding highlight pill per card follows the hovered row (Fluid) */
     el.addEventListener('mouseover', function (e) {
@@ -7072,6 +7728,23 @@
         return;
       }
 
+      /* An open widget menu folds away on any other click in the hotbox */
+      if (HB.wMenu && !t.closest('[data-zone="wmenu"]') && !(HB.wMenu.anchor && HB.wMenu.anchor.contains(t))) hbMenuClose();
+      var wEl = t.closest('[data-hb-w]');
+      if (wEl) {
+        e.stopPropagation();
+        hbWClick(wEl, e);
+        return;
+      }
+
+      var getBus = t.closest('[data-hb-getbus]');
+      if (getBus) {
+        var gName = getBus.getAttribute('data-hb-getbus');
+        hbClose();
+        addGetNamed(gName);
+        return;
+      }
+
       var runBtn = t.closest('[data-hb-run]');
       if (runBtn && HB.editMode && runBtn.closest('[data-hb-bar]')) {
         /* In edit mode a tap renames the button instead of running it */
@@ -7195,6 +7868,7 @@
         else if (a === 'lupa') actAltZ(node);
         else if (a === 'reroute') addReroute(node);
         else if (a === 'set') addSetNode(node);
+        else if (a === 'group') actGroup(node);
         else if (a === 'loadcanvas') actLoadInCanvas(node);
         else if (a === 'preview') addPreview(node);
         else if (a === 'bypass') actBypass(node);
@@ -7205,7 +7879,12 @@
 
     el.oninput = function (e) {
       var t = e.target;
-      if (t && t.hasAttribute('data-hb-q')) {
+      if (t && t.hasAttribute('data-hb-wq')) {
+        var wl = HB.el && HB.el.querySelector('[data-hb-wlist]');
+        if (wl && HB.wMenu) wl.innerHTML = wMenuListHTML(HB.wMenu.rows, t.value);
+      } else if (t && t.hasAttribute('data-hb-w')) {
+        hbWInput(t);
+      } else if (t && t.hasAttribute('data-hb-q')) {
         HB.q = t.value || '';
         hbPaint();
       } else if (t && t.hasAttribute('data-hb-customcolor')) {
@@ -7229,6 +7908,21 @@
 
     el.addEventListener('keydown', function (e) {
       var t = e.target;
+      if (t && t.tagName === 'INPUT' && t.hasAttribute('data-hb-wq')) {
+        e.stopPropagation();
+        if (e.key === 'Escape') { e.preventDefault(); hbMenuClose(); }
+        else if (e.key === 'Enter') {
+          e.preventDefault();
+          var first = HB.el && HB.el.querySelector('[data-zone="wmenu"] [data-hb-wrow]');
+          if (first) first.click();
+        }
+        return;
+      }
+      if (t && t.tagName === 'INPUT' && t.hasAttribute('data-hb-w')) {
+        e.stopPropagation();
+        hbWKey(t, e);
+        return;
+      }
       if (t && t.hasAttribute && t.hasAttribute('data-ps-num') && HB.node) {
         e.stopPropagation();
         if (e.key === 'Enter') {
@@ -7247,6 +7941,18 @@
           try { t.blur(); } catch (err) {}
         }
       }
+    });
+  }
+
+  /* Leaving a widget field commits it; letting go of a widget slider re-seats the hotbox around the node */
+  function hbWireWidgetFields(el) {
+    el.addEventListener('focusout', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'INPUT' && t.type !== 'range' && t.hasAttribute('data-hb-w') && HB.wItems[+t.getAttribute('data-hb-w')]) wCommit(t);
+    });
+    el.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t && t.type === 'range' && t.hasAttribute('data-hb-w')) hbPlace();
     });
   }
 
@@ -7706,6 +8412,14 @@
   /* A saved button is named after what it holds: a titled group, the one node, or what the nodes do together
      ("Flux · Text to Image + LoRA") */
   function mgName(nodes, items) {
+    var name = mgSmartName(nodes, items);
+    var taken = (S.templates || []).map(function (t) { return t.name; });
+    for (var k = 2, base = name; taken.indexOf(name) >= 0; k++) name = base + ' ' + k;
+    return name;
+  }
+
+  /* The name alone, without the "2", "3"… that keeps saved buttons apart (groups made with G use it too) */
+  function mgSmartName(nodes, items) {
     var name = '';
     for (var i = 0; i < items.length && !name; i++) {
       var tt = String((!isGraphNode(items[i]) && items[i].children && items[i].title) || '').trim();
@@ -7721,10 +8435,7 @@
         name = fam ? fam + ' · ' + job : job;
       } else name = mgChain(nodes);
     }
-    name = name.slice(0, 40);
-    var taken = (S.templates || []).map(function (t) { return t.name; });
-    for (var k = 2, base = name; taken.indexOf(name) >= 0; k++) name = base + ' ' + k;
-    return name;
+    return name.slice(0, 40);
   }
 
   /* While the ghosts fly, the real nodes step aside; restore() fades them back in where they were */
@@ -8778,7 +9489,8 @@
     if (HB.el && !hbTyping()) {
       if (e.key === 'Escape') {
         hbEat(e);
-        if (HB.editMode) hbSetEdit(false);
+        if (HB.wMenu) hbMenuClose();
+        else if (HB.editMode) hbSetEdit(false);
         else hbClose();
         return;
       }
@@ -8790,7 +9502,7 @@
       var kl = String(e.key || '').toLowerCase();
       /* Shift + a letter is someone else's shortcut (Shift+R renders), never a hotbox quick key */
       if (!e.ctrlKey && !e.altKey && !e.metaKey && !(e.shiftKey && /^[a-z]$/.test(kl))) {
-        var cardDrawer = { f: 'search', n: 'tools', a: 'models', g: 'subs' }[kl];
+        var cardDrawer = { f: 'search', n: 'tools', a: 'models', u: 'subs' }[kl];
         if (cardDrawer) {
           hbEat(e);
           hbTogglePlus(cardDrawer);
@@ -8928,6 +9640,18 @@
     zoom: actDotZoom,
     swapNodes: actSwapPair,
     mergeToButton: actMagic,
-    configFile: function () { return cfgPath(); }
+    configFile: function () { return cfgPath(); },
+    isOpen: function () { return !!HB.el; },
+    /* Extension bars (see BAR WIDGETS and CUSTOM_BAR.md): addBar(id, { name, where, items(ctx) }) or addBar(id, items) */
+    addBar: function (id, provider) {
+      window.__hotboxBars = window.__hotboxBars || {};
+      window.__hotboxBars[id] = provider;
+      if (HB.el) hbPaint();
+    },
+    repaint: function () { if (HB.el) hbPaint(); },
+    removeBar: function (id) {
+      if (window.__hotboxBars) delete window.__hotboxBars[id];
+      if (HB.el) hbPaint();
+    }
   };
 })();
