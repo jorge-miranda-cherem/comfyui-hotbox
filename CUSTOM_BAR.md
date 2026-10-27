@@ -67,6 +67,7 @@ tag shown as a pill: `85`, `×2`).
 |---|---|---|---|
 | `button` | `label`, `run(ctx)` | `icon`, `color`, `badge`, `active`, `disabled`, `stayOpen` | A button. Closes the hotbox after `run` unless `stayOpen: true` (then the hotbox repaints, good for a fold or an on/off). |
 | `group` | `items` (buttons, menus, selects, fields…) | `label`, `title` | A joined cluster with a small caption: `OUTPUT  ⇩ exr  ⇩ image  ×2`. No groups inside groups. |
+| `fold` | `label`, `items` (anything but another fold) | `id`, `icon`, `badge`, `color`, `row`, `open`, `onToggle(open, ctx)` | A button with an arrow, like the user's own button groups. By default its items drop down in a list under it when the pointer is on it, and its arrow keeps the list open (a second click closes it). With `row: true` a click opens them as a second row under the whole bar instead, like a `settings ▴` strip. Both animate and keep the hotbox open. Hotbox remembers what is kept open (by `id`, else `label`) while ComfyUI runs; `open: true` only sets the first state. Folds live at the top level of a bar. |
 | `menu` | `label`, `items` (array, or `function (ctx)` returning one) | `icon`, `badge`, `search`, `placeholder` | A button with ▾ that opens a list under it. Rows: `{ label, run, hint?, icon?, color?, active?, stayOpen? }`, plus `{ type: 'header', label }` and `{ type: 'sep' }`. A row closes the hotbox unless `stayOpen`. Lists with more than 10 rows get a filter field (force with `search: true/false`); Enter picks the first match. |
 | `select` | `options`, `value`, `onChange(value, ctx)` | `label` (caption), `display` (text shown instead of the current option), `icon` | A field showing the current choice ▾; picking a row calls `onChange` and repaints (the hotbox stays open). `options`: strings, or `{ value, label, hint? }`. |
 | `text` | `onChange(text, ctx)` and/or `onCommit(text, ctx)` | `value`, `label`, `placeholder`, `width` (px, default 150) | A text field. `onChange` fires on every keystroke (live), `onCommit` on Enter or when the field loses focus, only if the text changed. Esc puts the old text back. |
@@ -79,7 +80,7 @@ tag shown as a pill: `85`, `×2`).
 | `sep` | | | A thin divider. |
 
 Fields that change things in place (`select`, `segment`, `swatches`, `toggle`) keep the hotbox open and
-repaint it, so read the new value from your own state in `items(ctx)`. `text`, `number` and `range` do not
+repaint it, so read the new value from your own state in `items(ctx)`. A repaint keeps open folds open. `text`, `number` and `range` do not
 repaint while the user types or drags (the field would lose focus); Enter in a field repaints once.
 
 ---
@@ -92,6 +93,11 @@ repaint while the user types or drags (the field would lose focus); Enter in a f
 - **Modes are a `select`, not one button per mode.** `seed fixed / increment / decrement / randomize` is one
   field showing `randomize ▾`.
 - **Related actions share a `group`** with a short caption (`output`, `3 outputs`).
+- **`fold` or `menu`?** A `fold` shows real controls (fields, selects, a handful of buttons): with `row: true`
+  side by side, as in `settings ▴` with frame, color, viewer, get workflow; without it, as a short list that
+  opens on hover. A `menu` is a list you pick
+  one thing from: `add node 11 ▾`, `add api node 198 ▾`. Up to about 8 buttons can be either; more than that is
+  a `menu` (it gets a filter field on its own).
 - **Short labels**, lowercase or Title Case, but the same everywhere in your bar.
 - **No node picker.** The hotbox already opened on a node: use `ctx.node`.
 - **Hide what does not apply** by leaving it out of the list, rather than showing it disabled.
@@ -145,6 +151,17 @@ window.__hotboxBars['scene-manager'] = {
       })
     });
 
+    // ⊕ add api node 198 ▾  (headers group the list by vendor; the filter finds any of the 198)
+    var apis = SM.apiNodes(n);                              // [{ name, type, vendor }]
+    if (apis.length) out.push({
+      type: 'menu', label: 'add api node', icon: 'plus', badge: apis.length, placeholder: 'Find an API node…',
+      items: SM.byVendor(apis).reduce(function (rows, v) {
+        rows.push({ type: 'header', label: v.vendor });
+        v.nodes.forEach(function (a) { rows.push({ label: a.name, run: function () { SM.addNode(n, a.type); } }); });
+        return rows;
+      }, [])
+    });
+
     // seed: randomize ▾
     if (SM.hasSeed(n)) out.push({
       type: 'select', icon: 'seed', value: SM.seedMode(n),
@@ -169,6 +186,18 @@ window.__hotboxBars['scene-manager'] = {
           return { label: k.name, run: function () { SM.insertKit(n, k.id); } };
         });
       }
+    });
+
+    // ⚙ settings ▴ — a second row under the bar: frame · color ▾ · viewer · get workflow
+    out.push({
+      type: 'fold', id: 'settings', label: 'settings', icon: 'settings', row: true,
+      items: [
+        { type: 'text', label: 'frame', value: SM.frame(n), width: 70, onCommit: function (f) { SM.setFrame(n, f); } },
+        { type: 'select', label: 'color', value: SM.colorPair(n),           // 'ACEScg → sRGB'
+          options: SM.colorPairs(), onChange: function (v) { SM.setColorPair(n, v); } },
+        { type: 'toggle', label: 'viewer', icon: 'preview', value: SM.viewerOn(n), onChange: function (on) { SM.setViewer(n, on); } },
+        { label: 'get workflow', icon: 'subgraph', run: function () { SM.getWorkflow(n); } }
+      ]
     });
 
     // copy to nuke / load in canvas, when the node has something to send

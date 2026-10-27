@@ -30,6 +30,7 @@
     hbMods: '',
     hbHold: false,          /* false = toggle on press, true = hold & release */
     hbStyle: 'pro',         /* 'pro' (Fluid glass cards), 'quiet' (native panels) or 'classic' (Compact: Fluid look, bars only) */
+    hbLogo: 'comfy',        /* logo colors (top-bar H, Settings): 'comfy' (yellow on plum) | 'orange' (the first brand color) */
     hbDockCat: 'models',    /* category shortcut at the end of the dock: 'models' | 'tools' | 'subs' | 'search' | 'none' */
     hbEditAnim: 'jiggle',   /* edit-mode idle animation: 'jiggle' | 'tilt' | 'float' | 'outline' */
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
@@ -58,6 +59,7 @@
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
+    hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
     cfgRev: 0,              /* config migrations already applied */
     lbLast: null
   };
@@ -564,16 +566,22 @@
       ':root{--shb-bg:var(--p-content-background,var(--comfy-menu-bg,#222222));--shb-bg-elev:#2a2a2a;--shb-bg-hover:#333333;--shb-bg-input:#1a1a1a;--shb-border:#3c3c3c;--shb-border-hover:#525252;--shb-fg:#e2e2e2;--shb-fg-muted:#9a9a9a;--shb-fg-dim:#6e6e6e;--shb-accent:#5c94f0;--shb-shadow:0 4px 16px rgba(0,0,0,.45)}',
 
       /* Topbar Logo Button — matches ImissNuke [N] button in ComfyUI top bar */
-      '.shb-topbar-btn{display:inline-flex !important;align-items:center !important;justify-content:center !important;min-width:32px !important;height:28px !important;padding:0 8px !important;margin:0 3px !important;background:#2b2b34 !important;border:1px solid #3c3c46 !important;border-radius:6px !important;cursor:pointer !important;transition:background-color .15s ease,border-color .15s ease,color .15s ease !important;user-select:none !important;vertical-align:middle !important;box-sizing:border-box !important;box-shadow:none !important}',
+      '.shb-topbar-btn{display:inline-flex !important;align-items:center !important;justify-content:center !important;min-width:32px !important;height:28px !important;padding:0 4px !important;margin:0 3px !important;background:#2b2b34 !important;border:1px solid #3c3c46 !important;border-radius:6px !important;cursor:pointer !important;transition:background-color .15s ease,border-color .15s ease,color .15s ease !important;user-select:none !important;vertical-align:middle !important;box-sizing:border-box !important;box-shadow:none !important}',
       '.shb-topbar-btn.in-grouped{margin:0 0 0 3px !important}',
       '.shb-topbar-btn.shb-floating-fallback{position:fixed !important;top:8px !important;right:16px !important;z-index:99990 !important}',
       '.shb-topbar-btn:hover{background:#383844 !important;border-color:#4c4c58 !important}',
-      '.shb-topbar-btn .shb-h-icon{display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;font-weight:800 !important;font-size:17.5px !important;line-height:1 !important;transform:translateY(0.5px) scale(0.90,1.22) !important;transform-origin:center center !important;color:#71717a !important;text-shadow:none !important}',
+      '.shb-topbar-btn .shb-h-icon{display:flex;align-items:center;justify-content:center;color:#71717a !important}',
+      '.shb-topbar-btn .shb-h-icon svg{display:block;width:22px;height:22px}',
       '.shb-topbar-btn:hover .shb-h-icon{color:#e2e8f0 !important}',
-      '.shb-topbar-btn.tool-on{background:#e58c2c !important;border-color:#d97706 !important}',
-      '.shb-topbar-btn.tool-on .shb-h-icon{color:#ffffff !important}',
-      '.shb-topbar-btn.tool-on:hover{background:#f59e0b !important;border-color:#e58c2c !important}',
-      '.shb-topbar-btn.open{box-shadow:0 0 0 2px rgba(229,140,44,.45) !important}',
+      /* on: the logo chip, Comfy yellow on plum by default, the first orange when Settings says so */
+      '.shb-topbar-btn.tool-on{background:#211927 !important;border-color:#3a2b45 !important}',
+      '.shb-topbar-btn.tool-on .shb-h-icon{color:#F2FF59 !important}',
+      '.shb-topbar-btn.tool-on:hover{background:#2d2236 !important;border-color:#5a4768 !important}',
+      '.shb-topbar-btn.open{box-shadow:0 0 0 2px rgba(242,255,89,.4) !important}',
+      '.shb-topbar-btn[data-logo="orange"].tool-on{background:#E58A2E !important;border-color:#9C5517 !important}',
+      '.shb-topbar-btn[data-logo="orange"].tool-on .shb-h-icon{color:#ffffff !important}',
+      '.shb-topbar-btn[data-logo="orange"].tool-on:hover{background:#F3A65A !important;border-color:#E58A2E !important}',
+      '.shb-topbar-btn[data-logo="orange"].open{box-shadow:0 0 0 2px rgba(229,138,46,.45) !important}',
 
       /* Toast — matches ComfyUI PrimeVue toast */
       '.shb-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);z-index:2147483600;padding:8px 14px;border-radius:8px;background:var(--shb-bg);border:1px solid var(--shb-border);color:var(--shb-fg);font:500 12px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:var(--shb-shadow);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;max-width:82vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -643,6 +651,30 @@
 
       /* Bar items: × badges, removal collapse, drag source & edit-mode outline */
       '.shb-item-wrap{position:relative;display:inline-flex;align-items:center;max-width:320px}',
+      /* Button groups (yours: drop one button on another) and folds (extension bars). A group opens a list
+         under its button on hover; a row fold opens a second row under the whole bar */
+      '.shb-grp{position:relative;display:inline-flex;align-items:center}',
+      '.shb-item-wrap.shb-grp{max-width:none}',
+      '.shb-gdrop{display:none;position:absolute;left:50%;top:calc(100% + 8px);translate:calc(-50% + var(--gx,0px)) 0;flex-direction:column;align-items:stretch;gap:2px;min-width:max(100%,172px);z-index:5;box-sizing:border-box;transform-origin:50% 0}',
+      '.shb-gdrop.shb-gdrop-up{top:auto;bottom:calc(100% + 8px);transform-origin:50% 100%}',
+      '.shb-grp-show > .shb-gdrop{display:flex}',
+      '.shb-gdrop::before{content:"";position:absolute;left:0;right:0;top:-10px;height:10px}',
+      '.shb-gdrop.shb-gdrop-up::before{top:auto;bottom:-10px}',
+      '.shb-gdrop > .shb-item-wrap{max-width:none}',
+      '.shb-gdrop > .shb-item-wrap > .shb-btn,.shb-gdrop > .shb-btn{width:100%;justify-content:flex-start;margin:0}',
+      '.shb-gdrop .shb-x{left:auto;right:-5px}',
+      '.shb-zone:has(.shb-grp-show){z-index:6}',
+      '.shb-gtray{display:none;align-items:center;gap:2px;box-sizing:border-box}',
+      '.shb-gtray.shb-gtray-on{display:inline-flex}',
+      '.shb-gtray-anim{overflow:hidden;flex-wrap:nowrap}',
+      '.shb-tray-row{flex-basis:100%;order:99;flex-wrap:wrap;justify-content:center}',
+      '.shb-w-host:has(> .shb-tray-row.shb-gtray-on){flex-basis:100%}',
+      '.shb-grp-chev{display:inline-grid;place-items:center;padding:3px;margin:-3px -4px -3px -2px;border-radius:6px;opacity:.55;transition:transform 170ms cubic-bezier(.2,.9,.1,1),opacity 80ms,background 60ms}',
+      '.shb-grp-chev:hover{opacity:1;background:rgba(255,255,255,.12)}',
+      '.shb-grp-chev .shb-ico{color:inherit}',
+      '.shb-fold-on > .shb-grp-chev,.shb-grp-show > .shb-btn .shb-grp-chev{transform:rotate(180deg);opacity:.9}',
+      '.shb-grp-pin > .shb-btn .shb-grp-chev{color:#5aa2f0;opacity:1}',
+      '.shb-grp-drop > .shb-btn{box-shadow:inset 0 0 0 1.5px #5aa2f0 !important;background:rgba(90,162,240,.18) !important}',
       '.shb-item-wrap > .shb-btn{position:relative}',
       '.shb-item-wrap.shb-removing{max-width:0;opacity:0;transform:scale(.3);overflow:hidden;transition:max-width 120ms cubic-bezier(.2,.9,.1,1),opacity 90ms ease,transform 120ms cubic-bezier(.2,.9,.1,1)}',
       '.shb-item-wrap.shb-drag-src{opacity:.35;pointer-events:none}',
@@ -903,6 +935,12 @@
       '.shb-fluid .shb-drawer .shb-seg button.shb-on{background:rgba(255,255,255,.16);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}',
       '.shb-fluid .shb-drawer-hint{color:var(--shb-t3)}',
       '.shb-fluid{--shb-w-track:rgba(255,255,255,.16);--shb-w-thumb:#fff}',
+      '.shb-fluid .shb-tray-row{margin:5px 0 1px;padding:4px;border-radius:14px;background:rgba(0,0,0,.2)}',
+      '.shb-fluid .shb-fold-on,.shb-fluid .shb-grp-pin > .shb-btn{background:rgba(255,255,255,.13);color:#fff}',
+      '.shb-fluid .shb-gdrop{padding:5px;border-radius:17px;background:rgba(34,34,38,.96);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 44px rgba(0,0,0,.5)}',
+      '.shb-fluid .shb-gdrop .shb-btn{border-radius:12px}',
+      '.shb-fluid .shb-gdrop .shb-pin{background:transparent}',
+      '.shb-fluid .shb-gdrop .shb-pin:hover{background:rgba(255,255,255,.1)}',
       '.shb-fluid .shb-w-cap{font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--shb-t3);padding-left:6px}',
       '.shb-fluid .shb-w-grp{padding:2px;border-radius:13px;background:rgba(0,0,0,.22)}',
       '.shb-fluid .shb-w-grp > .shb-w-cap{padding:0 6px 0 8px}',
@@ -1004,6 +1042,10 @@
       '.shb-quiet .shb-drawer .shb-seg button{font:500 11px/1 var(--shb-mono);color:#7d7d7d;padding:6px 4px}',
       '.shb-quiet .shb-drawer .shb-seg button.shb-on{color:#fff;background:var(--shb-qhover)}',
       '.shb-quiet{--shb-w-track:#363636;--shb-w-thumb:#64a8f0}',
+      '.shb-quiet .shb-tray-row{margin:3px 0 0;padding:3px 0 0;border-top:1px solid #2c2c2c}',
+      '.shb-quiet .shb-fold-on,.shb-quiet .shb-grp-pin > .shb-btn{background:var(--shb-qhover);color:#fff}',
+      '.shb-quiet .shb-gdrop{padding:3px;border-radius:7px;background:#1f1f1f;border:1px solid #303030;box-shadow:0 10px 26px rgba(0,0,0,.45)}',
+      '.shb-quiet .shb-grp-chev:hover{background:#333}',
       '.shb-quiet .shb-w-cap{font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted);padding-left:5px}',
       '.shb-quiet .shb-w-grp{padding:1px;border-radius:6px;background:#181818;border:1px solid #2a2a2a}',
       '.shb-quiet .shb-w-in{height:27px;padding:0 8px;border-radius:5px;border:1px solid var(--shb-qbd);background:#161616;color:#e6e6e6;font:400 12px/1 Inter,system-ui,sans-serif}',
@@ -4633,6 +4675,7 @@
    * --------------------------------------------------------------------- */
   var HB = {
     el: null,
+    grpOpen: {},
     node: null,
     rect: null,
     x: 0,
@@ -4974,6 +5017,21 @@
     var isAdd = ndAdds(node);
     var sel = selNodes();
     var isPair = sel.length >= 2 && isAdd;
+
+    if (u.indexOf('grp:') === 0) {
+      var gid = u.slice(4), grp = grpById(gid);
+      if (!grp) return null;
+      var kids = (grp.items || []).map(function (k) { return /^grp:/.test(k) ? null : resolveBarItem(k, node, loose); }).filter(Boolean);
+      /* an empty group (or one whose buttons do not apply here) waits for edit mode */
+      if (!kids.length && !HB.editMode) return null;
+      return {
+        uid: u, kind: 'group', id: gid,
+        label: customLbl || grp.name,
+        title: (customLbl || grp.name) + ' · ' + kids.length + (kids.length === 1 ? ' button' : ' buttons') + ' · click to open · drop buttons on it to add them',
+        icon: 'folder', kbd: '', cls: '', count: kids.length, kids: kids, stayOpen: true,
+        run: function () { hbGroupToggle(gid); }
+      };
+    }
 
     if (u.indexOf('tool:') === 0) {
       var tid = u.slice(5);
@@ -5384,7 +5442,293 @@
     try { inp.focus(); inp.select(); } catch (e) {}
   }
 
-  function renderBarItemHTML(item, barName, numKey) {
+  /* ---------------------------------------------------------------------
+   * BUTTON GROUPS: drop one bar button on the middle of another and the two become a group; drop more on it
+   * to fill it. Hovering a group opens its buttons in a list under it; its arrow keeps it open (or closes it).
+   * Stored as S.hbGroups[id] = { name, items: [uid…] } and placed in a bar like any button, as 'grp:<id>'.
+   * Which groups are kept open is remembered while ComfyUI runs.
+   * --------------------------------------------------------------------- */
+  function grpById(id) {
+    return (S.hbGroups && typeof S.hbGroups === 'object' && S.hbGroups[id]) || null;
+  }
+
+  function grpNew() {
+    if (!S.hbGroups || typeof S.hbGroups !== 'object') S.hbGroups = {};
+    var names = Object.keys(S.hbGroups).map(function (k) { return S.hbGroups[k].name; });
+    var n = 1;
+    while (names.indexOf('Group ' + n) >= 0) n++;
+    var id = 'g' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    S.hbGroups[id] = { name: 'Group ' + n, items: [] };
+    return id;
+  }
+
+  /* A group leaving a bar hands its buttons back to that bar, in its place */
+  function grpDissolve(barName, uid, node) {
+    var gid = String(uid).slice(4), grp = grpById(gid);
+    var list = getBarUids(barName, node), at = list.indexOf(uid);
+    var kids = grp ? (grp.items || []).filter(function (k) { return list.indexOf(k) < 0; }) : [];
+    if (at >= 0) Array.prototype.splice.apply(list, [at, 1].concat(kids));
+    if (grp) delete S.hbGroups[gid];
+    if (S.customLabels) delete S.customLabels[uid];
+    delete HB.grpOpen[gid];
+    setBarUids(barName, node, list);
+    return kids.length;
+  }
+
+  /* A button that already lives in a group of this bar is not drawn twice */
+  function hbUngrouped(items) {
+    var inGrp = {};
+    items.forEach(function (it) {
+      if (it.kind === 'group') it.kids.forEach(function (k) { inGrp[k.uid] = 1; });
+    });
+    return items.filter(function (it) { return it.kind === 'group' || !inGrp[it.uid]; });
+  }
+
+  function renderGroupHTML(item, barName, numKey) {
+    var pin = !!HB.grpOpen[item.id];
+    var isz = hbIsFluid() ? 15 : 13;
+    var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn';
+    return '<span class="shb-item-wrap shb-grp' + (pin ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '" data-hb-gkey="' + esc(item.id) + '">' +
+      '<button type="button" class="' + cls + '" data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
+        (numKey ? '<span class="shb-num">' + esc(numKey) + '</span>' : ico('folder', isz)) +
+        '<span class="shb-lbl">' + esc(item.label) + '</span>' +
+        '<span class="shb-w-badge">' + esc(item.count) + '</span>' +
+        '<span class="shb-grp-chev" data-hb-grpchev title="Keep it open · click again to close it">' + ico('chevDown', 12) + '</span>' +
+        '<span class="shb-x" data-hb-rm="' + esc(item.uid) + '" data-hb-rmbar="' + esc(barName) + '" title="Ungroup (the buttons stay in the bar)">×</span>' +
+      '</button>' +
+      '<span class="shb-gdrop" data-hb-gtray="' + esc(item.id) + '">' +
+        item.kids.map(function (k) { return renderBarItemHTML(k, barName, 0, item.id); }).join('') +
+      '</span>' +
+    '</span>';
+  }
+
+  function hbGroupToggle(gid) {
+    var wrap = HB.el && HB.el.querySelector('.shb-grp[data-hb-gkey="' + cssEsc(gid) + '"]');
+    if (wrap) hbGrpClick(wrap);
+  }
+
+  function hbStyleName() {
+    return !hbIsFluid() ? 'quiet' : (S.hbStyle === 'classic' ? 'compact' : 'fluid');
+  }
+
+  /* The arrow (or a click on the group): open and keep open, or close and stay closed until the pointer
+     leaves */
+  function hbGrpClick(wrap) {
+    var key = wrap.getAttribute('data-hb-gkey');
+    if (HB.grpOpen[key]) {
+      delete HB.grpOpen[key];
+      wrap.classList.remove('shb-grp-pin');
+      wrap._mute = true;
+      hbDropHide(wrap);
+    } else {
+      HB.grpOpen[key] = true;
+      wrap.classList.add('shb-grp-pin');
+      wrap._mute = false;
+      hbDropShow(wrap);
+    }
+  }
+
+  /* Hover opens a group (a beat later while dragging, so passing over does not flash it); leaving closes it
+     unless it is kept open */
+  function hbWireGroups(el) {
+    el.addEventListener('mouseover', function (e) {
+      var w = e.target && e.target.closest ? e.target.closest('.shb-grp[data-hb-gkey]') : null;
+      if (!w || (e.relatedTarget && w.contains(e.relatedTarget))) return;
+      clearTimeout(w._hideT);
+      if (w._mute) return;
+      var dragging = !!((LP_DRAG && LP_DRAG.active) || (DRAWER_DRAG && DRAWER_DRAG.active));
+      clearTimeout(w._showT);
+      w._showT = setTimeout(function () { hbDropShow(w); }, dragging ? 280 : 70);
+    });
+    el.addEventListener('mouseout', function (e) {
+      var w = e.target && e.target.closest ? e.target.closest('.shb-grp[data-hb-gkey]') : null;
+      if (!w || (e.relatedTarget && w.contains(e.relatedTarget))) return;
+      clearTimeout(w._showT);
+      w._mute = false;
+      if (HB.grpOpen[w.getAttribute('data-hb-gkey')]) return;
+      clearTimeout(w._hideT);
+      w._hideT = setTimeout(function () { hbDropHide(w); }, 260);
+    });
+  }
+
+  /* The list drops under its button, or above it when the screen ends, and slides sideways to stay on screen */
+  function hbDropFit(drop) {
+    drop.classList.remove('shb-gdrop-up');
+    drop.style.setProperty('--gx', '0px');
+    var W = window.innerWidth || 1600, H = window.innerHeight || 900, z = parseFloat(S.hbScale) || 1;
+    var r = drop.getBoundingClientRect();
+    if (r.bottom > H - 10) {
+      var b = drop.parentNode.getBoundingClientRect();
+      if (b.top - r.height - 8 > 10) drop.classList.add('shb-gdrop-up');
+    }
+    var dx = r.left < 10 ? 10 - r.left : (r.right > W - 10 ? (W - 10) - r.right : 0);
+    if (dx) drop.style.setProperty('--gx', Math.round(dx / z) + 'px');
+  }
+
+  function hbDropAnims(drop) {
+    (drop._anims || []).forEach(function (a) { try { a.cancel(); } catch (e) {} });
+    drop._anims = [];
+    return function (el, kf, op) {
+      try { var a = el.animate(kf, op); drop._anims.push(a); return a; } catch (e) { return null; }
+    };
+  }
+
+  /* Opening: the list unfolds from its button and its buttons fall in one after another — a soft spring in
+     Fluid, little balloons in Compact, a quiet slide in Quiet */
+  function hbDropShow(wrap) {
+    if (!HB.el || !wrap || !wrap.isConnected || wrap.classList.contains('shb-grp-show') && !wrap._closing) return;
+    var drop = wrap.querySelector(':scope > .shb-gdrop');
+    if (!drop || !drop.children.length) return;
+    wrap._closing = false;
+    wrap.classList.add('shb-grp-show');
+    hbDropFit(drop);
+    var up = drop.classList.contains('shb-gdrop-up'), sg = up ? 1 : -1;
+    var st = hbStyleName(), run = hbDropAnims(drop);
+    var D = { fluid: [190, 300, 24], compact: [150, 210, 15], quiet: [110, 130, 8] }[st];
+    run(drop, [{ opacity: 0, transform: 'translateY(' + (sg * 6) + 'px) scale(' + (st === 'quiet' ? 1 : 0.96) + ')' }, { opacity: 1, transform: 'none' }],
+      { duration: D[0], easing: 'cubic-bezier(.2,.9,.1,1)' });
+    var kids = Array.prototype.slice.call(drop.children);
+    if (up) kids.reverse();
+    kids.forEach(function (k, i) {
+      var kf = st === 'compact'
+        ? [{ opacity: 0, transform: 'scale(.45)' }, { opacity: 1, transform: 'scale(1.06)', offset: 0.6 }, { opacity: 1, transform: 'none' }]
+        : [{ opacity: 0, transform: 'translateY(' + (sg * (st === 'fluid' ? 10 : 4)) + 'px)' + (st === 'fluid' ? ' scale(.92)' : '') }, { opacity: 1, transform: 'none' }];
+      run(k, kf, {
+        duration: D[1], delay: Math.round(D[0] * 0.15) + i * D[2], fill: 'backwards',
+        easing: st === 'fluid' ? 'cubic-bezier(.34,1.32,.64,1)' : (st === 'compact' ? 'cubic-bezier(.3,1.2,.5,1)' : 'cubic-bezier(.2,0,0,1)')
+      });
+    });
+  }
+
+  /* Closing runs it back, faster */
+  function hbDropHide(wrap) {
+    if (!wrap || !wrap.classList.contains('shb-grp-show') || wrap._closing) return;
+    var drop = wrap.querySelector(':scope > .shb-gdrop');
+    if (!drop) { wrap.classList.remove('shb-grp-show'); return; }
+    wrap._closing = true;
+    var st = hbStyleName(), run = hbDropAnims(drop);
+    var up = drop.classList.contains('shb-gdrop-up');
+    var fade = run(drop, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(' + (up ? 4 : -4) + 'px) scale(' + (st === 'quiet' ? 1 : 0.97) + ')' }],
+      { duration: st === 'fluid' ? 130 : (st === 'compact' ? 110 : 80), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+    function done() {
+      if (!wrap._closing) return;
+      wrap._closing = false;
+      wrap.classList.remove('shb-grp-show');
+      (drop._anims || []).forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      drop._anims = [];
+    }
+    if (fade) fade.finished.then(done, function () {});
+    else done();
+  }
+
+  /* A new group lands with a pop and a soft ring, then shows what it holds while the pointer is on it */
+  function hbGrpPop(gid) {
+    var w = HB.el && HB.el.querySelector('.shb-grp[data-hb-gkey="' + cssEsc(gid) + '"]');
+    var b = w && w.querySelector(':scope > .shb-btn');
+    if (!b) return;
+    var st = hbStyleName();
+    try {
+      b.animate(st === 'quiet'
+        ? [{ transform: 'scale(.92)', opacity: 0.5 }, { transform: 'none', opacity: 1 }]
+        : [{ transform: 'scale(.55)', opacity: 0.3 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.55 }, { transform: 'none', opacity: 1 }],
+        { duration: st === 'fluid' ? 380 : (st === 'compact' ? 240 : 150), easing: st === 'quiet' ? 'cubic-bezier(.2,0,0,1)' : 'cubic-bezier(.3,1.25,.5,1)' });
+      if (st !== 'quiet') {
+        b.animate([{ boxShadow: '0 0 0 0 rgba(90,162,240,.6)' }, { boxShadow: '0 0 0 12px rgba(90,162,240,0)' }],
+          { duration: 520, easing: 'cubic-bezier(.2,.9,.1,1)' });
+      }
+    } catch (e) {}
+    setTimeout(function () { if (w.isConnected && w.matches(':hover')) hbDropShow(w); }, 220);
+  }
+
+  /* Dropping one button on the middle of another: a new group takes the second one's place and holds both */
+  function hbMergeTarget(overWrap, dragWrap, x, y) {
+    if (!overWrap || overWrap === dragWrap || overWrap.classList.contains('shb-grp')) return null;
+    if (!overWrap.parentNode || !overWrap.parentNode.hasAttribute('data-hb-bar')) return null;
+    var r = overWrap.getBoundingClientRect();
+    if (x < r.left + r.width * 0.25 || x > r.right - r.width * 0.25 || y < r.top || y > r.bottom) return null;
+    return overWrap;
+  }
+
+  function hbMergeDom(targetWrap, dragWrap) {
+    var gid = grpNew();
+    var holder = document.createElement('span');
+    holder.className = 'shb-item-wrap shb-grp';
+    holder.setAttribute('data-hb-uid', 'grp:' + gid);
+    var drop = document.createElement('span');
+    drop.setAttribute('data-hb-gtray', gid);
+    holder.appendChild(drop);
+    targetWrap.parentNode.insertBefore(holder, targetWrap);
+    drop.appendChild(targetWrap);
+    drop.appendChild(dragWrap);
+    return gid;
+  }
+
+  /* A group or a fold opening: the tray grows out of its button while the buttons inside spring in one after
+     another (Fluid), pop in like little balloons (Compact) or slide in quietly (Quiet). Closing runs it back,
+     faster. The hotbox is laid out for the open tray first, so it stays centered while the tray grows. */
+  function hbTrayAnim(btn, tray, open) {
+    if (!HB.el || !btn || !tray) return;
+    var st = !hbIsFluid() ? 'quiet' : (S.hbStyle === 'classic' ? 'compact' : 'fluid');
+    var row = tray.classList.contains('shb-tray-row');
+    var wrap = btn.closest('.shb-grp');
+    btn.classList.toggle('shb-fold-on', open);
+    if (wrap) wrap.classList.toggle('shb-grp-open', open);
+    (tray._anims || []).forEach(function (a) { try { a.cancel(); } catch (e) {} });
+    tray._anims = [];
+    tray.classList.remove('shb-gtray-anim');
+    var kids = Array.prototype.slice.call(tray.children);
+    var z = parseFloat(S.hbScale) || 1;
+    var T = { fluid: { grow: 240, shrink: 170, step: 28, kid: 320 }, compact: { grow: 170, shrink: 130, step: 18, kid: 210 }, quiet: { grow: 120, shrink: 90, step: 10, kid: 140 } }[st];
+    var ease = st === 'quiet' ? 'cubic-bezier(.2,0,0,1)' : 'cubic-bezier(.2,.9,.1,1)';
+    function run(el, kf, op) {
+      try { var a = el.animate(kf, op); tray._anims.push(a); return a; } catch (e) { return null; }
+    }
+    function size(v) {
+      var o = { opacity: v ? 1 : 0.35 };
+      o[row ? 'height' : 'width'] = v + 'px';
+      return o;
+    }
+    if (open) {
+      tray.classList.add('shb-gtray-on');
+      hbPlace();
+      var r = tray.getBoundingClientRect();
+      var full = Math.round((row ? r.height : r.width) / z);
+      tray.classList.add('shb-gtray-anim');
+      var grow = run(tray, [size(0), size(full)], { duration: T.grow, easing: ease });
+      kids.forEach(function (k, i) {
+        var kf = st === 'compact'
+          ? [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1.07)', offset: 0.6 }, { opacity: 1, transform: 'none' }]
+          : [{ opacity: 0, transform: st === 'fluid' ? (row ? 'translateY(-9px) scale(.9)' : 'translateX(-14px) scale(.84)') : (row ? 'translateY(-4px)' : 'translateX(-6px)') },
+             { opacity: 1, transform: 'none' }];
+        run(k, kf, {
+          duration: T.kid, delay: Math.round(T.grow * 0.18) + i * T.step, fill: 'backwards',
+          easing: st === 'fluid' ? 'cubic-bezier(.34,1.32,.64,1)' : (st === 'compact' ? 'cubic-bezier(.3,1.2,.5,1)' : ease)
+        });
+      });
+      if (grow) grow.finished.then(function () { tray.classList.remove('shb-gtray-anim'); }, function () {});
+      else tray.classList.remove('shb-gtray-anim');
+      return;
+    }
+    var r2 = tray.getBoundingClientRect();
+    var cur = Math.round((row ? r2.height : r2.width) / z);
+    tray.classList.add('shb-gtray-anim');
+    kids.slice().reverse().forEach(function (k, i) {
+      run(k, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: st === 'compact' ? 'scale(.55)' : (row ? 'translateY(-4px)' : 'translateX(-8px) scale(.94)') }],
+        { duration: Math.round(T.shrink * 0.7), delay: i * Math.round(T.step / 3), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+    });
+    var shrink = run(tray, [size(cur), size(0)], { duration: T.shrink, delay: Math.min(70, kids.length * 7), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+    function done() {
+      (tray._anims || []).forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      tray._anims = [];
+      tray.classList.remove('shb-gtray-on', 'shb-gtray-anim');
+      if (HB.el) hbPlace();
+    }
+    if (shrink) shrink.finished.then(done, function () {});
+    else done();
+  }
+
+  function renderBarItemHTML(item, barName, numKey, grpId) {
+    if (item.kind === 'group') return renderGroupHTML(item, barName, numKey);
     var kbdStr = numKey ? String(numKey) : (item.kbd || '');
     var isTpl = item.kind === 'template';
     var isPin = (barName === 'bot' && item.kind !== 'tool') || isTpl;
@@ -5403,7 +5747,7 @@
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         (isTpl ? '<span class="shb-tpl-n">' + esc(item.count) + '</span>' : '') +
         (!numKey && !isPin && kbdStr ? '<span class="shb-key">' + esc(kbdStr) + '</span>' : '') +
-        '<span class="shb-x" data-hb-rm="' + esc(item.uid) + '" data-hb-rmbar="' + esc(barName) + '" title="Remove">×</span>' +
+        '<span class="shb-x" data-hb-rm="' + esc(item.uid) + '" data-hb-rmbar="' + esc(barName) + '"' + (grpId ? ' data-hb-rmgrp="' + esc(grpId) + '"' : '') + ' title="Remove">×</span>' +
       '</button>' +
     '</span>';
   }
@@ -5690,7 +6034,7 @@
   function hbEditBarHTML() {
     var fl = hbIsFluid();
     return '<div class="shb-editbar">' +
-      '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename' : 'edit · × or drag out · tap = rename') + '</span>' +
+      '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename · drop a button on another to group them' : 'edit · × or drag out · tap = rename · drop on a button = group') + '</span>' +
       '<button type="button" class="shb-editbar-b" data-hb-act="editreset">Reset</button>' +
       '<button type="button" class="shb-editbar-b shb-editbar-done" data-hb-act="editdone">Done</button>' +
     '</div>';
@@ -5711,7 +6055,7 @@
     if (!HB.el || !HB.editMode) return;
     var fl = hbIsFluid();
     var st = S.hbEditAnim || 'jiggle';
-    var btns = HB.el.querySelectorAll('[data-hb-bar] > .shb-item-wrap > .shb-btn');
+    var btns = HB.el.querySelectorAll('[data-hb-bar] > .shb-item-wrap > .shb-btn, [data-hb-gtray] > .shb-item-wrap > .shb-btn');
     Array.prototype.forEach.call(btns, function (b, i) {
       if (st === 'outline') { b.classList.add('shb-outline'); return; }
       var kf, op, sg = i % 2 ? 1 : -1;
@@ -5910,12 +6254,13 @@
 
   function hbFlashUid(uid) {
     if (!HB.el) return;
-    var b = HB.el.querySelector('[data-hb-bar] > .shb-item-wrap[data-hb-uid="' + cssEsc(uid) + '"] > .shb-btn');
+    var sel = '.shb-item-wrap[data-hb-uid="' + cssEsc(uid) + '"] > .shb-btn';
+    var b = HB.el.querySelector('[data-hb-bar] > ' + sel + ', [data-hb-gtray] > ' + sel);
     if (b) hbWiggle(b, hbAmp());
   }
 
   /* The standalone "+" opens the Add drawer right beside itself. The "+" itself toggles (All Nodes);
-     a category picked from its dial (or F / N / A / G) switches straight to that category. */
+     a category picked from its dial (or F / N / A / U) switches straight to that category. */
   function hbTogglePlus(which) {
     if (!HB.el) return;
     var wasOn = !!HB.drawer;
@@ -5952,9 +6297,9 @@
     try {
       var node = HB.node;
       var tools = hbContextTools(node);
-      var addItems = getBarUids('add', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean);
-      var toolItems = getBarUids('tools', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean);
-      var botItems = getBarUids('bot', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean);
+      var addItems = hbUngrouped(getBarUids('add', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
+      var toolItems = hbUngrouped(getBarUids('tools', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
+      var botItems = hbUngrouped(getBarUids('bot', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
       var isAdd = ndAdds(node);
       var sel = selNodes();
       var isPair = sel.length >= 2 && isAdd;
@@ -6209,7 +6554,7 @@
    * --------------------------------------------------------------------- */
   window.__hotboxBars = window.__hotboxBars || {};
 
-  var W_TYPES = { button: 1, group: 1, menu: 1, select: 1, text: 1, number: 1, range: 1, swatches: 1, segment: 1, toggle: 1, info: 1, sep: 1 };
+  var W_TYPES = { button: 1, group: 1, fold: 1, menu: 1, select: 1, text: 1, number: 1, range: 1, swatches: 1, segment: 1, toggle: 1, info: 1, sep: 1 };
 
   function wType(it) {
     var t = (it && typeof it === 'object') ? String(it.type || 'button') : '';
@@ -6222,14 +6567,16 @@
 
   /* Drops what a bar cannot draw (a button without run, a group inside a group…), so one bad item never
      takes the hotbox down */
-  function wClean(list, inGroup) {
+  function wClean(list, inside) {
     var out = [];
     (Array.isArray(list) ? list : []).forEach(function (it) {
       var t = wType(it), ok = false;
       if (t === 'button') ok = wHas(it.label) && wFn(it.run);
-      else if (t === 'group') {
-        var kids = inGroup ? [] : wClean(it.items, true);
-        if (kids.length) { it = Object.assign({}, it, { items: kids }); ok = true; }
+      else if (t === 'group' || t === 'fold') {
+        /* a group can sit in a fold, a fold only at the top, and neither inside a group */
+        var nests = t === 'group' ? inside !== 'group' : !inside;
+        var kids = nests ? wClean(it.items, t) : [];
+        if (kids.length && (t === 'group' || wHas(it.label))) { it = Object.assign({}, it, { items: kids }); ok = true; }
       }
       else if (t === 'menu') ok = wHas(it.label) && (Array.isArray(it.items) || wFn(it.items));
       else if (t === 'select' || t === 'segment') ok = Array.isArray(it.options) && it.options.length > 0 && wFn(it.onChange);
@@ -6297,6 +6644,34 @@
     }
     var i = HB.wItems.push(it) - 1, at = ' data-hb-w="' + i + '"';
     var isz = hbIsFluid() ? 14 : 13;
+    if (t === 'fold') {
+      /* remembered per bar and fold while ComfyUI runs; `open` is only the first state */
+      it._key = 'x:' + W_BAR + ':' + (it.id || it.label);
+      var fOpen = HB.grpOpen[it._key] != null ? !!HB.grpOpen[it._key] : !!it.open;
+      var fCol = wColor(it.color);
+      if (!it.row) {
+        /* like your own groups: hover opens the list under it, the arrow keeps it open */
+        return '<span class="shb-grp' + (fOpen ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-gkey="' + esc(it._key) + '">' +
+          '<button type="button" class="shb-btn ' + base + ' shb-w-fold shb-grp-btn"' + at + ' title="' + esc(it.title || it.label) + '">' +
+            (fCol ? '<i class="shb-cbar-dot" style="background:' + esc(fCol) + '"></i>' : '') +
+            ((it.icon && ICONS[it.icon]) ? ico(it.icon, isz) : '') + '<span class="shb-lbl">' + esc(it.label) + '</span>' +
+            (wHas(it.badge) ? '<span class="shb-w-badge">' + esc(it.badge) + '</span>' : '') +
+            '<span class="shb-grp-chev" data-hb-grpchev title="Keep it open · click again to close it">' + ico('chevDown', 11) + '</span>' +
+          '</button>' +
+          '<span class="shb-gdrop">' + it.items.map(function (k) { return wHTML(k, 'shb-tool'); }).join('') + '</span>' +
+        '</span>';
+      }
+      return '<button type="button" class="shb-btn ' + base + ' shb-w-fold' + (fOpen ? ' shb-fold-on' : '') + '"' + at +
+          ' title="' + esc(it.title || it.label) + '">' +
+          (fCol ? '<i class="shb-cbar-dot" style="background:' + esc(fCol) + '"></i>' : '') +
+          ((it.icon && ICONS[it.icon]) ? ico(it.icon, isz) : '') + '<span class="shb-lbl">' + esc(it.label) + '</span>' +
+          (wHas(it.badge) ? '<span class="shb-w-badge">' + esc(it.badge) + '</span>' : '') +
+          '<span class="shb-grp-chev">' + ico(it.row ? 'chevDown' : 'chevRight', 11) + '</span>' +
+        '</button>' +
+        '<span class="shb-gtray' + (it.row ? ' shb-tray-row' : '') + (fOpen ? ' shb-gtray-on' : '') + '" data-hb-ftray="' + i + '">' +
+          it.items.map(function (k) { return wHTML(k, 'shb-tool'); }).join('') +
+        '</span>';
+    }
     var tip = ' title="' + esc(it.title || it.label || it.text || '') + '"';
     var cap = wHas(it.label) ? '<span class="shb-w-cap">' + esc(it.label) + '</span>' : '';
     var icon = (it.icon && ICONS[it.icon]) ? ico(it.icon, isz) : '';
@@ -6388,8 +6763,11 @@
     return groups;
   }
 
+  var W_BAR = '';
+
   function hbBarGroupsHTML(groups, base) {
     return groups.map(function (g, gi) {
+      W_BAR = g.id;
       return (gi ? '<span class="shb-vsep"></span>' : '') +
         (g.name ? '<span class="shb-dock-mode">' + esc(g.name) + '</span>' : '') +
         g.items.map(function (it) { return wHTML(it, base); }).join('');
@@ -6481,6 +6859,20 @@
     if (t === 'number') {
       var st = +wEl.getAttribute('data-hb-wstep');
       if (st) wNumSet(it, wNum(it, (Number(it.value) || 0) + st * (+it.step || 1) * (e.shiftKey ? 10 : 1)), wEl.closest('.shb-w-num'));
+      return;
+    }
+    if (t === 'fold') {
+      hbMenuClose();
+      var fWrap = it.row ? null : wEl.closest('.shb-grp');
+      if (fWrap) {
+        hbGrpClick(fWrap);
+        if (wFn(it.onToggle)) { try { it.onToggle(!!HB.grpOpen[it._key], wCtx('')); } catch (err) { wErr(it, err); } }
+        return;
+      }
+      var fOpen = !wEl.classList.contains('shb-fold-on');
+      HB.grpOpen[it._key] = fOpen;
+      hbTrayAnim(wEl, HB.el.querySelector('[data-hb-ftray="' + idx + '"]'), fOpen);
+      if (wFn(it.onToggle)) { try { it.onToggle(fOpen, wCtx('')); } catch (err) { wErr(it, err); } }
       return;
     }
     if (t === 'menu' || t === 'select') {
@@ -7002,17 +7394,48 @@
      are kept unless they were just removed or moved to another bar. */
   function commitDomBarsOrder(rootEl, node, removedUid) {
     if (!rootEl) return;
-    var dom = {}, shown = [];
+    var dom = {}, trays = {}, shown = [];
+    function uidsOf(box, noGroups) {
+      var out = [];
+      Array.prototype.forEach.call(box.children, function (el) {
+        var u = el.getAttribute && el.getAttribute('data-hb-uid');
+        if (u && out.indexOf(u) < 0 && !(noGroups && /^grp:/.test(u))) out.push(u);
+      });
+      return out;
+    }
     ['add', 'tools', 'bot'].forEach(function (barName) {
       var container = rootEl.querySelector('[data-hb-bar="' + barName + '"]');
       if (!container) return;
-      var uids = [];
-      Array.prototype.forEach.call(container.querySelectorAll('[data-hb-uid]'), function (el) {
-        var u = el.getAttribute('data-hb-uid');
-        if (u && uids.indexOf(u) < 0) uids.push(u);
+      dom[barName] = uidsOf(container);
+      shown = shown.concat(dom[barName]);
+      /* a group's tray holds that group's buttons, in the order they sit there */
+      Array.prototype.forEach.call(container.querySelectorAll('[data-hb-gtray]'), function (tr) {
+        var k = uidsOf(tr, true);
+        trays[tr.getAttribute('data-hb-gtray')] = k;
+        shown = shown.concat(k);
       });
-      dom[barName] = uids;
-      shown = shown.concat(uids);
+    });
+    Object.keys(trays).forEach(function (gid) {
+      var grp = grpById(gid);
+      if (!grp) return;
+      var keep = trays[gid];
+      (grp.items || []).forEach(function (u) {
+        if (u !== removedUid && shown.indexOf(u) < 0 && keep.indexOf(u) < 0) keep.push(u);
+      });
+      grp.items = keep;
+    });
+    /* a group left with one button (or none) unfolds into the bar, like a folder on a phone */
+    Object.keys(dom).forEach(function (barName) {
+      dom[barName] = dom[barName].reduce(function (acc, u) {
+        var g = /^grp:/.test(u) && trays[u.slice(4)] ? grpById(u.slice(4)) : null;
+        if (g && (g.items || []).length < 2) {
+          (g.items || []).forEach(function (k) { if (acc.indexOf(k) < 0) acc.push(k); });
+          delete S.hbGroups[u.slice(4)];
+          delete HB.grpOpen[u.slice(4)];
+          if (S.customLabels) delete S.customLabels[u];
+        } else acc.push(u);
+        return acc;
+      }, []);
     });
     Object.keys(dom).forEach(function (barName) {
       var keep = dom[barName];
@@ -7023,6 +7446,20 @@
     });
   }
 
+  /* While a button is dragged over the middle of a group's own button, the group lights up and takes it */
+  function hbGrpHot(wrap) {
+    if (HB.el) Array.prototype.forEach.call(HB.el.querySelectorAll('.shb-grp-drop'), function (w) { if (w !== wrap) w.classList.remove('shb-grp-drop'); });
+    if (wrap) wrap.classList.add('shb-grp-drop');
+  }
+
+  function hbGrpTarget(overWrap, x, y) {
+    if (!overWrap || !overWrap.classList.contains('shb-grp')) return null;
+    var b = overWrap.querySelector(':scope > .shb-btn');
+    var r = b && b.getBoundingClientRect();
+    if (!r || x < r.left + r.width * 0.2 || x > r.right - r.width * 0.2 || y < r.top || y > r.bottom) return null;
+    return overWrap.querySelector(':scope > [data-hb-gtray]');
+  }
+
   /* Long-Press (420ms) Edit Mode, Bar Drags, Drawer Drag-to-Bar, Canvas Node Drag-to-Pin & Pro Slider Scrubbing */
   var LP_DRAG = null;
   var DRAWER_DRAG = null;
@@ -7031,6 +7468,7 @@
 
   function clearLpDrag() {
     if (!LP_DRAG) return;
+    hbGrpHot(null);
     if (LP_DRAG.timer) clearTimeout(LP_DRAG.timer);
     if (LP_DRAG.wrap) {
       LP_DRAG.wrap.classList.remove('shb-drag-src');
@@ -7186,7 +7624,20 @@
         if (underEl && underEl.closest) {
           var overWrapEl = underEl.closest('.shb-item-wrap[data-hb-uid]');
           var overBarBox = underEl.closest('.shb-bar');
-          if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
+          var dTray = /^grp:/.test(DRAWER_DRAG.uid) ? null : hbGrpTarget(overWrapEl, px, py);
+          var dMerge = (dTray || /^grp:/.test(DRAWER_DRAG.uid)) ? null : hbMergeTarget(overWrapEl, dWrap, px, py);
+          DRAWER_DRAG.merge = dMerge;
+          if (dMerge) {
+            if (dWrap.parentNode) dWrap.parentNode.removeChild(dWrap);
+            DRAWER_DRAG.inBar = true;
+            hbGrpHot(dMerge);
+            hbSetBotDrop(false);
+            ghostMove(px, py, 'Release to group them', 'over');
+            return;
+          }
+          if (dTray) {
+            target = dTray;
+          } else if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
             var wr = overWrapEl.getBoundingClientRect();
             target = overWrapEl.parentNode;
             before = px < (wr.left + wr.width / 2) ? overWrapEl : overWrapEl.nextSibling;
@@ -7202,6 +7653,7 @@
         dWrap.parentNode.removeChild(dWrap);
       }
       DRAWER_DRAG.inBar = !!target;
+      hbGrpHot(target && target.hasAttribute('data-hb-gtray') ? target.closest('.shb-grp') : null);
       hbSetBotDrop(!!(target && target === botC), false);
       ghostMove(px, py, target ? 'Release to pin' : (/^tpl:/.test(DRAWER_DRAG.uid) ? 'Release to add the nodes here' : 'Drag onto a bar or +'), target ? 'over' : '');
       return;
@@ -7261,9 +7713,29 @@
     if (!under || !under.closest) return;
 
     var overWrap = under.closest('.shb-item-wrap[data-hb-uid]');
+    if (overWrap && dragWrap.contains(overWrap)) return;
+    var dragIsGrp = /^grp:/.test(dragWrap.getAttribute('data-hb-uid') || '');
+    /* a group moves as a whole, never into another group */
+    if (overWrap && dragIsGrp && overWrap.parentNode && overWrap.parentNode.hasAttribute('data-hb-gtray')) {
+      overWrap = overWrap.parentNode.closest('.shb-item-wrap[data-hb-uid]');
+    }
+    var intoTray = dragIsGrp ? null : hbGrpTarget(overWrap, e.clientX, e.clientY);
+    var mergeOn = (intoTray || dragIsGrp) ? null : hbMergeTarget(overWrap, dragWrap, e.clientX, e.clientY);
+    LP_DRAG.merge = mergeOn;
+    hbGrpHot(intoTray ? overWrap : mergeOn);
+    if (intoTray) {
+      if (dragWrap.parentNode !== intoTray) intoTray.appendChild(dragWrap);
+      ghostMove(e.clientX, e.clientY, 'Release to put it in ' + ((overWrap.querySelector('.shb-lbl') || {}).textContent || 'the group'), 'over');
+      return;
+    }
+    if (mergeOn) {
+      ghostMove(e.clientX, e.clientY, 'Release to group them', 'over');
+      return;
+    }
     if (overWrap && overWrap !== dragWrap && overWrap.parentNode) {
       var r = overWrap.getBoundingClientRect();
-      var isBefore = e.clientX < (r.left + r.width / 2);
+      /* inside a group's list the buttons stack, so the halves are top and bottom */
+      var isBefore = overWrap.parentNode.hasAttribute('data-hb-gtray') ? e.clientY < (r.top + r.height / 2) : e.clientX < (r.left + r.width / 2);
       overWrap.parentNode.insertBefore(dragWrap, isBefore ? overWrap : overWrap.nextSibling);
       return;
     }
@@ -7289,7 +7761,15 @@
         HB.el.classList.remove('shb-dropping');
         hbSetBotDrop(false);
         var dw = dd.wrap;
-        if (dd.inBar && dw && dw.parentNode && dw.parentNode.hasAttribute('data-hb-bar')) {
+        hbGrpHot(null);
+        if (dd.merge && dd.merge.isConnected && dw) {
+          dw.classList.remove('shb-drag-src');
+          var dmGid = hbMergeDom(dd.merge, dw);
+          commitDomBarsOrder(HB.el, HB.node);
+          hbPaint();
+          hbGrpPop(dmGid);
+          setStatus('ok', 'Grouped with "' + (dd.item ? dd.item.label : 'button') + '" · drop more on it');
+        } else if (dd.inBar && dw && dw.parentNode && (dw.parentNode.hasAttribute('data-hb-bar') || dw.parentNode.hasAttribute('data-hb-gtray'))) {
           dw.classList.remove('shb-drag-src');
           commitDomBarsOrder(HB.el, HB.node);
           hbPaint();
@@ -7356,12 +7836,22 @@
       tplRun(dropTpl, { x: e.clientX, y: e.clientY }, { x: e.clientX, y: e.clientY });
       return;
     }
+    hbGrpHot(null);
     if (lp.outside) {
       if (w.parentNode) w.parentNode.removeChild(w);
       hbPoof(e.clientX, e.clientY, name);
-      commitDomBarsOrder(HB.el, HB.node, uid);
+      if (/^grp:/.test(uid)) grpDissolve(w.getAttribute('data-hb-bar') || 'bot', uid, HB.node);
+      else commitDomBarsOrder(HB.el, HB.node, uid);
       hbPaint();
-      setStatus('ok', 'Removed "' + name + '" · Reset (edit mode) restores the defaults');
+      setStatus('ok', /^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Removed "' + name + '" · Reset (edit mode) restores the defaults');
+    } else if (lp.merge && lp.merge.isConnected && !w.contains(lp.merge)) {
+      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      var mLbl = lp.merge.querySelector('.shb-lbl');
+      var mGid = hbMergeDom(lp.merge, w);
+      commitDomBarsOrder(HB.el, HB.node);
+      hbPaint();
+      hbGrpPop(mGid);
+      setStatus('ok', 'Grouped "' + (mLbl ? mLbl.textContent : '') + '" + "' + name + '" · drop more on it · tap it in edit mode to rename');
     } else {
       w.classList.remove('shb-drag-src', 'shb-collapsed');
       commitDomBarsOrder(HB.el, HB.node);
@@ -7423,6 +7913,7 @@
     hbPaint();
     hbAnimateOpen();
     hbWireWidgetFields(el);
+    hbWireGroups(el);
 
     /* One sliding highlight pill per card follows the hovered row (Fluid) */
     el.addEventListener('mouseover', function (e) {
@@ -7636,9 +8127,17 @@
         var rmWrap = rmBtn.closest('.shb-item-wrap');
         if (rmWrap) rmWrap.classList.add('shb-removing');
         /* Collapse first (max-width -> 0, scale .3, fade), then drop it from the list */
+        var rmGrp = rmBtn.getAttribute('data-hb-rmgrp');
         setTimeout(function () {
-          var curList = getBarUids(rmBar, HB.node).filter(function (u) { return u !== rmUid; });
-          setBarUids(rmBar, HB.node, curList);
+          var inGrp = rmGrp && grpById(rmGrp);
+          if (inGrp) {
+            inGrp.items = (inGrp.items || []).filter(function (u) { return u !== rmUid; });
+            save();
+          } else if (/^grp:/.test(rmUid)) {
+            grpDissolve(rmBar, rmUid, HB.node);
+          } else {
+            setBarUids(rmBar, HB.node, getBarUids(rmBar, HB.node).filter(function (u) { return u !== rmUid; }));
+          }
           if (HB.el) hbPaint();
         }, 130);
         return;
@@ -7745,6 +8244,14 @@
         return;
       }
 
+      var grpChev = t.closest('[data-hb-grpchev]');
+      if (grpChev) {
+        e.stopPropagation();
+        var gw = grpChev.closest('.shb-grp');
+        if (gw) hbGrpClick(gw);
+        return;
+      }
+
       var runBtn = t.closest('[data-hb-run]');
       if (runBtn && HB.editMode && runBtn.closest('[data-hb-bar]')) {
         /* In edit mode a tap renames the button instead of running it */
@@ -7812,6 +8319,7 @@
           return;
         }
         if (a === 'editreset') {
+          S.hbGroups = {};
           S.customAddBar = null;
           S.customAddBySig = {};
           S.customToolsBar = {};
@@ -8731,6 +9239,35 @@
     return comboLabel(S.hbKey, S.hbCode, S.hbMods);
   }
 
+  /* The Hotbox mark (assets/brand): the H with its scattered nodes, on a 32-unit grid */
+  var HB_MARK = '<rect x="11.5" y="10.5" width="3" height="11" rx="1"/><rect x="17.5" y="10.5" width="3" height="11" rx="1"/><rect x="11.5" y="14.7" width="9" height="2.6"/>' +
+    '<rect x="5.5" y="3.9" width="4.8" height="3.2" rx="1.2"/><rect x="20.8" y="3.5" width="2.6" height="2.6" rx="0.8"/><rect x="13.7" y="7.1" width="1.4" height="1.4" rx="0.45"/>' +
+    '<rect x="22.2" y="9.2" width="1.2" height="1.2" rx="0.4"/><rect x="27.4" y="8.3" width="1.8" height="1.8" rx="0.55"/><rect x="2.8" y="10.5" width="1.6" height="1.6" rx="0.5"/>' +
+    '<rect x="6.3" y="15.8" width="1.6" height="1.6" rx="0.5"/><rect x="26.8" y="12.7" width="3.2" height="4.8" rx="1.2"/><rect x="25.2" y="19" width="2.8" height="2.8" rx="0.85"/>' +
+    '<rect x="28.2" y="22.8" width="1.6" height="1.6" rx="0.5"/><rect x="1.7" y="22.5" width="3" height="3" rx="0.9"/><rect x="10.5" y="23.9" width="1.4" height="1.4" rx="0.45"/>' +
+    '<rect x="15.05" y="25.1" width="4.5" height="3" rx="1.1"/><rect x="11.5" y="27.9" width="1.8" height="1.8" rx="0.55"/><rect x="22.7" y="24.1" width="1.2" height="1.2" rx="0.4"/>';
+
+  /* Logo colors: Comfy (Alt Comfy from the brand kit) is the default, Orange is the first version */
+  var HB_LOGOS = {
+    comfy:  { bg: '#211927', edge: '', fg: '#F2FF59' },
+    orange: { bg: '#E58A2E', edge: '#9C5517', fg: '#FFFFFF' }
+  };
+
+  function hbLogoKey() { return S.hbLogo === 'orange' ? 'orange' : 'comfy'; }
+
+  /* The bare mark in currentColor (the top-bar button paints the chip around it) */
+  function hbMarkSVG(size) {
+    return '<svg viewBox="0 0 32 32" width="' + size + '" height="' + size + '" fill="currentColor" aria-hidden="true">' + HB_MARK + '</svg>';
+  }
+
+  /* The full chip, as in assets/brand/svg/hotbox-*-chip.svg */
+  function hbLogoChip(size) {
+    var L = HB_LOGOS[hbLogoKey()];
+    return '<svg viewBox="0 0 32 32" width="' + size + '" height="' + size + '" aria-hidden="true" style="display:block;flex:none">' +
+      '<rect x="1" y="1" width="30" height="30" rx="6" fill="' + L.bg + '"' + (L.edge ? ' stroke="' + L.edge + '" stroke-width="2"' : '') + '/>' +
+      '<g fill="' + L.fg + '" transform="translate(3.52 3.52) scale(0.78)">' + HB_MARK + '</g></svg>';
+  }
+
   var TOPBAR_SELECTORS = '.comfyui-menu, .comfyui-body-top, .comfyui-top-menu, .comfy-menu, .comfyui-body-bottom';
   var TOPBAR_OBSERVER_MOUNTED = false;
 
@@ -8763,6 +9300,7 @@
     if (!btn) return;
     var isEnabled = !!S.useHotbox;
     btn.classList.toggle('tool-on', isEnabled);
+    btn.setAttribute('data-logo', hbLogoKey());
     btn.title = 'Hotbox (' + (isEnabled ? 'Enabled · ' + hbKeyLabel() : 'Disabled') + ') - Settings (Right-click to toggle)';
   }
 
@@ -8784,7 +9322,7 @@
       btn.type = 'button';
       btn.className = 'comfyui-button comfyui-menu-mobile-collapse shb-topbar-btn';
       btn.setAttribute('aria-label', 'Hotbox Settings');
-      btn.innerHTML = '<span class="shb-h-icon">H</span>';
+      btn.innerHTML = '<span class="shb-h-icon">' + hbMarkSVG(22) + '</span>';
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         var existing = document.getElementById(PANEL_ID + '-settings');
@@ -9103,7 +9641,9 @@
       hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
         tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels, smaller and plainer. Tab also switches it.' },
       hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
-        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' }
+        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' },
+      hbLogo: { opts: ['comfy', 'orange'], names: ['Comfy Yellow', 'Orange'],
+        tip: 'Colors of the H in the top bar and of the logo here. Comfy Yellow (yellow on plum) is the default; Orange is the first version.' }
     };
     var ptOpen = false, sbOpen = false, dirEdit = false;
 
@@ -9179,7 +9719,7 @@
       wrap.innerHTML =
         '<div class="shb-modal shb-settings"' + modalStyle + '>' +
           '<div class="shb-modal-t">' +
-            '<span style="display:inline-flex;align-items:center;gap:7px"><span style="color:#e58c2c;font-weight:900">H</span><span>Hotbox Settings</span></span>' +
+            '<span style="display:inline-flex;align-items:center;gap:8px">' + hbLogoChip(20) + '<span>Hotbox Settings</span></span>' +
             '<button class="shb-btn shb-btn-ico" data-st-close>✕</button>' +
           '</div>' +
           '<div class="shb-grid">' +
@@ -9191,6 +9731,7 @@
             setLabel('pointer', 'Launch Mode') + '<div>' + cycleBtn('hbHold') + '</div>' +
             setLabel('palette', 'UI Style') + '<div>' + cycleBtn('hbStyle') + '</div>' +
             setLabel('edit', 'Edit Mode') + '<div>' + cycleBtn('hbEditAnim') + '</div>' +
+            setLabel('star', 'Logo Colors') + '<div>' + cycleBtn('hbLogo') + '</div>' +
             /* each style has its own effect, so only the one that shows is offered */
             setLabel('sparkles', 'Effects') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
@@ -9285,6 +9826,8 @@
           } else if (key === 'hbEditAnim' && HB.el) {
             if (!HB.editMode) hbSetEdit(true);
             else hbSyncEditAnim();
+          } else if (key === 'hbLogo') {
+            updateTopBarButtonState();
           }
           render();
         };

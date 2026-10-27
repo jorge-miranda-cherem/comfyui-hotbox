@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/hotbox-logo.svg" alt="Hotbox" width="300"></p>
+
 # Hotbox for ComfyUI
 
 A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd> over any node and the actions that make sense for *that* node bloom around your cursor: add and auto-wire the next node, swap models in place, scrub numeric widgets, recolor, crop, pin your favorite nodes and more.
@@ -16,6 +18,7 @@ Zero dependencies and no Python nodes — it just makes the canvas faster to dri
 - **A dock shortcut you choose.** The button at the end of the top dock opens one category (Models by default); its `▾` swaps it for the Kit, Subgraphs or All Nodes — or hides it.
 - **Drag a node onto the bar to pin it.** Grab any node by its title while the hotbox is open and drop it on the bottom bar (or the `+`). The node stays where it was; its type becomes a one-click button for that context.
 - **Save as Button.** Select any nodes (one or many, or a group) and press **Save as Button** (<kbd>X</kbd>): a copy of them melts into one button in the bottom bar, and the nodes themselves stay where they are. Click the button to add those nodes again by the cursor, or drag it onto the canvas to add them right there — settings and inner wires come back exactly as they were. The button is named after what the nodes do (`Flux · Text to Image`, `Wan · Image to Video`, `Upscale`…) and saved with the rest of your preferences.
+- **Button groups.** Hold any button and drop it on the middle of another: the two become a group, with a little pop. Keep dropping buttons on it to fill it. Hover a group and its buttons drop down in a list under it, one after another (a soft spring in Fluid, little balloons in Compact, a quiet slide in Quiet); its arrow keeps it open, and a second click closes it. Tap it in edit mode to rename it. Drag a button out of the list to take it back; × on the group, or dragging it out of the bar, ungroups it and its buttons stay in the bar. A group left with one button unfolds by itself.
 - **Group with `G`.** Press <kbd>G</kbd> in the hotbox to group the selection (or the node under the cursor). It uses ComfyUI's own Group Selected Nodes, so the title editor opens right away, already holding a name read from the nodes, like a saved button's.
 - **Swap Nodes.** Select two nodes and press **Swap Nodes** (<kbd>W</kbd>): they trade places and wires, like Ctrl+Shift-dragging a node in Nuke.
 - **Customize every bar, iOS style.** Long-press any button (or click the ✎ icon) to enter edit mode: buttons jiggle, tap **×** or drag a button out to remove it, drag to reorder, tap a button to rename it. **Reset** restores the defaults, **Done** / <kbd>Esc</kbd> / a click on the canvas exits.
@@ -92,7 +95,7 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/jorge-miranda-cherem/comfyui-hotbox.git
 ```
 
-Restart ComfyUI and refresh the browser. Look for the **H** button in the top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim or leader lines, UI scale, bar spacing, power tools, saved buttons, where your preferences are saved), right-click it to enable or disable the hotbox.
+Restart ComfyUI and refresh the browser. Look for the **H** button in the top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, logo colors (Comfy Yellow or Orange), canvas dim or leader lines, UI scale, bar spacing, power tools, saved buttons, where your preferences are saved), right-click it to enable or disable the hotbox.
 
 ### Your preferences file
 Everything you change — moved and pinned buttons, bars, labels, saved buttons and settings — is saved to one file in ComfyUI's user folder, the same place on Windows, macOS and Linux:
@@ -111,7 +114,7 @@ ComfyUI/user/default/hotbox/hotbox.json
 
 ## 🧩 Custom Bar (for extension authors)
 
-Any extension can put its own controls in the hotbox, drawn in the hotbox style: buttons, groups with a caption, menus with a filter, selects, text and number fields (with ▲ ▼), sliders, color swatches, segmented switches, toggles and info text. They go in the **Custom Bar** (right above the bottom bar) or in the **Context bar** (`where: 'context'`), and follow the current style.
+Any extension can put its own controls in the hotbox, drawn in the hotbox style: buttons, groups with a caption, folds that open a tray or a second row, menus with a filter, selects, text and number fields (with ▲ ▼), sliders, color swatches, segmented switches, toggles and info text. They go in the **Custom Bar** (right above the bottom bar) or in the **Context bar** (`where: 'context'`), and follow the current style.
 
 ```js
 window.__hotboxBars = window.__hotboxBars || {};

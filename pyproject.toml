@@ -11,4 +11,4 @@ Repository = "https://github.com/jorge-miranda-cherem/comfyui-hotbox"
 [tool.comfy]
 PublisherId = ""
 DisplayName = "Hotbox"
-Icon = ""
+Icon = "https://raw.githubusercontent.com/jorge-miranda-cherem/comfyui-hotbox/main/assets/hotbox-icon.png"
