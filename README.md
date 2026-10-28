@@ -6,6 +6,10 @@ A fast, Nuke/Maya-style **context-aware hotbox** for ComfyUI. Press <kbd>`</kbd>
 
 Zero dependencies and no Python nodes — it just makes the canvas faster to drive. (A tiny Python helper only serves its preferences folder.)
 
+**New here? [Follow the tutorial](TUTORIAL.md)** — nine short steps, each with a real-time recording: open it, crop, stitch an edit back, paint and send it to any model, swap models, save buttons and chain them like modules, Set / Get buses and your button library.
+
+<p align="center"><img src="docs/tutorial/07-modular-buttons.gif" alt="Saved buttons chained onto a plate like modules" width="720"></p>
+
 ---
 
 ## ✨ Highlights
@@ -51,10 +55,12 @@ Zero dependencies and no Python nodes — it just makes the canvas faster to dri
 - **Stitch node** — **Update Stitch** (re-read the crop) and **Swap FG / BG**.
 
 ### Super Stitch
-Press it on a crop, on the plate it cuts, or on a result that came out of a crop. It adds a **fit** (`ImageScale`, bicubic, crop disabled) that sizes your result back to the crop box, and an `ImageCompositeMasked` that pastes it at the crop's `x / y` with the plate as destination. Several crops of one plate make **one chain**, a crop is never stitched twice, a preview closes the chain, an empty **apinode / localmodel** group marks where the model goes, and every stitch **keeps following its crop** when you move or resize it.
+Press it on a crop, on the plate it cuts, or on a result that came out of a crop. It adds a **fit** (`ImageScale`, bicubic, crop disabled) that sizes your result back to the crop box, and an `ImageCompositeMasked` that pastes it at the crop's `x / y` with the plate as destination. Several crops of one plate make **one chain**, a crop is never stitched twice, a preview closes the chain, and every stitch **keeps following its crop** when you move or resize it. On a result that came out of a crop, Super Stitch is the **first button of the Context bar** and plugs that result in by itself; the chain sits right after it. Pressed on a crop before there is a result, an empty **apinode / localmodel** group marks where the model goes. Either way the new chain is brought into view.
 
 ### Save as Button
 The animation follows your style: **Fluid** pulls the nodes together into one card that falls into the bar, **Compact** shrinks the selection box into the button, **Quiet** dissolves the nodes into a soft bloom. Adding them back follows it too: **Fluid** springs the nodes out of the button one after another, **Compact** inflates them in place like little balloons with a soft bounce, **Quiet** just pops them in. Nothing is deleted: the nodes step aside while the button forms and come back once it lands. Every saved button is listed in **Settings → Saved Buttons** and under **Saved Buttons** in the Tools drawer, where it can be dragged onto any bar or onto the canvas, or deleted (two clicks on the trash). Rename one in edit mode.
+
+**Buttons are modules.** With one node selected, a saved button whose block starts with an open input (say `Crop → Preview`, or `Nano Banana 2 → Save`) lands right after that node and plugs the node's output into that input, so small saved blocks chain into a whole pipeline one click at a time. A block that starts with its own loader is just added. Wires into the image slots of the newer API nodes, which a plain paste can drop, come back too.
 
 ### Image & Video Kit (`N`)
 Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `ImageScaleBy`, `ImageScale`), Flip, Paint Mask/Plate, Compare A/B, Preview / Save Image, Framehold, Video → Frames, Create Video, Save Video, Set / Get nodes, Reroutes and labels — each spawned and wired to the current selection in one click.

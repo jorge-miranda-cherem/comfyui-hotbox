@@ -2785,7 +2785,8 @@
   }
 
   /* Lays a new chain out to the right of its crops and boxes it: an empty "apinode / localmodel" hole
-     (where the model goes — the one part of the trip this tool cannot build) and "Stitch" */
+     (where the model goes — the one part of the trip this tool cannot build) and "Stitch". When the
+     result already exists (gp.src) there is no hole to keep: the chain sits right after that result. */
   function stitchLayout(graph, gp, view) {
     if (gp.tail && gp.tail.pos) {
       var tx = gp.tail.pos[0], ty = gp.tail.pos[1];
@@ -2805,7 +2806,13 @@
       y1 = Math.max(y1, b.y + b.h);
     });
     if (!isFinite(x1)) return;
-    var gx = x1 + 120, sx = gx + STITCH_HOLE_W + 120;
+    var res = gp.src && gp.src.node && gp.src.node.pos ? visBox(gp.src.node) : null;
+    if (res) {
+      x1 = Math.max(x1, res.x + res.w);
+      y0 = res.y;
+      y1 = res.y + res.h;
+    }
+    var gx = x1 + 120, sx = res ? gx : gx + STITCH_HOLE_W + 120;
     var blockH = Math.max(y1 - y0, gp.rs.length * 420);
     var members = [];
     gp.rs.forEach(function (r) {
@@ -2834,7 +2841,7 @@
     if (view) nodeMoveTo(view, sx + 720, y0);
     y1 = y0 + blockH;
     outGroup('Stitch', '#3b2e58', members);
-    if (gp.had) return;
+    if (gp.had || res) return;
     var LG = litegraph();
     try {
       var hole = new LG.LGraphGroup();
@@ -2867,7 +2874,7 @@
       var pl = (cropPlate(g, cr) || {}).node || cr;
       var gp = null;
       groups.forEach(function (x) { if (x.plate === pl) gp = x; });
-      if (!gp) { gp = { plate: pl, crops: [] }; groups.push(gp); }
+      if (!gp) { gp = { plate: pl, crops: [], src: tg.src || null }; groups.push(gp); }
       gp.crops.push(cr);
     });
     var all = [], bad = [], had = 0, rewired = 0;
@@ -2904,6 +2911,7 @@
       return null;
     }
     /* a preview closes every chain */
+    var shown = tg.src && tg.src.node ? [tg.src.node] : [];
     groups.forEach(function (gp) {
       if (!gp.rs.length) return;
       var last = gp.rs[gp.rs.length - 1].made;
@@ -2916,10 +2924,16 @@
         }
       }
       try { stitchLayout(g, gp, view); } catch (e) {}
+      gp.rs.forEach(function (r) { if (r.fit) shown.push(r.fit); shown.push(r.made); });
+      if (view) shown.push(view);
     });
     var mades = all.map(function (r) { return r.made; });
     try { if (c && c.selectNodes) c.selectNodes(mades); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
+    /* the chain is laid out to the right, often past the edge of the screen: bring it (and the result
+       it takes) into view, so what was just made is never selected out of sight. A beat later, once
+       Nodes 2.0 has drawn the new nodes and their real width can be measured */
+    setTimeout(function () { revealNodes(shown); }, 150);
     var b0 = all[0].box;
     setStatus(bad.length ? 'error' : 'ok',
       (all.length > 1 ? '↱ ' + all.length + ' stitches chained' : '↱ Stitch at ' + b0.x + ',' + b0.y)
@@ -3960,6 +3974,51 @@
     return isFinite(x0) ? [x0, y0, x1 - x0, y1 - y0] : null;
   }
 
+  /* Brings nodes into view after a tool lays them out. Nothing moves when they are already on screen; a pan
+     when they fit at this zoom; a zoom-out, centered on them, only when they do not. */
+  function revealNodes(nodes) {
+    /* measured from pos and size (visBox), since a node that was just moved has not redrawn its bounds yet */
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    (nodes || []).forEach(function (n) {
+      if (!n || !n.pos) return;
+      var v = visBox(n);
+      x0 = Math.min(x0, v.x); y0 = Math.min(y0, v.y - 32);
+      x1 = Math.max(x1, v.x + v.w); y1 = Math.max(y1, v.y + v.h);
+    });
+    var c = getCanvas(), ds = c && c.ds, b = isFinite(x0) ? [x0, y0, x1 - x0, y1 - y0] : null;
+    if (!c || !ds || !ds.offset || !b) return;
+    var el = c.canvas;
+    var W = (el && (el.clientWidth || el.width)) || window.innerWidth;
+    var H = (el && (el.clientHeight || el.height)) || window.innerHeight;
+    /* room for the side bar on the left and the top bar above */
+    var mL = 90, mR = 50, mT = 110, mB = 70;
+    var s0 = ds.scale, ox0 = ds.offset[0], oy0 = ds.offset[1];
+    var l = (b[0] + ox0) * s0, t = (b[1] + oy0) * s0, r = l + b[2] * s0, bt = t + b[3] * s0;
+    if (l >= mL && t >= mT && r <= W - mR && bt <= H - mB) return;
+    var s1 = Math.min(s0, (W - mL - mR) / b[2], (H - mT - mB) / b[3]);
+    var ox1 = ox0, oy1 = oy0;
+    if (s1 < s0) {
+      ox1 = (mL + (W - mL - mR) / 2) / s1 - (b[0] + b[2] / 2);
+      oy1 = (mT + (H - mT - mB) / 2) / s1 - (b[1] + b[3] / 2);
+    } else {
+      if (l < mL) ox1 += (mL - l) / s0;
+      else if (r > W - mR) ox1 -= (r - (W - mR)) / s0;
+      if (t < mT) oy1 += (mT - t) / s0;
+      else if (bt > H - mB) oy1 -= (bt - (H - mB)) / s0;
+    }
+    var t0 = 0, dur = 280;
+    function step(now) {
+      if (!t0) t0 = now;
+      var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      ds.scale = s0 + (s1 - s0) * e;
+      ds.offset[0] = ox0 + (ox1 - ox0) * e;
+      ds.offset[1] = oy0 + (oy1 - oy0) * e;
+      try { c.setDirty(true, true); } catch (er) {}
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
   function actDotZoom(explicitNode) {
     var sel = selNodes();
     if (!sel.length && explicitNode) sel = [explicitNode];
@@ -4966,6 +5025,10 @@
     var ids = [];
     var hasImg = node && (imageOutSlot(node) >= 0 || isPreviewNode(node));
     var hasVid = node && videoOutSlot(node) >= 0;
+    /* a plate that crops cut, or a result that came out of a crop, can be stitched back; on a result that
+       is the next step, so it leads the bar (Super Stitch plugs the result in by itself) */
+    var stT = hasImg && k !== 'crop' && k !== 'stitch' ? stitchTargets(getGraph(), node) : null;
+    var stOn = !!(stT && stT.crops.length), stFirst = stOn && !!stT.src;
 
     if (k === 'crop') {
       ids.push('cropedit', 'stitch');
@@ -4976,15 +5039,20 @@
     } else if (k === 'api' || isSubgraphNode(node)) {
       /* a generator's first question is "keep it": save comes first, video or image by what it outputs */
       if (hasVid || (k === 'api' && genOut(node) === 'video')) ids.push('savevid', 'gvc');
+      if (stFirst) ids.unshift('stitch');
       if (hasImg) ids.push('saveimg', 'prev', 'crop', 'rsz', 'cmp');
-      if (hasImg && stitchTargets(getGraph(), node).crops.length) ids.push('stitch');
+      if (stOn && !stFirst) ids.push('stitch');
     } else if (k === 'paint') {
-      ids.push('paintedit', 'prev', 'cmp', 'saveimg');
+      /* painting comes first, then the paint goes back where its crop was cut */
+      ids.push('paintedit');
+      if (stFirst) ids.push('stitch');
+      ids.push('prev', 'cmp', 'saveimg');
     } else if (k === 'set') {
       ids.push('setinh', 'addget');
     } else if (k === 'get') {
       setNames().forEach(function (nm) { ids.push('get_' + nm); });
     } else {
+      if (stFirst) ids.push('stitch');
       if (hasImg) {
         ids.push('crop', 'rsz', 'flip');
         if (paintType()) ids.push('paint');
@@ -4997,8 +5065,7 @@
       if (hasImg && (canMake(CREATE_VIDEO_TYPE) || hasType(CREATE_VIDEO_TYPE))) {
         ids.push('mkvid');
       }
-      /* a plate that crops cut, or a result that came out of a crop, can be stitched back */
-      if (hasImg && stitchTargets(getGraph(), node).crops.length) ids.push('stitch');
+      if (stOn && !stFirst) ids.push('stitch');
       if (k === 'load') {
         ids.push('wf', 'seed');
       }
@@ -8819,7 +8886,9 @@
     var copy = JSON.parse(JSON.stringify(data));
     if (c && typeof c._deserializeItems === 'function') {
       var res = c._deserializeItems(copy, { position: pos });
-      return ((res && res.created) || []).filter(isGraphNode);
+      var made = ((res && res.created) || []).filter(isGraphNode);
+      mgRelink(data, made);
+      return made;
     }
     var KEY = 'litegrapheditor_clipboard', prev = null;
     try { prev = localStorage.getItem(KEY); } catch (e) {}
@@ -8831,6 +8900,49 @@
     } finally {
       try { if (prev == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, prev); } catch (e) {}
     }
+  }
+
+  /* A paste can miss links into inputs a node only grows once it is set up (the image slots of the newer API
+     nodes, which appear a moment after the paste): every saved link whose input is still empty is made again,
+     finding the input by its name, retried until that input exists */
+  function mgRelink(data, made, tries) {
+    var saved = (data && data.nodes) || [];
+    if (made.length !== saved.length) return;
+    /* the paste does not keep the saved order: each saved node pairs with the next pasted one of its type */
+    var byId = {}, used = [], waiting = 0;
+    for (var i = 0; i < saved.length; i++) {
+      var m = null;
+      for (var k = 0; k < made.length && !m; k++) {
+        if (used.indexOf(k) < 0 && String(made[k].type) === String(saved[i].type)) { m = made[k]; used.push(k); }
+      }
+      if (!m) return;
+      byId[saved[i].id] = { saved: saved[i], node: m };
+    }
+    var taken = {};
+    (data.links || []).forEach(function (l) {
+      var o = Array.isArray(l) ? { origin_id: l[1], origin_slot: l[2], target_id: l[3], target_slot: l[4], type: l[5] } : l;
+      var a = byId[o.origin_id], b = byId[o.target_id];
+      if (!a || !b) return;
+      /* the saved inputs can be listed in another order than the one the link's slot number counted (dynamic
+         inputs move), so a slot whose type does not take the wire gives way to the first free input that does */
+      var sIns = b.saved.inputs || [], cand = sIns[o.target_slot];
+      if (!cand || (o.type && !typeFits(o.type, cand.type))) {
+        cand = null;
+        for (var q = 0; q < sIns.length && !cand; q++) {
+          if (sIns[q] && !sIns[q].widget && typeFits(o.type, sIns[q].type) && !taken[o.target_id + ':' + sIns[q].name]) cand = sIns[q];
+        }
+      }
+      if (!cand) return;
+      taken[o.target_id + ':' + cand.name] = 1;
+      var name = cand.name;
+      var ins = b.node.inputs || [], slot = -1;
+      for (var j = 0; j < ins.length; j++) if (ins[j] && ins[j].name === name) { slot = j; break; }
+      if (slot < 0) { waiting++; return; }
+      if (ins[slot].link != null) return;
+      try { a.node.connect(o.origin_slot, b.node, slot); } catch (e) {}
+    });
+    tries = tries || 0;
+    if (waiting && tries < 10) setTimeout(function () { mgRelink(data, made, tries + 1); }, 120);
   }
 
   /* Model families, read from the model file a loader holds (or from the node types) */
@@ -9135,13 +9247,40 @@
     var b = HB.el && HB.el.querySelector('[data-hb-run="' + cssEsc(uid) + '"]');
     var r = b && b.getBoundingClientRect();
     var at = { x: HB.anchorX || HB_MX, y: HB.anchorY || HB_MY };
+    /* a saved block is a module: with one node selected and an open input in the block that its output fits,
+       the block lands right after that node and takes its output */
+    var sel = selNodes(), src = sel.length === 1 ? sel[0] : null;
+    if (src && tpl.data && tplEntry(tpl.data.nodes, src, tpl.data.links || [])) {
+      var vb = visBox(src);
+      at = graphToClient(vb.x + vb.w + 90, vb.y);
+    } else src = null;
     hbClose();
-    tplRun(tpl, (r && r.width) ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : at, at);
+    tplRun(tpl, (r && r.width) ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : at, at, src);
+  }
+
+  /* Where a block plugs in: the first open input (not a widget) of its leftmost head node — a node nothing in
+     the block feeds — that one of `src`'s outputs fits. A block that starts with its own loader takes nothing.
+     Saved data keeps its wires in `links`; nodes on the canvas carry them on their inputs. */
+  function tplEntry(nodes, src, links) {
+    var outs = (src && src.outputs) || [];
+    var fed = {};
+    (links || []).forEach(function (l) { fed[Array.isArray(l) ? l[3] : l.target_id] = 1; });
+    var head = (nodes || []).filter(function (n) {
+      return !fed[n.id] && (n.inputs || []).every(function (i) { return !i || i.widget || i.link == null; });
+    }).sort(function (a, b) { return ((a.pos && a.pos[0]) || 0) - ((b.pos && b.pos[0]) || 0); })[0];
+    var ins = (head && head.inputs) || [];
+    for (var j = 0; j < ins.length; j++) {
+      if (!ins[j] || ins[j].widget) continue;
+      for (var k = 0; k < outs.length; k++) {
+        if (outs[k] && typeFits(outs[k].type, ins[j].type)) return { node: head, input: j, out: k };
+      }
+    }
+    return null;
   }
 
   /* Drops a template: the block's top-left lands at screen point `at` (sliding down to a free spot), its nodes
      springing out of screen point `from` */
-  function tplRun(tpl, from, at) {
+  function tplRun(tpl, from, at, src) {
     var c = getCanvas(), g = getGraph();
     if (!tpl || !tpl.data || !c || !g) return;
     var data = tpl.data;
@@ -9192,8 +9331,20 @@
         setStatus('error', 'Could not add the saved nodes: ' + msgOf(e));
         return;
       }
+      var label = '✨ Added "' + tpl.name + '" (' + made.length + (made.length === 1 ? ' node)' : ' nodes)');
       try { g.setDirtyCanvas(true, true); } catch (e) {}
-      setStatus('ok', '✨ Added "' + tpl.name + '" (' + made.length + (made.length === 1 ? ' node)' : ' nodes)'));
+      setStatus('ok', label);
+      /* the block's open input can be one a node grows a moment after the paste (newer API nodes), so a few tries */
+      (function plug(tries) {
+        var ent = src ? tplEntry(made, src) : null;
+        if (ent) {
+          try {
+            src.connect(ent.out, ent.node, ent.input);
+            setStatus('ok', label + ' · plugged into ' + (src.title || src.type));
+            g.setDirtyCanvas(true, true);
+          } catch (e) {}
+        } else if (src && tries < 10) setTimeout(function () { plug(tries + 1); }, 120);
+      })(0);
     }, Math.max(0, h.duration - 60));
     h.finished.then(function () {
       setTimeout(function () {
