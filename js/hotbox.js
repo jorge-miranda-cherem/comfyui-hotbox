@@ -9762,9 +9762,6 @@
     var topBtn = anchorBtn || document.getElementById(PANEL_ID + '-topbar-btn');
     if (topBtn) topBtn.classList.add('open');
 
-    /* Keep Hotbox open (or open it if closed) so user sees live UI Scale & Bar Spacing changes */
-    if (!HB.el) hbOpen();
-
     var wrap = owns(document.createElement('div'));
     wrap.id = PANEL_ID + '-settings';
     wrap.className = 'shb-modal-bg';
@@ -9789,6 +9786,18 @@
       if (leftPx + mw > window.innerWidth - 12) leftPx = window.innerWidth - mw - 12;
       if (leftPx < 10) leftPx = 10;
     }
+    /* Keep Hotbox open (or open it if closed) so user sees live UI Scale & Bar Spacing changes. Opened from
+       here, the pointer is on the settings button, so it opens in the middle of the canvas the panel leaves
+       free instead of over the top bar */
+    if (!HB.el) {
+      var mx = HB_MX, my = HB_MY, vw = window.innerWidth || 1600, vh = window.innerHeight || 900;
+      HB_MX = Math.round(leftPx > vw / 2 ? leftPx / 2 : (leftPx + mw + vw) / 2);
+      HB_MY = Math.round((topPx + vh) / 2);
+      hbOpen();
+      HB_MX = mx;
+      HB_MY = my;
+    }
+
     var modalStyle = ' style="position:fixed;top:' + topPx + 'px;left:' + leftPx + 'px;width:min(' + mw + 'px,94vw);margin:0;pointer-events:auto"';
 
     /* Settings with several choices are one button that steps through them; the dots show where you are */
