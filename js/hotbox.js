@@ -1824,14 +1824,20 @@
       resolution: ['resolution', 'size', 'image_size'],
       duration: ['duration', 'seconds', 'length']
     };
+    /* newer API nodes nest their settings under a model picker (model.prompt, model.resolution…):
+       a setting matches by its own name, whatever group it sits in */
+    function leaf(name) { return String(name).split('.').pop(); }
     function findSrc(name) {
       for (var i = 0; i < src.length; i++) {
         if (src[i] && src[i].name === name) return src[i];
       }
+      for (var i2 = 0; i2 < src.length; i2++) {
+        if (src[i2] && src[i2].name && leaf(src[i2].name) === leaf(name)) return src[i2];
+      }
       for (var k in aliases) {
-        if (aliases[k].indexOf(name) >= 0) {
+        if (aliases[k].indexOf(leaf(name)) >= 0) {
           for (var j = 0; j < src.length; j++) {
-            if (src[j] && aliases[k].indexOf(src[j].name) >= 0) return src[j];
+            if (src[j] && src[j].name && aliases[k].indexOf(leaf(src[j].name)) >= 0) return src[j];
           }
         }
       }
