@@ -56,6 +56,12 @@ On a model node the Dock's numbers swap it in place, and <kbd>A</kbd> finds any 
 
 Video models swap only to video models, with the prompt and settings still on board.
 
+### Swap a whole batch at once
+
+<img src="docs/media/swap-many-models.webp" alt="Three templates selected with Ctrl+A, Nano Banana 2 swapped to Seedream and then to GPT Image, each keeping its own prompt" width="100%">
+
+Select every template (<kbd>Ctrl</kbd>+<kbd>A</kbd>) and swap one model node: every selected node of that model swaps with it, each keeping its own prompt, settings and wires. Load Image, Save Image and the rest stay as they are.
+
 ### Save as Button
 
 <img src="docs/media/save-as-button.webp" alt="Group with G, name it, X saves it as a button, one click brings it back in a new workflow" width="100%">

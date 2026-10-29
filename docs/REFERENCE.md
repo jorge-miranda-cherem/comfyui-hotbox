@@ -42,7 +42,7 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
 - **API nodes and subgraphs** — saving comes first: **Save Video** when they output video, **Save Image** / Preview when they output images. Video and image generators keep separate bars, and a model only swaps to models of the same kind.
 - **Image / video loaders** — `[1]`–`[5]` add the model to the right and auto-wire `IMAGE` / `VIDEO` / `MASK`. A `LoadImage` node also offers **Read PNG metadata** (load workflow, copy seed).
 - **Two loaders selected** — the model is wired to both (reference + target / first + last frame), plus **Compare A/B**.
-- **Model / API node selected** — `[1]`–`[5]` **swap the model in place** (the new node keeps the old one's spot), carrying over shared widgets (`prompt`, `seed`, `aspect_ratio`, …) and reconnecting links.
+- **Model / API node selected** — `[1]`–`[5]` **swap the model in place** (the new node keeps the old one's spot), carrying over shared widgets (`prompt`, `seed`, `aspect_ratio`, …) and reconnecting links. With several nodes selected, every selected node of the same model swaps at once, each with its own prompt and wires.
 - **Crop node** — **Visual Crop editor** and **Super Stitch** (below).
 - **Stitch node** — **Update Stitch** (re-read the crop) and **Swap FG / BG**.
 
