@@ -9737,7 +9737,7 @@
     { uid: 'tool:stitch', icon: 'stitch', name: 'Super Stitch', keys: 'crop · result', desc: 'Put processed crops back into their plate',
       tip: 'On a crop, on the plate it cuts, or on a result that came out of a crop: adds a fit (ImageScale, bicubic) that sizes your result back to the crop box and an ImageCompositeMasked that pastes it at the crop\'s x / y. Several crops of one plate chain into one result, a preview closes the chain, an empty "apinode / localmodel" group marks where the model goes, and every stitch keeps following its crop when you move or resize it.' },
     { uid: 'tool:swappair', icon: 'swap', name: 'Swap Nodes', keys: 'W', desc: 'Two selected nodes trade places and wires',
-      tip: 'Select two nodes and they trade places, each one taking over the other\'s connections (like Ctrl+Shift-dragging a node in Nuke). Wired or not, they always swap; slots are matched by name, then by type. Shows up in the bottom bar while exactly two nodes are selected.' },
+      tip: 'Select two nodes and they trade places, each one taking over the other\'s connections. Wired or not, they always swap; slots are matched by name, then by type. Shows up in the bottom bar while exactly two nodes are selected.' },
     { uid: 'tool:magic', icon: 'wand', name: 'Save as Button', keys: 'X', desc: 'Keep a copy of the selection as a button',
       tip: 'Select any nodes (one or many, or a group) and a copy of them becomes one button in the bottom bar, saved in your Hotbox file; the nodes themselves stay where they are. Click the button to add them again by the cursor, or drag it onto the canvas: their settings and inner wires come back exactly as they were. The name says what they do (e.g. "Flux · Text to Image"); rename it in edit mode.' },
     { uid: 'tool:apibypass', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
@@ -9822,7 +9822,7 @@
     /* Settings with several choices are one button that steps through them; the dots show where you are */
     var CYCLES = {
       hbHold: { opts: [false, true], names: ['Toggle on Press', 'Hold & Release'],
-        tip: 'Toggle: press the hotkey to open, press again to close. Hold & Release: Maya / Nuke style, open while held.' },
+        tip: 'Toggle: press the hotkey to open, press again to close. Hold & Release: open while the key is held.' },
       hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
         tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels, smaller and plainer. Tab also switches it.' },
       hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
