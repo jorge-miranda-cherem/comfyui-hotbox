@@ -566,12 +566,12 @@
       ':root{--shb-bg:var(--p-content-background,var(--comfy-menu-bg,#222222));--shb-bg-elev:#2a2a2a;--shb-bg-hover:#333333;--shb-bg-input:#1a1a1a;--shb-border:#3c3c3c;--shb-border-hover:#525252;--shb-fg:#e2e2e2;--shb-fg-muted:#9a9a9a;--shb-fg-dim:#6e6e6e;--shb-accent:#5c94f0;--shb-shadow:0 4px 16px rgba(0,0,0,.45)}',
 
       /* Topbar Logo Button — matches ImissNuke [N] button in ComfyUI top bar */
-      '.shb-topbar-btn{display:inline-flex !important;align-items:center !important;justify-content:center !important;min-width:32px !important;height:28px !important;padding:0 4px !important;margin:0 3px !important;background:#2b2b34 !important;border:1px solid #3c3c46 !important;border-radius:6px !important;cursor:pointer !important;transition:background-color .15s ease,border-color .15s ease,color .15s ease !important;user-select:none !important;vertical-align:middle !important;box-sizing:border-box !important;box-shadow:none !important}',
+      '.shb-topbar-btn{display:inline-flex !important;align-items:center !important;justify-content:center !important;min-width:32px !important;height:32px !important;padding:0 4px !important;margin:0 3px !important;background:#2b2b34 !important;border:1px solid #3c3c46 !important;border-radius:8px !important;cursor:pointer !important;transition:background-color .15s ease,border-color .15s ease,color .15s ease !important;user-select:none !important;vertical-align:middle !important;box-sizing:border-box !important;box-shadow:none !important}',
       '.shb-topbar-btn.in-grouped{margin:0 0 0 3px !important}',
       '.shb-topbar-btn.shb-floating-fallback{position:fixed !important;top:8px !important;right:16px !important;z-index:99990 !important}',
       '.shb-topbar-btn:hover{background:#383844 !important;border-color:#4c4c58 !important}',
       '.shb-topbar-btn .shb-h-icon{display:flex;align-items:center;justify-content:center;color:#71717a !important}',
-      '.shb-topbar-btn .shb-h-icon svg{display:block;width:22px;height:22px}',
+      '.shb-topbar-btn .shb-h-icon svg{display:block;width:24px;height:24px}',
       '.shb-topbar-btn:hover .shb-h-icon{color:#e2e8f0 !important}',
       /* on: the logo chip, Comfy yellow on plum by default, the first orange when Settings says so */
       '.shb-topbar-btn.tool-on{background:#211927 !important;border-color:#3a2b45 !important}',
@@ -9478,6 +9478,30 @@
     btn.classList.toggle('tool-on', isEnabled);
     btn.setAttribute('data-logo', hbLogoKey());
     btn.title = 'Hotbox (' + (isEnabled ? 'Enabled · ' + hbKeyLabel() : 'Disabled') + ') - Settings (Right-click to toggle)';
+    hbFitTopBarButton(btn);
+  }
+
+  /* The button is as tall as the bar's own buttons beside it (Run, the queue, the panel toggles), whatever the
+     frontend version or theme: the most common height in its row, the icon a little smaller */
+  function hbFitTopBarButton(btn) {
+    if (!btn || !isElemVisible(btn) || btn.classList.contains('shb-floating-fallback')) return;
+    var me = btn.getBoundingClientRect(), mid = me.top + me.height / 2, count = {}, best = 0, n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('button, .comfyui-button'), function (b) {
+      if (b === btn || b.id === 'imissnuke-topbar-btn' || !isElemVisible(b)) return;
+      var r = b.getBoundingClientRect();
+      if (Math.abs(r.top + r.height / 2 - mid) > 14 || r.width < 20 || r.height < 22 || r.height > 56) return;
+      var h = Math.round(r.height);
+      count[h] = (count[h] || 0) + 1;
+    });
+    Object.keys(count).forEach(function (h) { if (count[h] > n || (count[h] === n && +h > best)) { best = +h; n = count[h]; } });
+    if (!best || btn._hbH === best) return;
+    btn._hbH = best;
+    btn.style.setProperty('height', best + 'px', 'important');
+    btn.style.setProperty('min-width', best + 'px', 'important');
+    btn.style.setProperty('width', best + 'px', 'important');
+    btn.style.setProperty('padding', '0', 'important');
+    var svg = btn.querySelector('.shb-h-icon svg'), ic = Math.max(18, best - 8);
+    if (svg) { svg.style.width = ic + 'px'; svg.style.height = ic + 'px'; }
   }
 
   var TOPBAR_BTN = null;
@@ -9498,7 +9522,7 @@
       btn.type = 'button';
       btn.className = 'comfyui-button comfyui-menu-mobile-collapse shb-topbar-btn';
       btn.setAttribute('aria-label', 'Hotbox Settings');
-      btn.innerHTML = '<span class="shb-h-icon">' + hbMarkSVG(22) + '</span>';
+      btn.innerHTML = '<span class="shb-h-icon">' + hbMarkSVG(24) + '</span>';
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         var existing = document.getElementById(PANEL_ID + '-settings');
@@ -9596,6 +9620,7 @@
 
   function setupTopBarMounting() {
     mountTopBarButton();
+    window.addEventListener('resize', function () { hbFitTopBarButton(TOPBAR_BTN); });
     [50, 150, 300, 600, 1200, 2500, 5000].forEach(function (d) {
       setTimeout(mountTopBarButton, d);
     });
