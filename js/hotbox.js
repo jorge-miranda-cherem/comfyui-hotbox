@@ -6158,7 +6158,8 @@
     if (tb) tb.classList.toggle('shb-btn-on', on);
     hbSyncEditAnim();
     if (on === was) return;
-    hbPlace();
+    /* edit mode lists every button a bar can hold; leaving it must drop the ones that don't apply here */
+    hbPaint();
     if (!on) return;
     var fl = hbIsFluid();
     try {
