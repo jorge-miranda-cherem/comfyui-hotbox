@@ -2202,6 +2202,24 @@
     return made;
   }
 
+  /* Swap the model on the node under the hotbox and on every other selected node of the same type, in one go:
+     select a whole batch of templates, swap once, and each keeps its own prompt, settings and wires */
+  function swapSelected(node, type) {
+    var c = getCanvas(), oldType = node && node.type, sel = selNodes(), made = [];
+    var first = swapNode(node, type);
+    if (first) made.push(first);
+    sel.forEach(function (s) {
+      if (!s || s === node || s.type !== oldType || ndAdds(s)) return;
+      var m = swapNode(s, type);
+      if (m) made.push(m);
+    });
+    if (made.length > 1) {
+      try { if (c && c.selectNodes) c.selectNodes(made); } catch (e) {}
+      setStatus('ok', '⇄ Swapped ' + made.length + ' nodes to ' + (made[0].title || made[0].type));
+    }
+    return first;
+  }
+
   /* Swap Nodes: two selected nodes trade places and wires (Nuke's Ctrl+Shift drag). Each slot goes to the
      other node's slot with the same name, else the first free one of a fitting type, so two different
      models of one kind swap cleanly too. Wired or not, they always trade places. */
@@ -5199,7 +5217,7 @@
         run: function () {
           if (isPair) addModelPair(sel, mType);
           else if (isAdd) addModel(node, mType);
-          else swapNode(node, mType);
+          else swapSelected(node, mType);
         }
       };
     }
@@ -8357,7 +8375,7 @@
         hbClose();
         if (sel.length >= 2 && ndAdds(n)) addModelPair(sel, mType);
         else if (ndAdds(n)) addModel(n, mType);
-        else swapNode(n, mType);
+        else swapSelected(n, mType);
         return;
       }
 
