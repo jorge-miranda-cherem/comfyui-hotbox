@@ -7,6 +7,8 @@ dependencies = []
 
 [project.urls]
 Repository = "https://github.com/jorge-miranda-cherem/comfyui-hotbox"
+Documentation = "https://github.com/jorge-miranda-cherem/comfyui-hotbox/blob/main/TUTORIAL.md"
+"Bug Tracker" = "https://github.com/jorge-miranda-cherem/comfyui-hotbox/issues"
 
 [tool.comfy]
 PublisherId = "jorge-miranda"
