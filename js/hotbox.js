@@ -1230,6 +1230,7 @@
               subId: k,
               name: String(item.name || item.title || k),
               kind: 'image',
+              gen: subGenKind(item.name || item.title || ''),
               api: false,
               isSub: true,
               rank: ndRank(item.name || k, k)
@@ -1488,8 +1489,8 @@
   }
 
   function ndAdds(node) {
-    /* Only API nodes default to Swap mode; all standard nodes use Add/Connect mode */
-    return ndKind(node) !== 'api';
+    /* API nodes and subgraphs that run a model default to Swap mode; all standard nodes use Add/Connect mode */
+    return ndKind(node) !== 'api' && !isSwapSub(node);
   }
 
   /* ---------------------------------------------------------------------
@@ -1801,9 +1802,114 @@
     var want = kind || genOut(node);
     var cur = node ? String(node.type || node.comfyClass || '') : '';
     /* a video model swaps to video models, an image model to image ones (their outputs differ) */
-    return (SRV.models || []).filter(function (m) {
+    var models = (SRV.models || []).filter(function (m) {
       return m.type !== cur && (!want || m.kind === want);
     });
+    /* and to subgraphs that make the same: the workflow's own model subgraphs first on a subgraph, after the
+       API models on an API node; ComfyUI's ready-made ones last */
+    var subs = subMates(want).filter(function (m) { return m.type !== 'subgraph:' + cur; });
+    var own = subs.filter(function (m) { return m.wf; }), global = subs.filter(function (m) { return !m.wf; });
+    return isSubgraphNode(node) ? own.concat(models, global) : models.concat(own, global);
+  }
+
+  /* ---- Subgraphs as models. A subgraph with a model inside (an API node, or a loader of a local model) swaps
+     like a model: to an API model, or to another such subgraph, and back. The workflow's own subgraphs can be
+     made by type; a global one (ComfyUI's blueprints, a node pack's subgraphs) is pasted from its JSON, the way
+     ComfyUI's own node library adds it, and fetched the first time it is used */
+  var SUBDATA = {}, SUBDEF = {};   // a global subgraph's JSON, and the type it has in this workflow once pasted
+  var SUB_GEN = [[/\bto video\b|video generation|video edit|video inpaint|motion transfer|character replacement|flf2v/i, 'video'],
+    [/\bto image\b|image edit|edit image|inpainting|outpainting|style reference|^controlnet\b/i, 'image']];
+  var MODEL_LOADER_RE = /checkpointloader|unetloader|unet_?loader|diffusersloader|loadcheckpoint|modelloader|gguf/i;
+
+  function subGenKind(name) {
+    for (var i = 0; i < SUB_GEN.length; i++) if (SUB_GEN[i][0].test(String(name || ''))) return SUB_GEN[i][1];
+    return '';
+  }
+
+  /* does this subgraph (or one nested in it) run a model? */
+  function subHasModel(sg, depth) {
+    var nodes = (sg && (sg.nodes || sg._nodes)) || [];
+    return Array.prototype.some.call(nodes, function (n) {
+      var t = String((n && (n.type || n.comfyClass)) || '');
+      if ((SRV.api && SRV.api[t]) || MODEL_LOADER_RE.test(t)) return true;
+      return (depth || 0) < 3 && !!(n && n.subgraph) && subHasModel(n.subgraph, (depth || 0) + 1);
+    });
+  }
+
+  function subOutKind(outs) {
+    var t = (outs || []).map(function (o) { return String((o && o.type) || '').toUpperCase(); });
+    return t.indexOf('VIDEO') >= 0 ? 'video' : t.indexOf('IMAGE') >= 0 ? 'image' : '';
+  }
+
+  /* the workflow's own subgraphs that make images or video with a model */
+  function wfSubgraphs() {
+    var g = getGraph(), root = g && (g.rootGraph || g), m = root && root.subgraphs, out = [];
+    if (!m || typeof m.forEach !== 'function') return out;
+    m.forEach(function (sg, id) {
+      var kind = subOutKind(sg && sg.outputs);
+      if (!kind || !subHasModel(sg)) return;
+      out.push({ type: 'subgraph:' + ((sg && sg.id) || id), subId: (sg && sg.id) || id, name: String((sg && sg.name) || 'Subgraph'),
+        kind: kind, api: false, isSub: true, wf: true });
+    });
+    return out;
+  }
+
+  /* every subgraph that swaps like a model, of one kind (or all); a global one already in the workflow shows once */
+  function subMates(kind) {
+    var own = wfSubgraphs(), names = {};
+    own.forEach(function (m) { names[m.name] = 1; });
+    var global = (SRV.subgraphs || []).filter(function (m) { return m.gen && !names[m.name]; }).map(function (m) {
+      return { type: m.type, subId: m.subId, name: m.name, kind: m.gen, api: false, isSub: true, wf: false };
+    });
+    return own.concat(global).filter(function (m) { return !kind || m.kind === kind; });
+  }
+
+  function subNamed(type) {
+    var id = String(type || '').replace(/^subgraph:/, ''), hit = '';
+    wfSubgraphs().concat(SRV.subgraphs || []).forEach(function (m) { if (!hit && (m.subId === id || m.type === type)) hit = m.name; });
+    if (!hit) {
+      var g = getGraph(), root = g && (g.rootGraph || g), sg = root && root.subgraphs && root.subgraphs.get && root.subgraphs.get(id);
+      if (sg && sg.name) hit = String(sg.name);
+    }
+    return hit;
+  }
+
+  /* a subgraph node that runs a model and makes images or video: it swaps instead of adding */
+  function isSwapSub(node) {
+    return isSubgraphNode(node) && (imageOutSlot(node) >= 0 || videoOutSlot(node) >= 0) && subHasModel(node.subgraph);
+  }
+
+  /* resolves once `type` can be made right away: a global subgraph's JSON is fetched the first time */
+  function hbReady(type) {
+    var id = String(type || '').indexOf('subgraph:') === 0 ? String(type).slice(9) : '';
+    var LG = litegraph();
+    if (!id || SUBDATA[id] || (LG && LG.registered_node_types && LG.registered_node_types[id])) return Promise.resolve();
+    setStatus('ok', '… Loading ' + (subNamed(type) || 'subgraph'));
+    return apiFetch('/global_subgraphs/' + encodeURIComponent(id))
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (e) {
+        var d = e && e.data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (x) { d = null; } }
+        if (d && d.nodes) SUBDATA[id] = d;
+      })
+      .catch(function () {});
+  }
+
+  /* a global subgraph, pasted at pos; returns its subgraph node */
+  function subPaste(data, pos) {
+    var c = getCanvas();
+    if (!c || typeof c._deserializeItems !== 'function') return null;
+    var res = null;
+    try {
+      res = c._deserializeItems(JSON.parse(JSON.stringify({ nodes: data.nodes || [], links: data.links || [],
+        subgraphs: (data.definitions && data.definitions.subgraphs) || data.subgraphs || [] })), { position: pos });
+    } catch (e) { res = null; }
+    if (!res) return null;
+    var made = null;
+    try { if (res.nodes && res.nodes.values) made = res.nodes.values().next().value || null; } catch (e) {}
+    if (!made && res.created) made = Array.prototype.filter.call(res.created, isGraphNode)[0] || null;
+    if (made && made.pos) nodeMoveTo(made, pos[0], pos[1]);
+    return made;
   }
 
   function ndMates(node) {
@@ -1902,7 +2008,18 @@
     if (realType.indexOf('subgraph:') === 0) {
       realType = realType.slice(9);
     }
-    var made = null;
+    var made = null, reg = LG.registered_node_types || {};
+    /* a global subgraph already pasted once is made by its type in this workflow, so it is not defined twice */
+    if (realType !== type && SUBDEF[realType] && reg[SUBDEF[realType]]) realType = SUBDEF[realType];
+    if (realType !== type && SUBDATA[realType] && !reg[realType]) {
+      /* a global subgraph: pasted, so it is in the graph already */
+      made = subPaste(SUBDATA[realType], pos);
+      if (!made) return null;
+      SUBDEF[type.slice(9)] = made.type;
+      if (!keepPos) hbAvoidOverlap(g, made);
+      hbWiggleNode(made);
+      return made;
+    }
     try { made = LG.createNode(realType); } catch (e) { made = null; }
     if (!made && realType !== type) {
       try { made = LG.createNode(type); } catch (e) { made = null; }
@@ -5340,7 +5457,8 @@
         if (SRV.models[i].type === mType) { mObj = SRV.models[i]; break; }
       }
       var def = (SRV.types && SRV.types[mType]) || null;
-      var rawName = (mObj && mObj.name) || (def && def.display_name) || mType;
+      var mSub = mType.indexOf('subgraph:') === 0 ? subNamed(mType) : '';
+      var rawName = mSub || (mObj && mObj.name) || (def && def.display_name) || mType;
       var shortName = customLbl || String(rawName)
         .replace(/\s*\((?:API|Google[^)]*|Partner[^)]*|ByteDance[^)]*|Black Forest[^)]*|OpenAI[^)]*|Stability[^)]*)\)\s*/gi, ' ')
         .replace(/\s+/g, ' ')
@@ -5355,9 +5473,11 @@
         kbd: '',
         cls: 'shb-btn-pri',
         run: function () {
-          if (isPair) addModelPair(sel, mType);
-          else if (isAdd) addModel(node, mType);
-          else swapSelected(node, mType);
+          hbReady(mType).then(function () {
+            if (isPair) addModelPair(sel, mType);
+            else if (isAdd) addModel(node, mType);
+            else swapSelected(node, mType);
+          });
         }
       };
     }
@@ -5367,10 +5487,7 @@
       if (!HB.editMode && (hbSameNode(nType, node) || isDeprecatedType(nType))) return null;
       var nDef = (SRV.types && SRV.types[nType]) || null;
       var subName = '';
-      if (nType.indexOf('subgraph:') === 0) {
-        var sid = nType.slice(9);
-        (SRV.subgraphs || []).forEach(function (sg) { if (sg.subId === sid || sg.type === nType) subName = sg.name; });
-      }
+      if (nType.indexOf('subgraph:') === 0) subName = subNamed(nType);
       var SHORT_NODE_NAMES = {
         LoraLoader: 'Load LoRA',
         LoraLoaderModelOnly: 'LoRA (Model Only)',
@@ -5399,8 +5516,10 @@
         kbd: '',
         cls: 'shb-btn-pri',
         run: function () {
-          if (isPair) addModelPair(sel, nType);
-          else addModel(node, nType);
+          hbReady(nType).then(function () {
+            if (isPair) addModelPair(sel, nType);
+            else addModel(node, nType);
+          });
         }
       };
     }
@@ -5494,8 +5613,8 @@
       return cOut;
     }
 
-    /* API nodes use Swap mode with top API models */
-    if (ndKind(node) === 'api') {
+    /* API nodes, and subgraphs that run a model, use Swap mode with the top models */
+    if (ndKind(node) === 'api' || isSwapSub(node)) {
       var apiMods = hbTopModels(node, max).map(function (m) { return 'model:' + m.type; });
       if (apiMods.length) return apiMods;
     }
@@ -6062,22 +6181,27 @@
 
     if (d === 'models') {
       var allM = isAdd ? ndMates(node) : swapMates(node, '');
-      var listM = allM.filter(function (m) {
+      var hitM = allM.filter(function (m) {
         return !q || m.name.toLowerCase().indexOf(q) >= 0 || m.type.toLowerCase().indexOf(q) >= 0;
-      }).slice(0, 60);
+      });
+      /* the models, then the subgraphs that swap like one in their own section, so a long model list never hides them */
+      var listS = hitM.filter(function (m) { return m.isSub; }).slice(0, 40);
+      var listM = hitM.filter(function (m) { return !m.isSub; }).slice(0, 60);
+      if (listS.length) listM = listM.concat([{ sec: 'Subgraphs' }], listS);
       return '<div class="shb-drawer">' +
         '<div class="shb-card-hd"><span>' + (isAdd ? 'Models & APIs' : 'Swap Model') + '</span><span>' + allM.length + '</span></div>' +
         drawerTabsHTML +
         '<input class="shb-search" data-hb-q value="' + esc(HB.q) + '" placeholder="Search models…">' +
         '<div class="shb-list">' +
           (listM.length ? listM.map(function (m) {
+            if (m.sec) return '<div class="shb-sep"></div><div class="shb-drawer-sec">' + esc(m.sec) + '</div>';
             var uid = 'model:' + m.type;
             var inBar = allPinned.indexOf(uid) >= 0;
             return '<button type="button" class="shb-btn shb-btn-row" data-hb-model="' + esc(m.type) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to ' + (isAdd ? 'add' : 'swap') + '" style="cursor:grab">' +
               '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(m.name) + '</span>' +
               '<span style="display:inline-flex;align-items:center;gap:4px">' +
                 (inBar ? '<span class="shb-inbar">✓</span>' : '') +
-                '<span class="shb-kbd">' + (m.kind === 'video' ? 'VID' : 'IMG') + '</span>' +
+                (m.isSub ? ico('subgraph', 13) : '') + '<span class="shb-kbd">' + (m.kind === 'video' ? 'VID' : 'IMG') + '</span>' +
               '</span>' +
             '</button>';
           }).join('') : '<div style="padding:10px;color:#888888">No matching models found</div>') +
@@ -8514,9 +8638,11 @@
         var n = HB.node;
         var sel = selNodes();
         hbClose();
-        if (sel.length >= 2 && ndAdds(n)) addModelPair(sel, mType);
-        else if (ndAdds(n)) addModel(n, mType);
-        else swapSelected(n, mType);
+        hbReady(mType).then(function () {
+          if (sel.length >= 2 && ndAdds(n)) addModelPair(sel, mType);
+          else if (ndAdds(n)) addModel(n, mType);
+          else swapSelected(n, mType);
+        });
         return;
       }
 

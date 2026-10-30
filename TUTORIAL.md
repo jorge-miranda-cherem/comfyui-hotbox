@@ -59,6 +59,11 @@ On a model node, the Dock's numbers swap the model in place (<kbd>A</kbd> + a se
 node takes the old one's spot, its links, and every setting they share (`prompt`, `seed`, `aspect_ratio`…). Try the same
 prompt on five models in a few seconds, then **Run** the one you like.
 
+Subgraphs swap the same way. A subgraph with a model inside (an API node, or a loader of a local model) shows up under
+**Subgraphs** in the <kbd>A</kbd> drawer: your own, then ComfyUI's ready-made ones (Text to Image, Image Edit, Image to
+Video…). Swap an API model to a local pipeline and back, or one subgraph to another, prompt and links included. On such a
+subgraph the hotbox opens in swap mode too.
+
 ## 6. Group it and save it as a button
 
 ![Group with G, name it, Save as Button with X, reuse it in a new tab](docs/tutorial/06-group-and-save-as-button.gif)
@@ -122,6 +127,7 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 | <kbd>.</kbd> | Frame the selection (again to return) |
 | <kbd>Tab</kbd> · <kbd>Esc</kbd> | Switch style · close |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Render only the selected outputs (works with the hotbox closed) |
+| <kbd>L</kbd> (hotbox closed) | Arrange the selection along its wires, as Nuke's <kbd>L</kbd> does; on one node, line it up with what feeds it |
 | <kbd>Alt</kbd>+<kbd>R</kbd> · <kbd>Alt</kbd>+<kbd>N</kbd> | Load in Canvas · Label Studio |
 
 ---

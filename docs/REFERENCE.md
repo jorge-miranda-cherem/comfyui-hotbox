@@ -74,11 +74,12 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | <kbd>Alt</kbd>+<kbd>R</kbd> | **Load in Canvas** — hand the selected node's render to a new `Load Image` (or `Load Video` for videos). |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | **Render Selected** — queue only the selected output nodes (or the outputs downstream of the selection). Nothing selected renders nothing. |
 | <kbd>.</kbd> | Frame the selected node(s); press again to return to the previous view. |
+| <kbd>L</kbd> | Arrange the selected nodes along their wires (Nuke's <kbd>L</kbd>); one node lines up with the node that feeds it. With the hotbox open, <kbd>L</kbd> is Add Label. |
 
 While the hotbox is open it owns these keys, so other extensions (or ComfyUI keybindings) on the same keys don't fire at the same time.
 
 ### Power Tools
-Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Swap Nodes, Save as Button, Bypass All APIs and Zoom to Selection are listed in **Settings → Power Tools** (hover one for what it does). **Drag any of them straight onto a hotbox bar**; a pinned tool only shows up on the nodes it works on.
+Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Swap Nodes, Save as Button, Bypass All APIs, Zoom to Selection and Arrange Nodes are listed in **Settings → Power Tools** (hover one for what it does). **Drag any of them straight onto a hotbox bar**; a pinned tool only shows up on the nodes it works on.
 
 ---
 

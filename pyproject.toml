@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-hotbox"
 description = "A fast, context-aware hotbox for ComfyUI: smart auto-wiring, model swapping, drag-to-pin bars, pro sliders, nodes saved as buttons and visual crop/paint editors. No Python nodes, zero dependencies."
-version = "1.0.0"
+version = "1.1.0"
 license = { file = "LICENSE" }
 dependencies = []
 

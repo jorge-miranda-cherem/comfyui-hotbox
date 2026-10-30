@@ -29,6 +29,9 @@ Restart ComfyUI and press <kbd>`</kbd> over any node.
 
 <img src="docs/media/swap-image-models.webp" alt="Nano Banana 2 swapped to other image models, the prompt carried over" width="100%">
 
+Subgraphs with a model inside swap the same way: an API model to a local pipeline (your own subgraphs, or ComfyUI's
+ready-made ones), and back.
+
 **Swap a whole batch at once**
 
 <img src="docs/media/swap-many-models.webp" alt="Three templates selected with Ctrl+A, the model swapped in all of them at once, each keeping its own prompt" width="100%">
