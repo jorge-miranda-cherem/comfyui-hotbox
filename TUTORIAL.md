@@ -107,6 +107,9 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 - **Find any button**: press <kbd>N</kbd> and type — saved buttons have their own section in the drawer.
 - **Drag a button onto the canvas** to add its nodes there, or **onto a bar** to pin it to that bar.
 - **Manage them** in **Settings → Saved Buttons** (rename in edit mode, delete with two clicks on the trash).
+- **Share them**: **Settings → Shared Libraries → Add Folder** adds a team folder (a studio drive, one per show). Its
+  buttons show up in the drawer beside yours; make it **Writable** and **Save Here** and the buttons you save go there
+  for everyone. See [shared libraries](docs/REFERENCE.md#%EF%B8%8F-shared-libraries).
 
 Saved buttons live in your preferences file (`hotbox.json`), so they survive restarts and can be shared.
 

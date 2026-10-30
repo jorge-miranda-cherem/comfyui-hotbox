@@ -44,6 +44,8 @@ ready-made ones), and back.
 
 <img src="docs/media/modular-buttons.webp" alt="Saved buttons chained one after another onto a Load Image" width="100%">
 
+Saved buttons can live in a shared folder too (a studio drive, one per show), so a team builds one library together.
+
 **Make it yours**
 
 <img src="docs/media/make-it-yours.webp" alt="Edit mode: buttons removed from every bar, Nano Banana pinned, a smaller hotbox" width="100%">

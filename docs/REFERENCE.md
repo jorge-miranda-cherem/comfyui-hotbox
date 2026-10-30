@@ -100,6 +100,23 @@ ComfyUI/user/default/hotbox/hotbox.json
 
 `hotbox.json` is your **Original** and an import never overwrites it: **Import .json** always adds a **new version** (`hotbox_v2.json`, `hotbox_v3.json`, …) and switches to it, and the **Version** button in Settings steps back to the Original any time. **Export .json** downloads a dated copy of the version in use (`hotbox_original_2026-10-22_0915.json`). A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
 
+## 🗂️ Shared libraries
+A shared library is another folder of saved buttons (a studio's shared drive, one folder per show) whose buttons show up beside your own: in the <kbd>N</kbd> drawer, grouped by library, and in **Settings → Saved Buttons**, ready to drag onto any bar.
+
+- **Settings → Shared Libraries → Add Folder** takes a full path. A library starts **Read-only** (its buttons are used, never changed); make it **Writable** and **Save Here** to send the buttons you save with <kbd>X</kbd> into it for everyone who has it.
+- Each button is its own `<id>.json` file in the folder, so a synced drive (Google Drive, Dropbox, a NAS, a Git repository) never has two people writing the same file. A `hotbox.json` in the folder (someone's whole Hotbox folder) is read too.
+- The libraries are read again each time the hotbox opens, so a button a teammate just saved shows up without reloading. A folder that is not there right now (a drive not mounted) hides its buttons and stays on the list.
+- The list is kept in `libraries.json` next to your `hotbox.json`.
+
+For a tool that follows the shot you are on, the list can be set without Settings:
+
+```
+POST /hotbox/libraries   { "add": [{ "path": "/shows/ABC/hotbox", "label": "ABC", "readOnly": false }], "remove": ["/shows/XYZ/hotbox"] }
+GET  /hotbox/libraries   (?buttons=1 to include them)
+```
+
+or from the page: `window.__hotbox.addLibrary(path, { label, readOnly })`, `window.__hotbox.removeLibrary(path)` and `window.__hotbox.libraries()`. A studio can also set the `HOTBOX_EXTRA_PATHS` environment variable (folders separated like `PATH`) before starting ComfyUI: those are always read-only and marked **Studio**.
+
 > Upgrading from *Super Hotbox*? Your settings are picked up automatically. Remove the old `super_hotbox` folder from `custom_nodes` so the two don't load side by side.
 
 ---
