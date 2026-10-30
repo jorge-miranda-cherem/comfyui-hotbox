@@ -9,6 +9,6 @@ dependencies = []
 Repository = "https://github.com/jorge-miranda-cherem/comfyui-hotbox"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "jorge-miranda"
 DisplayName = "Hotbox"
 Icon = "https://raw.githubusercontent.com/jorge-miranda-cherem/comfyui-hotbox/main/assets/hotbox-icon.png"

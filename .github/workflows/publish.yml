@@ -1,0 +1,38 @@
+# Publishes Hotbox to the Comfy Registry (registry.comfy.org, publisher jorge-miranda), which is where ComfyUI
+# Manager finds it: on every push to main that changes pyproject.toml (raise its version), or by hand from the
+# Actions tab. It needs the registry's personal access token in the repository secret REGISTRY_ACCESS_TOKEN;
+# until that secret exists, a run only says so instead of failing.
+name: Publish to Comfy Registry
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
+
+permissions:
+  issues: write
+
+jobs:
+  publish-node:
+    name: Publish to the Comfy Registry
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'jorge-miranda-cherem' }}
+    env:
+      HAS_TOKEN: ${{ secrets.REGISTRY_ACCESS_TOKEN != '' }}
+    steps:
+      - name: No token yet
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::warning::Add the REGISTRY_ACCESS_TOKEN repository secret (a personal access token from registry.comfy.org) to publish"
+      - name: Check out code
+        if: env.HAS_TOKEN == 'true'
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Publish
+        if: env.HAS_TOKEN == 'true'
+        uses: Comfy-Org/publish-node-action@v1
+        with:
+          personal_access_token: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
