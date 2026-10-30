@@ -46,6 +46,7 @@
     useStitch: true,        /* Super Stitch: put crops back into their plate (and keep them following) */
     useKillApi: true,       /* [K] Bypass All APIs: bypass / re-enable every API node */
     dotZoom: true,          /* . frame the selection, press again to go back */
+    useArrange: true,       /* L arrange the selection along its wires, as Nuke's L does */
     lupaSize: 1,
     lupaBox: 1,
     lupaWH: '',
@@ -521,6 +522,7 @@
     subgraph: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
     plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
     search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    arrange: '<rect x="2" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="15" width="7" height="5" rx="1.2"/><path d="M9 6.5h6"/><path d="M12 6.5v11h3"/>',
     zoom: '<circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
     swap: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
@@ -4087,6 +4089,142 @@
     return true;
   }
 
+  /* L: arrange the selection as Nuke's L does. Wired nodes go into columns that follow the wires (each one a
+     column right of the furthest node feeding it), in the order of what feeds them, each wire as straight as
+     its column allows; nodes with no wires between them line up in a row or a column, whichever they are
+     closer to already. The selection keeps its top-left corner. One node lines up with the node that feeds it
+     (or, with nothing wired in, with the one it feeds). Pinned nodes stay put; Ctrl+Z undoes it */
+  var ARR = { GX: 90, GY: 40, raf: 0 };
+
+  /* how far below the node's top a slot sits, in graph units */
+  function arrSlotY(n, isIn, slot) {
+    try {
+      var p = n.getConnectionPos ? n.getConnectionPos(isIn, slot)
+        : (isIn ? n.getInputPos(slot) : n.getOutputPos(slot));
+      if (p && isFinite(p[1])) return p[1] - n.pos[1];
+    } catch (e) {}
+    var LG = litegraph();
+    return (slot + 0.7) * ((LG && LG.NODE_SLOT_HEIGHT) || 20);
+  }
+
+  function arrPlan(g, sel) {
+    var LG = litegraph(), TH = (LG && LG.NODE_TITLE_HEIGHT) || 30;
+    var ids = {}, box = {}, to = {}, wires = [];
+    sel.forEach(function (n) { ids[n.id] = n; box[n.id] = visBox(n); });
+    sel.forEach(function (t) {
+      (t.inputs || []).forEach(function (inp, ts) {
+        var l = (inp && inp.link != null) ? linkById(g, inp.link) : null;
+        if (l && ids[l.origin_id] && ids[l.origin_id] !== t) wires.push({ o: ids[l.origin_id], os: l.origin_slot, t: t, ts: ts });
+      });
+    });
+    var x0 = Math.min.apply(null, sel.map(function (n) { return n.pos[0]; }));
+    var y0 = Math.min.apply(null, sel.map(function (n) { return n.pos[1]; }));
+
+    if (sel.length === 1) {
+      var n = sel[0], w = null;
+      (n.inputs || []).some(function (inp, ts) {
+        var l = (inp && inp.link != null) ? linkById(g, inp.link) : null, o = l && g.getNodeById(l.origin_id);
+        if (o) w = { o: o, os: l.origin_slot, ts: ts };
+        return !!w;
+      });
+      if (w) { to[n.id] = [n.pos[0], w.o.pos[1] + arrSlotY(w.o, false, w.os) - arrSlotY(n, true, w.ts)]; return to; }
+      (n.outputs || []).some(function (out, os) {
+        return ((out && out.links) || []).some(function (lid) {
+          var l = linkById(g, lid), t = l && g.getNodeById(l.target_id);
+          if (t) w = { t: t, ts: l.target_slot, os: os };
+          return !!w;
+        });
+      });
+      if (w) to[n.id] = [n.pos[0], w.t.pos[1] + arrSlotY(w.t, true, w.ts) - arrSlotY(n, false, w.os)];
+      return to;
+    }
+
+    if (!wires.length) {
+      /* a row or a column on the top (left) edge, each node where it was along it, pushed on only if it would overlap */
+      var b = nodesBounds(sel), row = b[2] >= b[3], cur = -Infinity;
+      sel.slice().sort(function (a, c) { return row ? a.pos[0] - c.pos[0] : a.pos[1] - c.pos[1]; }).forEach(function (n) {
+        if (row) { cur = Math.max(n.pos[0], cur); to[n.id] = [cur, y0]; cur += box[n.id].w + ARR.GX; }
+        else { cur = Math.max(n.pos[1], cur); to[n.id] = [x0, cur]; cur += box[n.id].h + TH + ARR.GY; }
+      });
+      return to;
+    }
+
+    var feeds = {}, depth = {};
+    sel.forEach(function (n) { feeds[n.id] = []; });
+    wires.forEach(function (w) { feeds[w.t.id].push(w); });
+    function dep(n, path) {
+      if (depth[n.id] != null) return depth[n.id];
+      if (path[n.id]) return 0;
+      path[n.id] = 1;
+      var d = 0;
+      feeds[n.id].forEach(function (w) { d = Math.max(d, dep(w.o, path) + 1); });
+      delete path[n.id];
+      return (depth[n.id] = d);
+    }
+    sel.forEach(function (n) { dep(n, {}); });
+    var cols = [];
+    sel.forEach(function (n) { (cols[depth[n.id]] = cols[depth[n.id]] || []).push(n); });
+    var x = x0;
+    cols.forEach(function (col, d) {
+      if (!col) return;
+      var want = {}, floor = d ? -Infinity : y0, wmax = 0;
+      col.forEach(function (n) {
+        /* straighten the wire from the nearest column that feeds it */
+        var ws = feeds[n.id].slice().sort(function (a, c) { return depth[c.o.id] - depth[a.o.id] || a.ts - c.ts; });
+        want[n.id] = ws.length && to[ws[0].o.id]
+          ? to[ws[0].o.id][1] + arrSlotY(ws[0].o, false, ws[0].os) - arrSlotY(n, true, ws[0].ts)
+          : n.pos[1];
+      });
+      col.sort(function (a, c) { return want[a.id] - want[c.id] || a.pos[1] - c.pos[1]; });
+      col.forEach(function (n) {
+        var y = d ? Math.max(want[n.id], floor) : floor;
+        to[n.id] = [x, y];
+        floor = y + box[n.id].h + TH + ARR.GY;
+        wmax = Math.max(wmax, box[n.id].w);
+      });
+      x += wmax + ARR.GX;
+    });
+    return to;
+  }
+
+  function actArrange(explicitNode) {
+    var g = getGraph();
+    if (!g) return false;
+    var sel = selNodes();
+    if (!sel.length && explicitNode) sel = [explicitNode];
+    sel = sel.filter(function (n) { return n && n.pos && !(n.flags && n.flags.pinned); });
+    if (!sel.length) return false;
+    var to = arrPlan(g, sel), moved = sel.filter(function (n) {
+      var t = to[n.id];
+      return t && (Math.abs(t[0] - n.pos[0]) > 0.5 || Math.abs(t[1] - n.pos[1]) > 0.5);
+    });
+    if (!moved.length) {
+      setStatus('ok', sel.length === 1 && !to[sel[0].id] ? 'Nothing wired to line it up with' : '≡ Already arranged');
+      return false;
+    }
+    var from = {}, c = getCanvas();
+    moved.forEach(function (n) { from[n.id] = [n.pos[0], n.pos[1]]; });
+    if (ARR.raf) return false;
+    /* one change for undo however many frames it slides: the canvas event holds ComfyUI's history until the end */
+    try { if (c && c.emitBeforeChange) c.emitBeforeChange(); } catch (e) {}
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    var t0 = performance.now(), D = 180;
+    (function step(now) {
+      var u = Math.min(1, Math.max(0, (now - t0) / D)), k = u * u * (3 - 2 * u);
+      moved.forEach(function (n) {
+        var a = from[n.id], b = to[n.id];
+        nodeMoveTo(n, a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k);
+      });
+      try { g.setDirtyCanvas(true, true); } catch (e) {}
+      if (u < 1) { ARR.raf = requestAnimationFrame(step); return; }
+      ARR.raf = 0;
+      try { if (g.afterChange) g.afterChange(); } catch (e) {}
+      try { if (c && c.emitAfterChange) c.emitAfterChange(); } catch (e) {}
+    })(t0);
+    setStatus('ok', '≡ Arranged ' + (sel.length === 1 ? (sel[0].title || sel[0].type) : sel.length + ' nodes'));
+    return true;
+  }
+
   /* ---------------------------------------------------------------------
    * 13. ALT+Z POWER SUITE: LUPA (PROMPT), VISUAL CROP & PAINT STUDIO
    * --------------------------------------------------------------------- */
@@ -4951,6 +5089,7 @@
       mute:       { id: 'mute',       icon: 'bypass',     label: 'Mute Node',      kbd: 'M', cls: (node && node.mode === 2) ? 'shb-btn-on' : '', fn: function () { actMute(node); } },
       apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Bypass All APIs', kbd: 'K', fn: function () { actBypassApi(); } },
       zoom:       { id: 'zoom',       icon: 'zoom',       label: 'Zoom',           kbd: '.', fn: function () { actDotZoom(node); } },
+      arrange:    { id: 'arrange',    icon: 'arrange',    label: 'Arrange',        kbd: '',  fn: function () { actArrange(node); } },
       render:     { id: 'render',     icon: 'play',       label: 'Render Selected', kbd: '⇧R', fn: function () { actRenderSelected(); } },
       stitch:     { id: 'stitch',     icon: 'stitch',     label: 'Super Stitch',   kbd: '',  fn: function () { actStitch(node); } },
       stitchupd:  { id: 'stitchupd',  icon: 'sync',       label: 'Update Stitch',  kbd: '',  fn: function () { actStitchUpdate(node); } },
@@ -5000,7 +5139,8 @@
     render: 'useShiftR',
     stitch: 'useStitch', stitchupd: 'useStitch',
     apibypass: 'useKillApi',
-    zoom: 'dotZoom'
+    zoom: 'dotZoom',
+    arrange: 'useArrange'
   };
 
   function hbToolOn(tid) {
@@ -5869,7 +6009,7 @@
       var allToolIds = [
         'crop', 'stitch', 'stitchupd', 'rsz', 'flip', 'paint', 'cmp', 'saveimg', 'prev', 'loadcanvas',
         'gvc', 'batch', 'mkvid', 'savevid', 'wf', 'seed', 'lupa', 'label',
-        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'swappair', 'magic', 'apibypass', 'zoom', 'seedtoggle'
+        'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'swappair', 'magic', 'apibypass', 'zoom', 'arrange', 'seedtoggle'
       ];
       var allToolsList = allToolIds.filter(hbToolOn).map(function (id) { return mt[id]; }).filter(Boolean);
       var filteredTools = allToolsList.filter(function (t) {
@@ -9768,7 +9908,9 @@
     { uid: 'tool:apibypass', icon: 'zapOff', name: 'Bypass All APIs', keys: 'K', desc: 'Bypass every API node at once',
       tip: 'Bypasses every paid API node in the workflow for a cost-free test run; press it again to bring them back. Shows up in the bottom bar when the workflow has API nodes.' },
     { uid: 'tool:zoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
-      tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' }
+      tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' },
+    { uid: 'tool:arrange', icon: 'arrange', name: 'Arrange Nodes', keys: 'L', desc: 'Line up the selection along its wires, as in Nuke',
+      tip: 'With the hotbox closed, select nodes and press L. Wired nodes go into columns that follow the wires, each wire as straight as it can be; nodes with no wires between them line up in a row or a column. One node lines up with the node that feeds it. The selection keeps its corner, and Ctrl+Z puts it back.' }
   ];
 
   /* One floating tooltip for anything that carries data-tip (it lives on body, so a scrolling modal never clips it) */
@@ -10351,6 +10493,18 @@
     actDotZoom();
   }, true);
 
+  /* L: Arrange the selection (Nuke's L). With the hotbox open, L is its Add Label row instead */
+  listen(document, 'keydown', function (e) {
+    if (!S.useArrange || HB.binding || HB.el || hbTyping()) return;
+    if (e.code !== 'KeyL' && String(e.key || '').toLowerCase() !== 'l') return;
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (LUPA.el || CE.el || PE.el || LB.on) return;
+    if (!selNodes().length) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.repeat) return;
+    actArrange();
+  }, true);
+
   /* ---------------------------------------------------------------------
    * 17. BOOTSTRAP & COMFYUI EXTENSION REGISTRATION
    * --------------------------------------------------------------------- */
@@ -10391,6 +10545,7 @@
     label: labelOpen,
     loadInCanvas: actLoadInCanvas,
     zoom: actDotZoom,
+    arrange: actArrange,
     swapNodes: actSwapPair,
     mergeToButton: actMagic,
     configFile: function () { return cfgPath(); },
