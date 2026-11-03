@@ -1146,13 +1146,118 @@
   /* Deprecated nodes are never offered anywhere (they still load fine in old workflows) */
   function isDeprecatedType(type) {
     var def = SRV.types && SRV.types[type];
-    if (def && (def.deprecated || /\(deprecated\)/i.test(String(def.display_name || '')))) return true;
+    if (def && (def.deprecated || /\bdeprecated\b|\(legacy\)/i.test(String(def.display_name || ''))
+      || /(^|\/)_?(deprecated|legacy)(\/|$)/i.test(String(def.category || '')))) return true;
     try {
       var reg = (litegraph() || {}).registered_node_types;
       var nd = reg && reg[type] && reg[type].nodeData;
       if (nd && nd.deprecated) return true;
     } catch (e) {}
     return false;
+  }
+
+  /* ---- Older versions. A partner (API) node whose newer version is installed beside it is left out of the
+     lists: Kling 4.0 Text to Video hides Kling 3.0 Omni, Kling 2.6 and the first Kling Text to Video; Vidu Q4
+     hides Vidu2 and the first Vidu; Seedance 2.5 hides the first ByteDance video nodes. Within one partner:
+     - the same name once the version (4.0, V3, Q4, Gen-2, Vidu2…) and the tier (Pro, Max, Turbo…) are out: the
+       highest version stays;
+     - the same job (text to video, image to video, edit video…): only the highest version number of that job
+       stays, whatever else the name says (Omni, with Audio). A node with no version is held to that only when its
+       name is nothing but the partner and the job (Kling Text to Video), so another product of the same partner
+       with no version (HappyHorse under Wan) is never taken for an old one;
+     - a node with no version gives way to a versioned one that only adds the model's name (Seedance).
+     ComfyUI's ready-made subgraphs follow the first rule (Image to Video (LTX-2.5) hides the LTX-2.3 one). Local
+     nodes are never hidden: an older model on disk needs its own nodes. A search with a version number in it
+     still finds them all, and a button already pinned to a bar stays */
+  var VER_TIER = /^(pro|max|turbo|ultra|fast|lite|flash|plus|standard|and|the|with|&)$/;
+  var VER_FEAT = /^(audio|edit|reference|extend|extension|continuation|upscale|enhance|motion|lip|sync|avatar|vector|style|fusion|transition|multi|draft|final|layer|separation|precise|creative|inpainting|background|remove|replace|image|video|text|to|model|first|last|frame|keyframes|voice|speech)$/;
+  var VER_JOBS = [
+    [/\bfirst last frame to video\b|\bkeyframes to video\b/, 'flf2v'], [/\breference to video\b/, 'r2v'],
+    [/\btext to video\b/, 't2v'], [/\bimage to video\b/, 'i2v'], [/\bvideo to video\b/, 'v2v'], [/\baudio to video\b/, 'a2v'],
+    [/\bedit video\b|\bvideo edit\b/, 'vedit'], [/\bextend video\b|\bvideo extension\b|\bvideo continuation\b/, 'vext'],
+    [/\btext to image\b/, 't2i'], [/\bimage to image\b/, 'i2i'], [/\bimage edit\b/, 'iedit'], [/\btext to speech\b/, 'tts'],
+    [/\btext to model\b/, 't2m'], [/\bimage to model\b/, 'i2m'], [/\bmultiview to model\b/, 'mv2m']
+  ];
+
+  function verOf(type, def) {
+    var s = String((def && def.display_name) || type).toLowerCase()
+      .replace(/\s*\((?:api|google[^)]*|partner[^)]*|bytedance[^)]*|black forest[^)]*|openai[^)]*|stability[^)]*)\)/g, '')
+      .replace(/\(first frame\)/g, ' ')
+      .replace(/\bstart\s*[-\/ ]\s*end\b(\s*frame)?/g, 'first last frame')
+      .replace(/first\s*(-|&)\s*last\s*-?\s*frame/g, 'first last frame')
+      .replace(/\b(\d+)\s*([dk])\b/g, '$1$2_')            // 3D, 2K are not versions
+      .replace(/([a-z])\.(\d)/g, '$1 $2')                 // Flux.2
+      .replace(/\b(v|q|gen|h|p|uni)[-\s]?(\d)/g, ' $2')    // V3, Q4, Gen-2, H3, P1, UNI-1
+      .replace(/([a-z]{2,})(\d)/g, '$1 $2')               // Vidu2, Wan2.1
+      .replace(/[^a-z0-9_.& ]+/g, ' ');
+    var vendor = String((def && def.category) || '').split('/').pop().toLowerCase().split(/[^a-z0-9]+/);
+    var ver = 0, words = [], job = '', jobWords = [];
+    s.split(/\s+/).forEach(function (w) {
+      if (!w) return;
+      if (/^\d+(\.\d+)?[a-z]?$/.test(w)) ver = Math.max(ver, parseFloat(w));
+      else if (!VER_TIER.test(w) && vendor.indexOf(w) < 0) words.push(w);
+    });
+    var flat = words.join(' ');
+    for (var i = 0; i < VER_JOBS.length && !job; i++) {
+      var m = VER_JOBS[i][0].exec(flat);
+      if (m) { job = VER_JOBS[i][1]; jobWords = m[0].split(' '); }
+    }
+    var tv = /V(\d+)$/.exec(type);
+    return {
+      ver: ver, tv: tv ? +tv[1] : 1, line: flat, words: words, job: job,
+      /* nothing but the partner and the job: Kling Text to Video, Wan Image to Video */
+      bare: !!job && words.every(function (w) { return jobWords.indexOf(w) >= 0; })
+    };
+  }
+
+  function olderThan(a, b, byJob) {
+    if (a.line === b.line && (b.ver > a.ver || (b.ver === a.ver && b.tv > a.tv))) return true;
+    if (!byJob) return false;
+    if (a.job && a.job === b.job && b.ver > a.ver && (a.ver || a.bare)) return true;
+    if (!a.ver && b.ver && b.words.length === a.words.length + 1
+      && a.words.every(function (w) { return b.words.indexOf(w) >= 0; })) {
+      var extra = b.words.filter(function (w) { return a.words.indexOf(w) < 0; });
+      if (extra.length === 1 && !VER_FEAT.test(extra[0])) return true;
+    }
+    return false;
+  }
+
+  function markOld(groups, byJob, old) {
+    Object.keys(groups).forEach(function (c) {
+      var L = groups[c];
+      L.forEach(function (a) {
+        for (var i = 0; i < L.length; i++) {
+          if (L[i] !== a && olderThan(a, L[i], byJob)) { old[a.type] = L[i].name; return; }
+        }
+      });
+    });
+    return old;
+  }
+
+  function findOldVersions(types, subs) {
+    var byCat = {}, blue = { '': [] };
+    Object.keys(types || {}).forEach(function (t) {
+      var d = types[t];
+      if (!d || !d.api_node || isDeprecatedType(t)) return;
+      var v = verOf(t, d);
+      v.type = t; v.name = d.display_name || t;
+      (byCat[d.category || ''] = byCat[d.category || ''] || []).push(v);
+    });
+    (subs || []).forEach(function (m) {
+      var v = verOf(m.type, { display_name: m.name });
+      v.type = m.type; v.name = m.name; v.tv = 1;
+      blue[''].push(v);
+    });
+    return markOld(blue, false, markOld(byCat, true, {}));
+  }
+
+  function isOldVersion(type) {
+    return !!(SRV.old && SRV.old[type]);
+  }
+
+  /* a search with a version number in it ("kling 2.6") finds the older versions too */
+  function wantsOld(q) {
+    return /\d/.test(String(q || ''));
   }
 
   function allTypes() {
@@ -1204,6 +1309,7 @@
       .catch(function () { return {}; })
       .then(function (info) {
         SRV.types = info || {};
+        SRV.old = findOldVersions(SRV.types);
         SRV.api = {};
         var models = [];
         Object.keys(SRV.types).forEach(function (t) {
@@ -1243,6 +1349,7 @@
           });
         }
         SRV.subgraphs = list;
+        SRV.old = findOldVersions(SRV.types, list);
         return SRV;
       });
     return SRV.probing;
@@ -1803,16 +1910,16 @@
   /* ---------------------------------------------------------------------
    * 7. SMART MODEL ADD, SWAP & AUTO-WIRING
    * --------------------------------------------------------------------- */
-  function swapMates(node, kind) {
+  function swapMates(node, kind, withOld) {
     var want = kind || genOut(node);
     var cur = node ? String(node.type || node.comfyClass || '') : '';
     /* a video model swaps to video models, an image model to image ones (their outputs differ) */
     var models = (SRV.models || []).filter(function (m) {
-      return m.type !== cur && (!want || m.kind === want);
+      return m.type !== cur && (!want || m.kind === want) && (withOld || !isOldVersion(m.type));
     });
     /* and to subgraphs that make the same: the workflow's own model subgraphs first on a subgraph, after the
        API models on an API node; ComfyUI's ready-made ones last */
-    var subs = subMates(want).filter(function (m) { return m.type !== 'subgraph:' + cur; });
+    var subs = subMates(want, withOld).filter(function (m) { return m.type !== 'subgraph:' + cur; });
     var own = subs.filter(function (m) { return m.wf; }), global = subs.filter(function (m) { return !m.wf; });
     return isSubgraphNode(node) ? own.concat(models, global) : models.concat(own, global);
   }
@@ -1860,10 +1967,10 @@
   }
 
   /* every subgraph that swaps like a model, of one kind (or all); a global one already in the workflow shows once */
-  function subMates(kind) {
+  function subMates(kind, withOld) {
     var own = wfSubgraphs(), names = {};
     own.forEach(function (m) { names[m.name] = 1; });
-    var global = (SRV.subgraphs || []).filter(function (m) { return m.gen && !names[m.name]; }).map(function (m) {
+    var global = (SRV.subgraphs || []).filter(function (m) { return m.gen && !names[m.name] && (withOld || !isOldVersion(m.type)); }).map(function (m) {
       return { type: m.type, subId: m.subId, name: m.name, kind: m.gen, api: false, isSub: true, wf: false };
     });
     return own.concat(global).filter(function (m) { return !kind || m.kind === kind; });
@@ -1917,10 +2024,10 @@
     return made;
   }
 
-  function ndMates(node) {
+  function ndMates(node, withOld) {
     var cur = node ? String(node.type || node.comfyClass || '') : '';
     return (SRV.models || []).filter(function (m) {
-      return m.type !== cur;
+      return m.type !== cur && (withOld || !isOldVersion(m.type));
     });
   }
 
@@ -5120,7 +5227,19 @@
   }
 
   var HB_AVOID = ['.selection-toolbox', '.comfyui-selection-toolbox', '[class*="selection-toolbox"]', '[class*="toolbox"]', '.p-toolbar', '[role="toolbar"]'];
+  /* Asked two or three times as the hotbox opens, and each look makes the browser lay out the whole page (every
+     node, on a graph drawn with Vue nodes): the answer is kept for a moment while the node stays put */
+  var HB_AVOID_MEMO = { key: '', at: 0, r: null };
   function hbAvoidRect(nodeRect) {
+    var key = nodeRect ? [nodeRect.x, nodeRect.y, nodeRect.w, nodeRect.h].map(Math.round).join(',') : '';
+    var now = Date.now();
+    if (HB_AVOID_MEMO.key === key && now - HB_AVOID_MEMO.at < 400) return HB_AVOID_MEMO.r;
+    var r = hbAvoidRectNow(nodeRect);
+    HB_AVOID_MEMO = { key: key, at: now, r: r };
+    return r;
+  }
+
+  function hbAvoidRectNow(nodeRect) {
     var best = null;
     function consider(el) {
       if (!el || el === document.body || el === document.documentElement) return;
@@ -5166,7 +5285,8 @@
     var all = isAdd ? ndMates(node) : swapMates(node, kind);
     var chosen = [];
     if (favs.length) {
-      all.forEach(function (m) {
+      /* a favorite stays even when it is an older version: it was picked on purpose */
+      (isAdd ? ndMates(node, true) : swapMates(node, kind, true)).forEach(function (m) {
         if (favs.indexOf(m.type) >= 0) chosen.push(m);
       });
       chosen.sort(function (a, b) { return favs.indexOf(a.type) - favs.indexOf(b.type); });
@@ -6192,7 +6312,7 @@
     }
 
     if (d === 'models') {
-      var allM = isAdd ? ndMates(node) : swapMates(node, '');
+      var allM = isAdd ? ndMates(node, wantsOld(q)) : swapMates(node, '', wantsOld(q));
       var hitM = allM.filter(function (m) {
         return !q || m.name.toLowerCase().indexOf(q) >= 0 || m.type.toLowerCase().indexOf(q) >= 0;
       });
@@ -6222,8 +6342,9 @@
     }
 
     if (d === 'subs') {
+      var subsOld = wantsOld(q);
       var subs = (SRV.subgraphs || []).filter(function (s) {
-        return !q || s.name.toLowerCase().indexOf(q) >= 0;
+        return (subsOld || !isOldVersion(s.type)) && (!q || s.name.toLowerCase().indexOf(q) >= 0);
       });
       return '<div class="shb-drawer">' +
         '<div class="shb-card-hd"><span>Subgraphs</span><span>' + subs.length + '</span></div>' +
@@ -6249,7 +6370,9 @@
         if (u.indexOf('node:') === 0) sugTypes.push(u.slice(5));
         else if (u.indexOf('model:') === 0) sugTypes.push(u.slice(6));
       });
+      var withOld = wantsOld(q);
       var types = allTypes().filter(function (t) {
+        if (!withOld && isOldVersion(t)) return false;
         if (!q) return sugTypes.indexOf(t) < 0;
         var disp = (SRV.types && SRV.types[t] && SRV.types[t].display_name) || '';
         return t.toLowerCase().indexOf(q) >= 0 || disp.toLowerCase().indexOf(q) >= 0;
@@ -9911,15 +10034,17 @@
     return null;
   }
 
+  /* Is the button still where it was put? Asked on every change to the page, so it measures nothing (a size
+     read would force a layout each time): the button just has to sit beside ImissNuke's [N], or in the element
+     it was put in. Newer frontends keep the bar's buttons in an action bar that none of the old menu classes
+     name, so the check is by the element itself, not by class: by class, the button looked misplaced there,
+     was put back, and putting it back was a change to the page, five times a second for good */
+  var TOPBAR_HOME = null;
   function isTopBarBtnProperlyMounted(btn) {
-    if (!btn || !btn.parentNode || !document.body.contains(btn)) return false;
+    if (!btn || !btn.isConnected || !btn.parentNode) return false;
     var imissBtn = document.getElementById('imissnuke-topbar-btn');
-    if (imissBtn && imissBtn.parentNode && document.body.contains(imissBtn) && isElemVisible(imissBtn)) {
-      return btn.previousElementSibling === imissBtn;
-    }
-    var p = btn.closest('.comfyui-menu, .comfyui-menu-actions, .comfyui-top-menu, .comfy-menu, .comfyui-button-group');
-    if (p && isElemVisible(p)) return true;
-    return false;
+    if (imissBtn && imissBtn.isConnected && imissBtn.parentNode) return btn.previousElementSibling === imissBtn;
+    return btn.parentNode === TOPBAR_HOME && !btn.classList.contains('shb-floating-fallback');
   }
 
   function updateTopBarButtonState() {
@@ -9936,7 +10061,10 @@
   function hbFitTopBarButton(btn) {
     if (!btn || !isElemVisible(btn) || btn.classList.contains('shb-floating-fallback')) return;
     var me = btn.getBoundingClientRect(), mid = me.top + me.height / 2, count = {}, best = 0, n = 0;
-    Array.prototype.forEach.call(document.querySelectorAll('button, .comfyui-button'), function (b) {
+    /* only the bar's own buttons: the whole page would measure every button on every node too */
+    var scope = btn.closest('.actionbar-container, .comfyui-menu, .comfy-menu, .comfyui-top-menu, header, nav')
+      || (btn.parentNode && btn.parentNode.parentNode) || document;
+    Array.prototype.forEach.call(scope.querySelectorAll('button, .comfyui-button'), function (b) {
       if (b === btn || b.id === 'imissnuke-topbar-btn' || !isElemVisible(b)) return;
       var r = b.getBoundingClientRect();
       if (Math.abs(r.top + r.height / 2 - mid) > 14 || r.width < 20 || r.height < 22 || r.height > 56) return;
@@ -9995,7 +10123,6 @@
       });
     }
     TOPBAR_BTN = btn;
-    updateTopBarButtonState();
 
     if (isTopBarBtnProperlyMounted(btn)) {
       var imissNow = document.getElementById('imissnuke-topbar-btn');
@@ -10004,6 +10131,13 @@
       }
       return true;
     }
+    var placed = hbPlaceTopBarButton(btn);
+    TOPBAR_HOME = placed ? btn.parentNode : null;
+    updateTopBarButtonState();
+    return placed;
+  }
+
+  function hbPlaceTopBarButton(btn) {
 
     /* 1. Highest priority: Dock directly beside ImissNuke's [N] button in ComfyUI top bar */
     var imissBtn = document.getElementById('imissnuke-topbar-btn');
@@ -10072,21 +10206,23 @@
     mountTopBarButton();
     window.addEventListener('resize', function () { hbFitTopBarButton(TOPBAR_BTN); });
     [50, 150, 300, 600, 1200, 2500, 5000].forEach(function (d) {
-      setTimeout(mountTopBarButton, d);
+      setTimeout(function () { mountTopBarButton(); hbFitTopBarButton(TOPBAR_BTN); }, d);
     });
     if (window.MutationObserver && !TOPBAR_OBSERVER_MOUNTED) {
       TOPBAR_OBSERVER_MOUNTED = true;
-      var throttleTimer = null;
+      var throttleTimer = null, recent = [], restUntil = 0;
       var observer = new MutationObserver(function () {
-        var curBtn = document.getElementById(PANEL_ID + '-topbar-btn');
-        if (isTopBarBtnProperlyMounted(curBtn) && curBtn === TOPBAR_BTN
-          && document.querySelectorAll('#' + PANEL_ID + '-topbar-btn').length === 1) return;
-        if (!throttleTimer) {
-          throttleTimer = setTimeout(function () {
-            throttleTimer = null;
-            mountTopBarButton();
-          }, 200);
-        }
+        if (isTopBarBtnProperlyMounted(TOPBAR_BTN) || throttleTimer || Date.now() < restUntil) return;
+        throttleTimer = setTimeout(function () {
+          throttleTimer = null;
+          /* if something else keeps moving the bar (another extension placing its own button), stop answering
+             it for a while instead of trading places with it forever */
+          var now = Date.now();
+          recent = recent.filter(function (t) { return now - t < 5000; });
+          if (recent.length >= 8) { recent = []; restUntil = now + 30000; return; }
+          recent.push(now);
+          mountTopBarButton();
+        }, 200);
       });
       observer.observe(document.body, { childList: true, subtree: true });
     }
