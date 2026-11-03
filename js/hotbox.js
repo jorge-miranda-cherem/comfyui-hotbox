@@ -6707,6 +6707,7 @@
       el.className = 'shb-wrap ' + hbThemeCls() + (HB.editMode ? ' shb-editing' : '');
       hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, S.hbStyle === 'classic');
       hbFitSliders(el);
+      if (!HB.psSync) HB.psSync = setInterval(hbSyncSliders, 300);
 
       hbPlace();
       hbSyncEditAnim();
@@ -6897,6 +6898,22 @@
         '</div>';
       }).join('') +
     '</div>';
+  }
+
+  /* A value changed on the node itself (or by another tool) shows in its slider while the hotbox is open; a number
+     box being typed into is left alone */
+  function hbSyncSliders() {
+    if (!HB.el || !HB.node || PSLIDER_DRAG) return;
+    var rows = HB.el.querySelectorAll('.shb-ps[data-ps-row]');
+    if (!rows.length) return;
+    var infos = {};
+    getNumericWidgets(HB.node).forEach(function (it) { infos[it.wIdx] = it; });
+    Array.prototype.forEach.call(rows, function (row) {
+      var info = infos[+row.getAttribute('data-ps-row')];
+      if (!info || row._v === info.val) return;
+      row._v = info.val;
+      updateSliderRowDOM(row, info, info.val);
+    });
   }
 
   function updateSliderRowDOM(rowEl, info, val) {
@@ -8269,6 +8286,7 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
+    if (HB.psSync) { clearInterval(HB.psSync); HB.psSync = 0; }
     /* a group kept open folds up again: the next hotbox opens with every group closed */
     Object.keys(S.hbGroups || {}).forEach(function (g) { delete HB.grpOpen[g]; });
     HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false; HB.wItems = []; HB.wMenu = null;
@@ -8364,6 +8382,9 @@
       if (psTrack && HB.node) {
         e.preventDefault();
         e.stopPropagation();
+        /* a number box left focused (clicked or typed into earlier) would stop showing the value being scrubbed */
+        var focusedNum = document.activeElement;
+        if (focusedNum && focusedNum.hasAttribute && focusedNum.hasAttribute('data-ps-num') && el.contains(focusedNum)) focusedNum.blur();
         var wIdx = +psTrack.getAttribute('data-ps-track');
         var info = findNumWidgetInfo(HB.node, wIdx);
         if (!info) return;
