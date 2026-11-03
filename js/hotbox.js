@@ -30,7 +30,6 @@
     hbMods: '',
     hbHold: false,          /* false = toggle on press, true = hold & release */
     hbStyle: 'pro',         /* 'pro' (Fluid glass cards), 'quiet' (native panels) or 'classic' (Compact: Fluid look, bars only) */
-    hbLogo: 'comfy',        /* logo colors (top-bar H, Settings): 'comfy' (yellow on plum) | 'orange' (the first brand color) */
     hbDockCat: 'models',    /* category shortcut at the end of the dock: 'models' | 'tools' | 'subs' | 'search' | 'none' */
     hbEditAnim: 'jiggle',   /* edit-mode idle animation: 'jiggle' | 'tilt' | 'float' | 'outline' */
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
@@ -576,15 +575,11 @@
       '.shb-topbar-btn .shb-h-icon{display:flex;align-items:center;justify-content:center;color:#71717a !important}',
       '.shb-topbar-btn .shb-h-icon svg{display:block;width:24px;height:24px}',
       '.shb-topbar-btn:hover .shb-h-icon{color:#e2e8f0 !important}',
-      /* on: the logo chip, Comfy yellow on plum by default, the first orange when Settings says so */
+      /* on: the logo chip, Comfy yellow on plum */
       '.shb-topbar-btn.tool-on{background:#211927 !important;border-color:#3a2b45 !important}',
       '.shb-topbar-btn.tool-on .shb-h-icon{color:#F2FF59 !important}',
       '.shb-topbar-btn.tool-on:hover{background:#2d2236 !important;border-color:#5a4768 !important}',
       '.shb-topbar-btn.open{box-shadow:0 0 0 2px rgba(242,255,89,.4) !important}',
-      '.shb-topbar-btn[data-logo="orange"].tool-on{background:#E58A2E !important;border-color:#9C5517 !important}',
-      '.shb-topbar-btn[data-logo="orange"].tool-on .shb-h-icon{color:#ffffff !important}',
-      '.shb-topbar-btn[data-logo="orange"].tool-on:hover{background:#F3A65A !important;border-color:#E58A2E !important}',
-      '.shb-topbar-btn[data-logo="orange"].open{box-shadow:0 0 0 2px rgba(229,138,46,.45) !important}',
 
       /* Toast — matches ComfyUI PrimeVue toast */
       '.shb-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);z-index:2147483600;padding:8px 14px;border-radius:8px;background:var(--shb-bg);border:1px solid var(--shb-border);color:var(--shb-fg);font:500 12px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:var(--shb-shadow);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;max-width:82vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -5808,7 +5803,7 @@
    * BUTTON GROUPS: drop one bar button on the middle of another and the two become a group; drop more on it
    * to fill it. Hovering a group opens its buttons in a list under it; its arrow keeps it open (or closes it).
    * Stored as S.hbGroups[id] = { name, items: [uid…] } and placed in a bar like any button, as 'grp:<id>'.
-   * Which groups are kept open is remembered while ComfyUI runs.
+   * A group kept open folds up again when the hotbox closes.
    * --------------------------------------------------------------------- */
   function grpById(id) {
     return (S.hbGroups && typeof S.hbGroups === 'object' && S.hbGroups[id]) || null;
@@ -7989,6 +7984,8 @@
       var px = e.clientX, py = e.clientY;
       var botC = HB.el.querySelector('[data-hb-bar="bot"]');
       var target = null, before = null;
+      DRAWER_DRAG.merge = null;
+      DRAWER_DRAG.tray = null;
       if (botC && hbOverPlus(px, py, 16)) {
         target = botC;
       } else if (distToNearestBar(HB.el, px, py) <= 34) {
@@ -8009,8 +8006,15 @@
             return;
           }
           if (dTray) {
-            target = dTray;
-          } else if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
+            /* it goes into the group on release: nothing in the bar moves while it hovers */
+            DRAWER_DRAG.tray = dTray;
+            DRAWER_DRAG.inBar = true;
+            hbGrpHot(overWrapEl);
+            hbSetBotDrop(false);
+            ghostMove(px, py, 'Release to put it in ' + ((overWrapEl.querySelector('.shb-lbl') || {}).textContent || 'the group'), 'over');
+            return;
+          }
+          if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
             var wr = overWrapEl.getBoundingClientRect();
             target = overWrapEl.parentNode;
             before = px < (wr.left + wr.width / 2) ? overWrapEl : overWrapEl.nextSibling;
@@ -8081,6 +8085,7 @@
       out ? (drop ? 'over' : 'rm') : '');
     if (out) return;
 
+    LP_DRAG.tray = null;
     var under = null;
     try { under = document.elementFromPoint(e.clientX, e.clientY); } catch (err) { under = null; }
     if (!under || !under.closest) return;
@@ -8097,7 +8102,9 @@
     LP_DRAG.merge = mergeOn;
     hbGrpHot(intoTray ? overWrap : mergeOn);
     if (intoTray) {
-      if (dragWrap.parentNode !== intoTray) intoTray.appendChild(dragWrap);
+      /* it goes in on release: moving it into the list now would shift the bar under the pointer (a wide button
+         next to the group pulled the group away, and the button bounced in and out) */
+      LP_DRAG.tray = intoTray;
       ghostMove(e.clientX, e.clientY, 'Release to put it in ' + ((overWrap.querySelector('.shb-lbl') || {}).textContent || 'the group'), 'over');
       return;
     }
@@ -8135,7 +8142,14 @@
         hbSetBotDrop(false);
         var dw = dd.wrap;
         hbGrpHot(null);
-        if (dd.merge && dd.merge.isConnected && dw) {
+        if (dd.tray && dd.tray.isConnected && dw) {
+          dw.classList.remove('shb-drag-src');
+          dd.tray.appendChild(dw);
+          var dtLbl = dd.tray.closest('.shb-grp') && dd.tray.closest('.shb-grp').querySelector(':scope > .shb-btn .shb-lbl');
+          commitDomBarsOrder(HB.el, HB.node);
+          hbPaint();
+          setStatus('ok', 'Put "' + (dd.item ? dd.item.label : 'button') + '" in "' + (dtLbl ? dtLbl.textContent : 'the group') + '"');
+        } else if (dd.merge && dd.merge.isConnected && dw) {
           dw.classList.remove('shb-drag-src');
           var dmGid = hbMergeDom(dd.merge, dw);
           commitDomBarsOrder(HB.el, HB.node);
@@ -8217,6 +8231,13 @@
       else commitDomBarsOrder(HB.el, HB.node, uid);
       hbPaint();
       setStatus('ok', /^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Removed "' + name + '" · Reset (edit mode) restores the defaults');
+    } else if (lp.tray && lp.tray.isConnected && !w.contains(lp.tray)) {
+      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      lp.tray.appendChild(w);
+      var tGrp = lp.tray.closest('.shb-grp'), tLbl = tGrp && tGrp.querySelector(':scope > .shb-btn .shb-lbl');
+      commitDomBarsOrder(HB.el, HB.node);
+      hbPaint();
+      setStatus('ok', 'Put "' + name + '" in "' + (tLbl ? tLbl.textContent : 'the group') + '"');
     } else if (lp.merge && lp.merge.isConnected && !w.contains(lp.merge)) {
       w.classList.remove('shb-drag-src', 'shb-collapsed');
       var mLbl = lp.merge.querySelector('.shb-lbl');
@@ -8248,6 +8269,8 @@
     ghostHide();
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
+    /* a group kept open folds up again: the next hotbox opens with every group closed */
+    Object.keys(S.hbGroups || {}).forEach(function (g) { delete HB.grpOpen[g]; });
     HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false; HB.wItems = []; HB.wMenu = null;
     if (old) {
       old.removeAttribute('id');
@@ -9835,13 +9858,8 @@
     '<rect x="28.2" y="22.8" width="1.6" height="1.6" rx="0.5"/><rect x="1.7" y="22.5" width="3" height="3" rx="0.9"/><rect x="10.5" y="23.9" width="1.4" height="1.4" rx="0.45"/>' +
     '<rect x="15.05" y="25.1" width="4.5" height="3" rx="1.1"/><rect x="11.5" y="27.9" width="1.8" height="1.8" rx="0.55"/><rect x="22.7" y="24.1" width="1.2" height="1.2" rx="0.4"/>';
 
-  /* Logo colors: Comfy (Alt Comfy from the brand kit) is the default, Orange is the first version */
-  var HB_LOGOS = {
-    comfy:  { bg: '#211927', edge: '', fg: '#F2FF59' },
-    orange: { bg: '#E58A2E', edge: '#9C5517', fg: '#FFFFFF' }
-  };
-
-  function hbLogoKey() { return S.hbLogo === 'orange' ? 'orange' : 'comfy'; }
+  /* Logo colors: Alt Comfy from the brand kit, yellow on plum */
+  var HB_LOGO = { bg: '#211927', edge: '', fg: '#F2FF59' };
 
   /* The bare mark in currentColor (the top-bar button paints the chip around it) */
   function hbMarkSVG(size) {
@@ -9850,7 +9868,7 @@
 
   /* The full chip, as in assets/brand/svg/hotbox-*-chip.svg */
   function hbLogoChip(size) {
-    var L = HB_LOGOS[hbLogoKey()];
+    var L = HB_LOGO;
     return '<svg viewBox="0 0 32 32" width="' + size + '" height="' + size + '" aria-hidden="true" style="display:block;flex:none">' +
       '<rect x="1" y="1" width="30" height="30" rx="6" fill="' + L.bg + '"' + (L.edge ? ' stroke="' + L.edge + '" stroke-width="2"' : '') + '/>' +
       '<g fill="' + L.fg + '" transform="translate(3.52 3.52) scale(0.78)">' + HB_MARK + '</g></svg>';
@@ -9888,7 +9906,6 @@
     if (!btn) return;
     var isEnabled = !!S.useHotbox;
     btn.classList.toggle('tool-on', isEnabled);
-    btn.setAttribute('data-logo', hbLogoKey());
     btn.title = 'Hotbox (' + (isEnabled ? 'Enabled · ' + hbKeyLabel() : 'Disabled') + ') - Settings (Right-click to toggle)';
     hbFitTopBarButton(btn);
   }
@@ -10265,9 +10282,7 @@
       hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
         tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels, smaller and plainer. Tab also switches it.' },
       hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
-        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' },
-      hbLogo: { opts: ['comfy', 'orange'], names: ['Comfy Yellow', 'Orange'],
-        tip: 'Colors of the H in the top bar and of the logo here. Comfy Yellow (yellow on plum) is the default; Orange is the first version.' }
+        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' }
     };
     var ptOpen = false, sbOpen = false, dirEdit = false, libAdd = false;
     libRefresh(true).then(function () { if (wrap.parentNode) render(); });
@@ -10387,7 +10402,6 @@
             setLabel('pointer', 'Launch Mode') + '<div>' + cycleBtn('hbHold') + '</div>' +
             setLabel('palette', 'UI Style') + '<div>' + cycleBtn('hbStyle') + '</div>' +
             setLabel('edit', 'Edit Mode') + '<div>' + cycleBtn('hbEditAnim') + '</div>' +
-            setLabel('star', 'Logo Colors') + '<div>' + cycleBtn('hbLogo') + '</div>' +
             /* each style has its own effect, so only the one that shows is offered */
             setLabel('sparkles', 'Effects') +
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
@@ -10483,8 +10497,6 @@
           } else if (key === 'hbEditAnim' && HB.el) {
             if (!HB.editMode) hbSetEdit(true);
             else hbSyncEditAnim();
-          } else if (key === 'hbLogo') {
-            updateTopBarButtonState();
           }
           render();
         };

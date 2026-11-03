@@ -103,7 +103,7 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 
 ![Group two buttons, find one in the drawer, drag it onto the canvas](docs/tutorial/09-saved-buttons-library.gif)
 
-- **Group buttons**: drag a button onto the middle of another. Hover the group to see its list; its arrow keeps it open.
+- **Group buttons**: drag a button onto the middle of another. Hover the group to see its list; its arrow keeps it open until the hotbox closes.
 - **Find any button**: press <kbd>N</kbd> and type — saved buttons have their own section in the drawer.
 - **Drag a button onto the canvas** to add its nodes there, or **onto a bar** to pin it to that bar.
 - **Manage them** in **Settings → Saved Buttons** (rename in edit mode, delete with two clicks on the trash).
