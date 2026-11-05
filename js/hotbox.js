@@ -58,6 +58,7 @@
     customToolsBar: {},     /* per-bucket array of item uids for Tools Bar */
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
+    customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
     hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
@@ -874,6 +875,18 @@
       '.shb-magic.shb-quiet .shb-mg-fly{border-radius:6px;padding:7px 10px;background:#262626;border-color:#3a3a3a;font-size:12.5px;color:#e6e6e6}',
       '.shb-mg-slot{display:inline-flex;flex:none;max-width:0;overflow:hidden;padding:4px 0;margin:-4px 0}',
       '.shb-tpl-ico{display:inline-grid;place-items:center}',
+      /* a color given in edit mode marks the button's dot, icon or number; the button itself keeps its look */
+      '.shb-tinted > .shb-pin-dot{background:var(--shb-tint) !important}',
+      '.shb-tinted > .shb-ico,.shb-tinted > .shb-tpl-ico .shb-ico{color:var(--shb-tint) !important}',
+      '.shb-tinted > .shb-num{color:var(--shb-tint) !important;box-shadow:inset 0 0 0 1.5px var(--shb-tint)}',
+      '.shb-ebtn-prev{display:flex;justify-content:center;padding:14px 8px;border-radius:8px;background:#161616;border:1px solid #2c2c2c}',
+      '.shb-ebtn-prev .shb-btn{pointer-events:none;gap:8px;padding:8px 13px;border-radius:10px;background:#262626;color:#e6e6e6;font:500 13px/1 Inter,system-ui,sans-serif}',
+      '.shb-ebtn-prev .shb-pin-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#5aa2f0}',
+      '.shb-ebtn-prev .shb-num{display:grid;place-items:center;width:18px;height:18px;border-radius:6px;background:rgba(255,255,255,.1);font:600 10.5px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.7)}',
+      '.shb-ebtn-prev .shb-ico{color:#b8b8b8}',
+      '.shb-ebtn-row{display:flex;align-items:center;gap:10px}',
+      '.shb-ebtn-row > span{min-width:42px;font-size:12px;color:#9a9a9a}',
+      '.shb-ebtn-note{font-size:11px;color:#8a8a8a;line-height:1.4}',
       '.shb-tpl-ico .shb-ico{color:oklch(0.82 0.11 300) !important}',
       '.shb-tpl-n{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:rgba(190,170,255,.18);color:#dcd2ff;font:600 10px/1 Inter,system-ui,sans-serif}',
       '.shb-quiet .shb-tpl-n{background:none;color:#a99be0;font-family:var(--shb-mono)}',
@@ -4022,6 +4035,17 @@
     { name: 'Pink',    color: '#3d2335', bgcolor: '#4d2d44', dot: '#cc6ea9' }
   ];
 
+  function barTint(uid) {
+    var name = S.customColors && S.customColors[uid];
+    for (var i = 1; name && i < HB_SWATCHES.length; i++) if (HB_SWATCHES[i].name === name) return HB_SWATCHES[i].dot;
+    return '';
+  }
+
+  function barTintAttrs(uid) {
+    var c = barTint(uid);
+    return c ? { cls: ' shb-tinted', style: ' style="--shb-tint:' + esc(c) + '"' } : { cls: '', style: '' };
+  }
+
   function actCollapseNode(node) {
     var list = selNodes();
     if (node && list.indexOf(node) < 0) list = [node];
@@ -6228,17 +6252,35 @@
     }
   }
 
-  function promptRenameBarItem(uid, node) {
+  /* Edit mode: a tap on a button opens this. Its name, and a color for its mark (the dot, icon or number at its
+     start), shown on a copy of the button as it changes. The color is a tag for the button only: the button
+     keeps its own look, and nodes keep theirs */
+  function promptRenameBarItem(uid, node, btnEl) {
     var item = resolveBarItem(uid, node);
     if (!item) return;
+    var lead = '';
+    try {
+      var src = btnEl && btnEl.querySelector(':scope > .shb-num, :scope > .shb-pin-dot, :scope > .shb-tpl-ico, :scope > .shb-ico');
+      lead = src ? src.outerHTML : '';
+    } catch (e) {}
+    if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' : '<i class="shb-pin-dot"></i>');
+    var cur = (S.customColors && S.customColors[uid]) || '';
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
     bg.innerHTML =
-      '<div class="shb-modal" style="width:min(360px,92vw)">' +
-        '<div class="shb-modal-t"><span>Rename Button Label</span></div>' +
-        '<input class="shb-input" data-rbi-in value="' + esc(item.label) + '" placeholder="Custom button name…">' +
+      '<div class="shb-modal" style="width:min(380px,92vw)">' +
+        '<div class="shb-modal-t"><span>Edit Button</span></div>' +
+        '<div class="shb-ebtn-prev"><span class="shb-btn" data-rbi-prev>' + lead + '<span class="shb-lbl" data-rbi-plbl>' + esc(item.label) + '</span></span></div>' +
+        '<div class="shb-ebtn-row"><span>Name</span><input class="shb-input" style="flex:1" data-rbi-in value="' + esc(item.label) + '" placeholder="Custom button name…"></div>' +
+        '<div class="shb-ebtn-row"><span>Color</span><div class="shb-swatches">' +
+          HB_SWATCHES.map(function (sw, i) {
+            var on = i ? cur === sw.name : !cur;
+            return '<i class="shb-swatch' + (on ? ' shb-on' : '') + '" data-rbi-col="' + (i ? esc(sw.name) : '') + '" style="background:' + sw.dot + '" title="' + esc(i ? sw.name : 'Default color') + '"></i>';
+          }).join('') +
+        '</div></div>' +
+        '<div class="shb-ebtn-note">The color marks this button in the bars, so you can find it at a glance. Nodes keep their own colors.</div>' +
         '<div style="display:flex;justify-content:space-between;gap:8px">' +
-          '<button class="shb-btn" data-rbi-reset>Default Name</button>' +
+          '<button class="shb-btn" data-rbi-reset title="Back to its own name and color">Reset</button>' +
           '<div style="display:flex;gap:6px">' +
             '<button class="shb-btn" data-rbi-cancel>Cancel</button>' +
             '<button class="shb-btn shb-btn-pri" data-rbi-ok>Save</button>' +
@@ -6247,22 +6289,45 @@
       '</div>';
     document.body.appendChild(bg);
     var inp = bg.querySelector('[data-rbi-in]');
+    var prev = bg.querySelector('[data-rbi-prev]');
+    function paintPrev() {
+      var c = '';
+      for (var i = 1; cur && i < HB_SWATCHES.length; i++) if (HB_SWATCHES[i].name === cur) c = HB_SWATCHES[i].dot;
+      prev.classList.toggle('shb-tinted', !!c);
+      prev.style.setProperty('--shb-tint', c || '');
+      Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-col]'), function (el) {
+        el.classList.toggle('shb-on', el.getAttribute('data-rbi-col') === cur);
+      });
+    }
+    paintPrev();
     function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
-    function saveLbl(val) {
+    function saveBtn(val, col) {
       if (!S.customLabels || typeof S.customLabels !== 'object') S.customLabels = {};
-      if (val) S.customLabels[uid] = val;
-      else delete S.customLabels[uid];
+      if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
+      if (val && val !== item.label || val && S.customLabels[uid]) S.customLabels[uid] = val;
+      else if (!val) delete S.customLabels[uid];
+      if (col) S.customColors[uid] = col;
+      else delete S.customColors[uid];
       save();
       close();
       hbPaint();
     }
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
+    bg.addEventListener('click', function (ev) {
+      var sw = ev.target && ev.target.closest ? ev.target.closest('[data-rbi-col]') : null;
+      if (!sw) return;
+      cur = sw.getAttribute('data-rbi-col');
+      paintPrev();
+    });
+    inp.oninput = function () {
+      bg.querySelector('[data-rbi-plbl]').textContent = String(inp.value || '').trim() || item.label;
+    };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
-    bg.querySelector('[data-rbi-reset]').onclick = function () { saveLbl(''); };
-    bg.querySelector('[data-rbi-ok]').onclick = function () { saveLbl(String(inp.value || '').trim()); };
+    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', ''); };
+    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur); };
     inp.onkeydown = function (ev) {
       ev.stopPropagation();
-      if (ev.key === 'Enter') { ev.preventDefault(); saveLbl(String(inp.value || '').trim()); }
+      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur); }
       if (ev.key === 'Escape') { ev.preventDefault(); close(); }
     };
     try { inp.focus(); inp.select(); } catch (e) {}
@@ -6296,6 +6361,7 @@
     if (at >= 0) Array.prototype.splice.apply(list, [at, 1].concat(kids));
     if (grp) delete S.hbGroups[gid];
     if (S.customLabels) delete S.customLabels[uid];
+    if (S.customColors) delete S.customColors[uid];
     delete HB.grpOpen[gid];
     setBarUids(barName, node, list);
     return kids.length;
@@ -6313,9 +6379,10 @@
   function renderGroupHTML(item, barName, numKey) {
     var pin = !!HB.grpOpen[item.id];
     var isz = hbIsFluid() ? 15 : 13;
-    var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn';
+    var tint = barTintAttrs(item.uid);
+    var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn' + tint.cls;
     return '<span class="shb-item-wrap shb-grp' + (pin ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '" data-hb-gkey="' + esc(item.id) + '">' +
-      '<button type="button" class="' + cls + '" data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
+      '<button type="button" class="' + cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
         (numKey ? '<span class="shb-num">' + esc(numKey) + '</span>' : ico('folder', isz)) +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         '<span class="shb-w-badge">' + esc(item.count) + '</span>' +
@@ -6567,8 +6634,9 @@
         : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13)));
     var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
       : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
+    var tint = barTintAttrs(item.uid);
     return '<span class="shb-item-wrap" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '">' +
-      '<button type="button" class="' + btnCls + '" data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title + ' (' + hint + ')') + '">' +
+      '<button type="button" class="' + btnCls + tint.cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title + ' (' + hint + ')') + '">' +
         lead +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         (isTpl ? '<span class="shb-tpl-n">' + esc(item.count) + '</span>' : '') +
@@ -6874,7 +6942,7 @@
   function hbEditBarHTML() {
     var fl = hbIsFluid();
     return '<div class="shb-editbar">' +
-      '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename · drop a button on another to group them' : 'edit · × or drag out · tap = rename · drop on a button = group') + '</span>' +
+      '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename or color · drop a button on another to group them' : 'edit · × or drag out · tap = name & color · drop on a button = group') + '</span>' +
       '<button type="button" class="shb-editbar-b" data-hb-act="editreset">Reset</button>' +
       '<button type="button" class="shb-editbar-b shb-editbar-done" data-hb-act="editdone">Done</button>' +
     '</div>';
@@ -8316,6 +8384,7 @@
           delete S.hbGroups[u.slice(4)];
           delete HB.grpOpen[u.slice(4)];
           if (S.customLabels) delete S.customLabels[u];
+          if (S.customColors) delete S.customColors[u];
         } else acc.push(u);
         return acc;
       }, []);
@@ -9063,7 +9132,9 @@
       var renBtn = t.closest('[data-hb-ren]');
       if (renBtn) {
         e.stopPropagation();
-        promptRenameBarItem(renBtn.getAttribute('data-hb-ren'), HB.node);
+        var renUid = renBtn.getAttribute('data-hb-ren');
+        var renEl = HB.el && HB.el.querySelector('.shb-item-wrap[data-hb-uid="' + cssEsc(renUid) + '"] > .shb-btn');
+        promptRenameBarItem(renUid, HB.node, renEl);
         return;
       }
 
@@ -9172,7 +9243,7 @@
       var runBtn = t.closest('[data-hb-run]');
       if (runBtn && HB.editMode && runBtn.closest('[data-hb-bar]')) {
         /* In edit mode a tap renames the button instead of running it */
-        promptRenameBarItem(runBtn.getAttribute('data-hb-run'), HB.node);
+        promptRenameBarItem(runBtn.getAttribute('data-hb-run'), HB.node, runBtn);
         return;
       }
       if (runBtn) {
@@ -9244,6 +9315,7 @@
           S.customToolsBar = {};
           S.customBotBar = null;
           S.customLabels = {};
+          S.customColors = {};
           save();
           hbPaint();
           setStatus('ok', '↺ Hotbox bars restored to defaults');
@@ -10360,6 +10432,7 @@
     Object.keys(S.customToolsBar || {}).forEach(function (k) { S.customToolsBar[k] = strip(S.customToolsBar[k]); });
     Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
     if (S.customLabels) delete S.customLabels[uid];
+    if (S.customColors) delete S.customColors[uid];
     save();
     setStatus('ok', 'Deleted the saved button "' + t.name + '"');
   }
@@ -11289,6 +11362,7 @@
           S.customToolsBar = {};
           S.customBotBar = null;
           S.customLabels = {};
+          S.customColors = {};
           save();
           if (HB.el) hbPaint();
           setStatus('ok', '✓ Custom bars reset to defaults');
