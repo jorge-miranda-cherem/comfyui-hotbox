@@ -5,8 +5,9 @@ Where Hotbox keeps its preferences, by default:
   reinstalling it (a ComfyUI shared by several users keeps one folder per user, below);
 - otherwise ComfyUI's user folder, <ComfyUI>/user/<user>/hotbox.
 Files already in ComfyUI's user folder are copied into the new default the first time it is used, so moving
-to it loses nothing. Any other folder can be picked in Settings; the pick is remembered in folder.json inside
-the default folder. Only Hotbox's own JSON files are ever read or written.
+to it loses nothing. Any other folder can be picked in Settings (Set Project): the pick is remembered in
+folder.json inside the default folder, with the last projects used, so Settings switches back to one in a click.
+Only Hotbox's own JSON files are ever read or written.
 
 Shared libraries: other folders (a studio's shared drive, one per show) whose saved buttons show up beside
 the user's own, one JSON file per button so a synced drive never has two people writing the same file. The
@@ -29,6 +30,7 @@ LIBS = "libraries.json"
 BUTTON_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 MAX_BUTTON_BYTES = 8 * 1024 * 1024
 MAX_BUTTONS = 400
+MAX_RECENT = 8
 
 
 def _server():
@@ -102,13 +104,50 @@ def default_dir(request):
     return old
 
 
-def chosen_dir(base):
-    """The folder picked in Settings, or '' for the default one."""
+def _pointer(base):
     try:
         with open(os.path.join(base, POINTER), encoding="utf-8") as f:
-            return str(json.load(f).get("folder") or "")
-    except (OSError, ValueError, AttributeError):
-        return ""
+            raw = json.load(f)
+        return raw if isinstance(raw, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def chosen_dir(base):
+    """The folder picked in Settings, or '' for the default one."""
+    return str(_pointer(base).get("folder") or "")
+
+
+def recent_dirs(base):
+    """The project folders used last, newest first (never the default folder, which is always offered)"""
+    out = []
+    for p in _pointer(base).get("recent") or []:
+        if isinstance(p, str) and os.path.isabs(p) and not _same(p, base) and not any(_same(p, o) for o in out):
+            out.append(p)
+    return out[:MAX_RECENT]
+
+
+def _write_pointer(base, folder, recent):
+    path = os.path.join(base, POINTER)
+    if not folder and not recent:
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"folder": folder or "", "recent": recent[:MAX_RECENT]}, f, indent=2)
+    os.replace(tmp, path)
+
+
+def _clean_path(raw):
+    """a path as people paste it: quoted (Windows' Copy as path), with ~, or the hotbox.json itself"""
+    p = str(raw or "").strip()
+    if len(p) > 1 and p[0] == p[-1] and p[0] in "\"'":
+        p = p[1:-1].strip()
+    p = os.path.expanduser(p)
+    if p and NAME_RE.match(os.path.basename(p)) and not os.path.isdir(p):
+        p = os.path.dirname(p)
+    return p
 
 
 def current_dir(request):
@@ -129,8 +168,10 @@ def _file_path(request):
 
 def _folder_info(request, **extra):
     cur, base, missing = current_dir(request)
+    recent = [{"path": p, "prefs": os.path.isfile(os.path.join(p, "hotbox.json"))}
+              for p in recent_dirs(base) if not _same(p, cur) and os.path.isdir(p)]
     info = {"folder": cur, "default": base, "custom": not _same(cur, base), "missing": missing,
-            "sep": os.sep, "platform": sys.platform}
+            "sep": os.sep, "platform": sys.platform, "recent": recent}
     info.update(extra)
     return web.json_response(info)
 
@@ -251,13 +292,15 @@ def setup(routes):
 
     @routes.post("/hotbox/folder")
     async def set_folder(request):
-        """Use another folder. Hotbox files already there are used as they are; otherwise the current
-        ones are copied in, so nothing changes but the location. An empty folder means the default."""
+        """Set Project: use another folder. Hotbox files already there are used as they are; otherwise the
+        current ones are copied in, so nothing changes but the location ({copy: false} leaves it empty, for
+        preferences loaded from a file to start it). An empty folder means the default."""
         try:
             body = await request.json()
         except ValueError:
             body = {}
-        want = os.path.expanduser(str((body or {}).get("folder") or "").strip())
+        want = _clean_path((body or {}).get("folder"))
+        copy = (body or {}).get("copy", True) is not False
         cur, base, _ = current_dir(request)
         if want and not os.path.isabs(want):
             return web.json_response({"error": "Use a full path, like " + base}, status=400)
@@ -271,7 +314,7 @@ def setup(routes):
                 return web.json_response({"error": "Could not create the folder: " + str(e)}, status=400)
         found = os.path.isfile(os.path.join(target, "hotbox.json"))
         copied = []
-        if not _same(cur, target):
+        if copy and not _same(cur, target):
             for name in sorted(os.listdir(cur)):
                 if NAME_RE.match(name) and not os.path.exists(os.path.join(target, name)):
                     try:
@@ -279,13 +322,9 @@ def setup(routes):
                         copied.append(name)
                     except OSError as e:
                         return web.json_response({"error": "Could not copy " + name + ": " + str(e)}, status=400)
-        pointer = os.path.join(base, POINTER)
-        if _same(target, base):
-            if os.path.exists(pointer):
-                os.remove(pointer)
-        else:
-            with open(pointer, "w", encoding="utf-8") as f:
-                json.dump({"folder": target}, f, indent=2)
+        recent = [p for p in [target, cur] + recent_dirs(base) if not _same(p, base)]
+        recent = [p for i, p in enumerate(recent) if not any(_same(p, q) for q in recent[:i])]
+        _write_pointer(base, "" if _same(target, base) else target, recent)
         return _folder_info(request, found=found, copied=copied)
 
     @routes.get("/hotbox/libraries")
