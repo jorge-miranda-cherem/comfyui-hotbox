@@ -2197,19 +2197,81 @@
   }
 
   /* Connect all compatible slots between srcNode and dstNode (multi-slot aware, e.g. MODEL + CLIP) */
+  /* ---- Which outputs a new node gets. A source often offers one picture several ways, plus its side data (OCIO
+     Read: the frames as IMAGE and as a ComfyUI VIDEO, then alpha, fps, info, metadata). The picture is wired once:
+     as VIDEO when the source holds a sequence or a clip and the new node takes video, as IMAGE when it is a still
+     (or when it cannot tell). Side data (text, numbers, an alpha) goes only into an input of the same name: fps
+     into fps and metadata into metadata on OCIO Write, never info into a prompt. A source with nothing but text or
+     numbers (a prompt node) still wires them as before */
+  var WIRE_SIDE = /^(STRING|INT|FLOAT|BOOLEAN|COMBO|NUMBER)$/;
+  var VIDEO_FILE = /\.(mp4|mov|mxf|avi|mkv|webm|m4v|mpg|mpeg|wmv|gif)$/i;
+
+  /* 'video' for a sequence or a clip, 'image' for a still, '' when it cannot tell */
+  function srcMediaKind(node) {
+    try {
+      var k = node && node._ocioSeq && node._ocioSeq.kind;   // OCIO Read, once it has looked at its source
+      if (k === 'still') return 'image';
+      if (k === 'sequence' || k === 'video') return 'video';
+    } catch (e) {}
+    var fm = widgetNamed(node, 'frame_mode');
+    var mode = fm ? String(fm.value || '') : '';
+    if (mode === 'single') return 'image';
+    if (mode === 'sequence' || mode === 'video') return 'video';
+    var title = String((node && node.title) || '');
+    if (/\bsingle image\b|\[\s*single\b|\[\s*still\b/i.test(title)) return 'image';
+    if (/\[\s*(image\s*)?(sequence|video|clip)\b/i.test(title)) return 'video';
+    var src = '';
+    ['source', 'video', 'file', 'filename', 'path'].some(function (n) {
+      var w = widgetNamed(node, n);
+      if (w && typeof w.value === 'string' && w.value) { src = w.value; return true; }
+      return false;
+    });
+    if (VIDEO_FILE.test(src) || /#{2,}|%0?\d*d|\$F\d*|@{2,}/.test(src)) return 'video';
+    return '';
+  }
+
+  /* per output: 'any' (wire to a matching input), 'byName' (only into an input of the same name) or 'skip' */
+  function wirePlan(node, made) {
+    var outs = node.outputs || [], ins = made.inputs || [];
+    function T(s) { return String((s && s.type) || '').toUpperCase(); }
+    function free(type) { return ins.some(function (i) { return i && i.link == null && T(i) === type; }); }
+    var outI = -1, outV = -1, picture = false;
+    outs.forEach(function (o, k) {
+      var t = T(o);
+      if (t === 'IMAGE' && outI < 0) outI = k;
+      if (t === 'VIDEO' && outV < 0) outV = k;
+      if (t && t !== '*' && !WIRE_SIDE.test(t)) picture = true;
+    });
+    var skip = -1;
+    if (outI >= 0 && outV >= 0 && free('IMAGE') && free('VIDEO')) skip = srcMediaKind(node) === 'video' ? outI : outV;
+    return outs.map(function (o, k) {
+      if (k === skip) return 'skip';
+      var t = T(o);
+      if (picture && t === 'MASK' && /^alpha$/i.test(slotName(o))) return 'skip';
+      if (picture && WIRE_SIDE.test(t)) return 'byName';
+      return 'any';
+    });
+  }
+
+  function slotName(s) {
+    return String((s && s.name) || '').toLowerCase().trim();
+  }
+
   function wireNodesSmart(node, made, vb) {
     if (!node || !made) return '';
     var wiredList = [];
     var outs = node.outputs || [];
     var ins = made.inputs || [];
     var usedOut = {};
+    var plan = wirePlan(node, made);
 
     /* Pass 1: Exact slot type matches from node.outputs -> made.inputs (connects MODEL + CLIP + VAE together!) */
     for (var o = 0; o < outs.length; o++) {
       var oType = String((outs[o] && outs[o].type) || '').toUpperCase();
-      if (!oType || oType === '*') continue;
+      if (!oType || oType === '*' || plan[o] === 'skip') continue;
       for (var i = 0; i < ins.length; i++) {
         if (ins[i].link != null) continue;
+        if (plan[o] === 'byName' && slotName(ins[i]) !== slotName(outs[o])) continue;
         var iType = String((ins[i] && ins[i].type) || '').toUpperCase();
         if (oType === iType) {
           try {
@@ -2226,7 +2288,7 @@
     /* Pass 2: Flexible/wildcard matches if nothing matched or remaining outputs fit wildcard inputs */
     if (!wiredList.length) {
       for (var o2 = 0; o2 < outs.length; o2++) {
-        if (usedOut[o2]) continue;
+        if (usedOut[o2] || plan[o2] !== 'any') continue;
         for (var j = 0; j < ins.length; j++) {
           if (ins[j].link != null) continue;
           if (!typeFits(outs[o2] && outs[o2].type, ins[j] && ins[j].type)) continue;
