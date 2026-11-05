@@ -10659,7 +10659,7 @@
             '<div>' + savedButtonsHTML() + '</div>' +
             setLabel('folder', 'Saved In', true) +
             '<div class="shb-cfg">' +
-              '<div class="shb-cfg-path" data-tip="Every change (moved or pinned buttons, bars, labels, saved buttons and these settings) is written to this file, so it follows you to any browser and survives clearing the cache. By default it sits in ComfyUI\'s user folder, on Windows, macOS and Linux alike.">' + esc(cfgPath()) + '</div>' +
+              '<div class="shb-cfg-path" data-tip="Every change (moved or pinned buttons, bars, labels, saved buttons and these settings) is written to this file, so it follows you to any browser and survives clearing the cache. By default it sits in ~/comfyui/hotbox on Linux and in ComfyUI\'s user folder on Windows and macOS (the HOTBOX_DIR environment variable sets another default).">' + esc(cfgPath()) + '</div>' +
               (CFG.missing ? '<div class="shb-cfg-warn">The folder you picked is not there right now (' + esc(CFG.missing) + '), so the default one is in use.</div>' : '') +
               '<span data-st-cfgstate class="shb-cfg-state shb-cfg-' + esc(CFG.state) + '">' + esc(cfgStateText()) + '</span>' +
               '<div class="shb-cfg-btns">' +

@@ -91,13 +91,16 @@ The **H** button in ComfyUI's top bar: click it for settings (hotkey, toggle vs.
 ---
 
 ## 📁 Your preferences file
-Everything you change — moved and pinned buttons, bars, labels, saved buttons and settings — is saved to one file in ComfyUI's user folder, the same place on Windows, macOS and Linux:
+Everything you change — moved and pinned buttons, bars, labels, saved buttons and settings — is saved to one file:
 
 ```
-ComfyUI/user/default/hotbox/hotbox.json
+Linux            ~/comfyui/hotbox/hotbox.json
+Windows, macOS   ComfyUI/user/default/hotbox/hotbox.json
 ```
 
-**Settings → Saved In** shows its full path (**Copy Path** and **Copy Folder Path** put it on the clipboard), and **Change Folder** moves Hotbox to any other folder (a synced drive, a team folder…): Hotbox files already there are used as they are, otherwise yours are copied in. Because it lives with ComfyUI (not in the browser), your setup follows you to any browser and survives clearing the cache.
+On Linux it sits in your home folder, outside ComfyUI, so reinstalling or moving ComfyUI never touches it; whatever an older Hotbox saved in ComfyUI's user folder is copied there the first time (the old files stay where they were). A ComfyUI shared by several users (`--multi-user`) keeps one folder per user in its user folder instead. To choose the default yourself on any system, set `HOTBOX_DIR` to a full path before starting ComfyUI (`export HOTBOX_DIR=/mnt/studio/hotbox/$USER`).
+
+**Settings → Saved In** shows its full path (**Copy Path** and **Copy Folder Path** put it on the clipboard), and **Change Folder** moves Hotbox to any other folder (a synced drive, a team folder…): Hotbox files already there are used as they are, otherwise yours are copied in. Because it lives on disk (not in the browser), your setup follows you to any browser and survives clearing the cache.
 
 `hotbox.json` is your **Original** and an import never overwrites it: **Import .json** always adds a **new version** (`hotbox_v2.json`, `hotbox_v3.json`, …) and switches to it, and the **Version** button in Settings steps back to the Original any time. **Export .json** downloads a dated copy of the version in use (`hotbox_original_2026-10-22_0915.json`). A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
 

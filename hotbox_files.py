@@ -1,7 +1,12 @@
 """
-Where Hotbox keeps its preferences: <ComfyUI>/user/<user>/hotbox by default (the same folder on Windows,
-macOS and Linux, since it lives inside ComfyUI), or any folder picked in Settings. The pick is remembered
-in folder.json inside the default folder. Only Hotbox's own JSON files are ever read or written.
+Where Hotbox keeps its preferences, by default:
+- the folder in the HOTBOX_DIR environment variable, when it is set (any system);
+- on Linux, ~/comfyui/hotbox in the home folder of whoever runs ComfyUI, outside ComfyUI so it survives
+  reinstalling it (a ComfyUI shared by several users keeps one folder per user, below);
+- otherwise ComfyUI's user folder, <ComfyUI>/user/<user>/hotbox.
+Files already in ComfyUI's user folder are copied into the new default the first time it is used, so moving
+to it loses nothing. Any other folder can be picked in Settings; the pick is remembered in folder.json inside
+the default folder. Only Hotbox's own JSON files are ever read or written.
 
 Shared libraries: other folders (a studio's shared drive, one per show) whose saved buttons show up beside
 the user's own, one JSON file per button so a synced drive never has two people writing the same file. The
@@ -10,6 +15,7 @@ list is kept in libraries.json in the default folder, set from Settings or by a 
 like PATH). Only folders on that list are read, and only <button id>.json files are ever written there.
 """
 import json
+import logging
 import os
 import re
 import shutil
@@ -34,12 +40,66 @@ def _same(a, b):
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
-def default_dir(request):
+HOME_DIR = os.path.join("~", "comfyui", "hotbox")
+_MOVED_IN = set()
+
+
+def _comfy_dir(request):
+    """ComfyUI's own user folder for Hotbox: <ComfyUI>/user/<user>/hotbox"""
     path = _server().user_manager.get_request_user_filepath(request, "hotbox")
     if path is None:
         raise web.HTTPForbidden(text="No user folder for this request")
-    os.makedirs(path, exist_ok=True)
     return path
+
+
+def _home_dir(request):
+    """HOTBOX_DIR when set; on Linux ~/comfyui/hotbox for a ComfyUI with one user; '' to keep ComfyUI's folder"""
+    env = str(os.environ.get("HOTBOX_DIR") or "").strip()
+    if env and os.path.isabs(os.path.expanduser(env)):
+        return _norm(env)
+    if not sys.platform.startswith("linux"):
+        return ""
+    try:
+        if _server().user_manager.get_request_user_id(request) != "default":
+            return ""   # several users on one ComfyUI: one folder each, in ComfyUI's user folder
+    except Exception:
+        return ""
+    return _norm(HOME_DIR)
+
+
+def _hotbox_files(folder):
+    try:
+        return [n for n in sorted(os.listdir(folder)) if NAME_RE.match(n) or n in (POINTER, LIBS)]
+    except OSError:
+        return []
+
+
+def _move_in(old, new):
+    """the first time a new default folder is used, what Hotbox had in ComfyUI's user folder is copied there
+    (copied, not moved: the old files stay as they were)"""
+    key = (old, new)
+    if key in _MOVED_IN or _same(old, new):
+        return
+    if not _hotbox_files(new):
+        for name in _hotbox_files(old):
+            shutil.copy2(os.path.join(old, name), os.path.join(new, name))
+    _MOVED_IN.add(key)
+
+
+def default_dir(request):
+    old = _comfy_dir(request)
+    home = _home_dir(request)
+    if home:
+        try:
+            os.makedirs(home, exist_ok=True)
+            _move_in(old, home)
+            return home
+        except OSError as e:
+            if home not in _MOVED_IN:
+                _MOVED_IN.add(home)
+                logging.warning("[Hotbox] cannot use %s (%s), using %s", home, e, old)
+    os.makedirs(old, exist_ok=True)
+    return old
 
 
 def chosen_dir(base):
