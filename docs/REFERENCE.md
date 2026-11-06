@@ -11,6 +11,7 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
   - **Compact** — the same Fluid look and motion, bars only (no side cards).
   - **Quiet** — native ComfyUI panels, monospace key hints, fast fades (optional leader lines from the cursor to each zone).
 - **The big blue `+`** sits right beside the bottom bar. Hover it and the four categories fan out (`All Nodes F` · `Image / Video Kit N` · `Models & APIs A` · `Subgraphs U`); click it for All Nodes. Drag any result onto any bar to pin it, or **drop it on the `+`** to pin it to the bottom bar.
+- **A search that ranks like ComfyUI's.** The drawer's search grades each node the way ComfyUI's own search box does (the whole name, its start, a whole word, part of a word, every word you typed), then puts ComfyUI's own nodes before custom ones, the nodes that take the node's outputs next (with their slot shown, `IMAGE`), then the ones people use most (the popularity list ComfyUI ships). Typos (`previw`), short forms (`load img`, `ckpt`, `i2v`) and the node's search aliases still find it. A custom node shows its pack's name beside it. <kbd>↑</kbd> <kbd>↓</kbd> pick a result, <kbd>Enter</kbd> adds it, <kbd>Esc</kbd> clears the search, then closes the drawer.
 - **Only the newest models.** Deprecated and legacy nodes never show up, and neither do older versions of a partner model when its newer one is installed: Kling 4.0 hides Kling 3.0 Omni, Kling 2.6 and the first Kling; Vidu Q4 hides Vidu2; Seedance 2.5 hides the first ByteDance video nodes; ComfyUI's Image to Video (LTX-2.5) subgraph hides the LTX-2.3 one. Type a version number to find an older one (`kling 2.6`). A button you already pinned stays, and local model nodes are never hidden (an older model on disk needs its own nodes).
 - **A dock shortcut you choose.** The button at the end of the top dock opens one category (Models by default); its `▾` swaps it for the Kit, Subgraphs or All Nodes — or hides it.
 - **Drag a node onto the bar to pin it.** Grab any node by its title while the hotbox is open and drop it on the bottom bar (or the `+`). The node stays where it was; its type becomes a one-click button for that context.
@@ -18,7 +19,7 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
 - **Button groups.** Hold any button and drop it on the middle of another: the two become a group, with a little pop. Keep dropping buttons on it to fill it. Hover a group and its buttons drop down in a list under it, one after another (a soft spring in Fluid, little balloons in Compact, a quiet slide in Quiet); its arrow keeps it open until the hotbox closes, and a second click closes it. Tap it in edit mode to rename it. Drag a button out of the list to take it back; × on the group, or dragging it out of the bar, ungroups it and its buttons stay in the bar. A group left with one button unfolds by itself.
 - **Group with `G`.** Press <kbd>G</kbd> in the hotbox to group the selection (or the node under the cursor). It uses ComfyUI's own Group Selected Nodes, so the title editor opens right away, already holding a name read from the nodes, like a saved button's.
 - **Swap Nodes.** Select two nodes and press **Swap Nodes** (<kbd>W</kbd>): they trade places and wires.
-- **Customize every bar.** Long-press any button (or click the ✎ icon) to enter edit mode: buttons jiggle, tap **×** or drag a button out to remove it, drag to reorder, tap a button to rename it. **Reset** restores the defaults, **Done** / <kbd>Esc</kbd> / a click on the canvas exits.
+- **Customize every bar.** Long-press any button (or click the ✎ icon) to enter edit mode: buttons jiggle, tap **×** or drag a button out to remove it, drag to reorder, tap a button to rename it or give it a color. The color marks the button's dot, icon or number (the button keeps its look), in the same seven colors as the node swatches, so a button is easy to find at a glance; nodes keep their own colors. **Reset** in that dialog brings back the button's own name and color. **Reset** restores the defaults, **Done** / <kbd>Esc</kbd> / a click on the canvas exits.
 - **Works with both node renderers** — Nodes 2.0 (Vue) and the classic LiteGraph canvas.
 
 ---
@@ -68,6 +69,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | <kbd>Tab</kbd> | Switch style (Fluid → Compact → Quiet) while the hotbox is open. |
 | <kbd>1</kbd>–<kbd>9</kbd> | Run the matching dock button. |
 | <kbd>+</kbd> / <kbd>F</kbd> · <kbd>N</kbd> · <kbd>A</kbd> · <kbd>U</kbd> | Add drawer: all nodes · image/video kit · models & APIs · subgraphs. |
+| <kbd>↑</kbd> <kbd>↓</kbd> · <kbd>Enter</kbd> · <kbd>Esc</kbd> | In the drawer's search: pick a result · add it · clear the search (again: close the drawer). |
 | <kbd>G</kbd> | Group the selection (or the node under the cursor) and name it. |
 | <kbd>Esc</kbd> | Leave edit mode, or close the hotbox. |
 | <kbd>Alt</kbd>+<kbd>Z</kbd> | **Magnifier** — big live prompt editor · **Visual Crop editor** on crop nodes · **Paint Studio** on paint / `LoadImage` nodes. |
@@ -100,9 +102,23 @@ Windows, macOS   ComfyUI/user/default/hotbox/hotbox.json
 
 On Linux it sits in your home folder, outside ComfyUI, so reinstalling or moving ComfyUI never touches it; whatever an older Hotbox saved in ComfyUI's user folder is copied there the first time (the old files stay where they were). A ComfyUI shared by several users (`--multi-user`) keeps one folder per user in its user folder instead. To choose the default yourself on any system, set `HOTBOX_DIR` to a full path before starting ComfyUI (`export HOTBOX_DIR=/mnt/studio/hotbox/$USER`).
 
-**Settings → Saved In** shows its full path (**Copy Path** and **Copy Folder Path** put it on the clipboard), and **Change Folder** moves Hotbox to any other folder (a synced drive, a team folder…): Hotbox files already there are used as they are, otherwise yours are copied in. Because it lives on disk (not in the browser), your setup follows you to any browser and survives clearing the cache.
+Because it lives on disk (not in the browser), your setup follows you to any browser and survives clearing the cache.
 
-`hotbox.json` is your **Original** and an import never overwrites it: **Import .json** always adds a **new version** (`hotbox_v2.json`, `hotbox_v3.json`, …) and switches to it, and the **Version** button in Settings steps back to the Original any time. **Export .json** downloads a dated copy of the version in use (`hotbox_original_2026-10-22_0915.json`). A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
+### Projects
+The folder your preferences live in is the **project**. **Settings → Project** shows its name (the folder's, or `Default`) and the full path of the file (**Copy Path** and **Copy Folder Path** put it on the clipboard).
+
+**Set Project…** points Hotbox at any other folder (one per show, a synced drive, a team folder…): preferences already in it load right away; a folder without any starts with a copy of yours. A path copied from Explorer or Finder works as it is, quotes and all, and so does the path of a `hotbox.json`. A folder called `hotbox` is named after the folder above it (`MyShow/hotbox` is the `MyShow` project). The projects you used last show up under **Recent**, one click each, and **Back to Default** returns to the default folder. The choice and the recent list are kept in `folder.json` in the default folder.
+
+### Backup & Share
+Your preferences save themselves into the project on every change; these are for another computer, a teammate or a backup.
+
+- **Download a Copy** downloads the preferences in use as a dated file (`hotbox_original_2026-10-22_0915.json`). Nothing changes in Hotbox.
+- **Load from File…** opens a Hotbox `.json` and never overwrites anything. Choose:
+  - **Use it in this project**: it is added as a **new version** (`hotbox_v2.json`, `hotbox_v3.json`, …) and used right away. `hotbox.json` stays your **Original**, and **Settings → Version** steps back to it any time.
+  - **Set a project for it…**: pick a folder (or a **Recent** one) and Hotbox switches to it with these preferences. In an empty folder they become its `hotbox.json`; a folder that already has preferences keeps them and gets the file as its next version.
+- **Reset Bars** puts every bar back to its default buttons (saved buttons stay saved).
+
+A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
 
 ## 🗂️ Shared libraries
 A shared library is another folder of saved buttons (a studio's shared drive, one folder per show) whose buttons show up beside your own: in the <kbd>N</kbd> drawer, grouped by library, and in **Settings → Saved Buttons**, ready to drag onto any bar.
