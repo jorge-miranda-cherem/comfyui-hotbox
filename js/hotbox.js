@@ -59,6 +59,7 @@
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
     customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
+    customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
     hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
@@ -879,6 +880,12 @@
       '.shb-tinted > .shb-pin-dot{background:var(--shb-tint) !important}',
       '.shb-tinted > .shb-ico,.shb-tinted > .shb-tpl-ico .shb-ico{color:var(--shb-tint) !important}',
       '.shb-tinted > .shb-num{color:var(--shb-tint) !important;box-shadow:inset 0 0 0 1.5px var(--shb-tint)}',
+      /* Whole button: a soft wash of the color and a thin ring of it, so the label stays easy to read */
+      '.shb-tinted.shb-filled{background:color-mix(in srgb,var(--shb-tint) 26%,transparent) !important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--shb-tint) 60%,transparent) !important;color:#fff !important}',
+      '.shb-tinted.shb-filled:hover{background:color-mix(in srgb,var(--shb-tint) 38%,transparent) !important}',
+      '.shb-ebtn-seg.shb-off{opacity:.4;pointer-events:none}',
+      /* Quiet's numbers are bare digits: the color alone marks them, a ring would sit on the digit */
+      '.shb-quiet .shb-tinted > .shb-num{box-shadow:none !important}',
       '.shb-ebtn-prev{display:flex;justify-content:center;padding:14px 8px;border-radius:8px;background:#161616;border:1px solid #2c2c2c}',
       '.shb-ebtn-prev .shb-btn{pointer-events:none;gap:8px;padding:8px 13px;border-radius:10px;background:#262626;color:#e6e6e6;font:500 13px/1 Inter,system-ui,sans-serif}',
       '.shb-ebtn-prev .shb-pin-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#5aa2f0}',
@@ -4043,7 +4050,8 @@
 
   function barTintAttrs(uid) {
     var c = barTint(uid);
-    return c ? { cls: ' shb-tinted', style: ' style="--shb-tint:' + esc(c) + '"' } : { cls: '', style: '' };
+    var fill = c && S.customFill && S.customFill[uid];
+    return c ? { cls: ' shb-tinted' + (fill ? ' shb-filled' : ''), style: ' style="--shb-tint:' + esc(c) + '"' } : { cls: '', style: '' };
   }
 
   function actCollapseNode(node) {
@@ -6252,9 +6260,9 @@
     }
   }
 
-  /* Edit mode: a tap on a button opens this. Its name, and a color for its mark (the dot, icon or number at its
-     start), shown on a copy of the button as it changes. The color is a tag for the button only: the button
-     keeps its own look, and nodes keep theirs */
+  /* Edit mode: a tap on a button opens this. Its name, and a color: on its mark (the dot, icon or number at its
+     start) or on the whole button, shown on a copy of the button as it changes. The color is for the button
+     only: nodes keep theirs */
   function promptRenameBarItem(uid, node, btnEl) {
     var item = resolveBarItem(uid, node);
     if (!item) return;
@@ -6265,6 +6273,7 @@
     } catch (e) {}
     if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' : '<i class="shb-pin-dot"></i>');
     var cur = (S.customColors && S.customColors[uid]) || '';
+    var fill = !!(S.customFill && S.customFill[uid]);
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
     bg.innerHTML =
@@ -6278,7 +6287,11 @@
             return '<i class="shb-swatch' + (on ? ' shb-on' : '') + '" data-rbi-col="' + (i ? esc(sw.name) : '') + '" style="background:' + sw.dot + '" title="' + esc(i ? sw.name : 'Default color') + '"></i>';
           }).join('') +
         '</div></div>' +
-        '<div class="shb-ebtn-note">The color marks this button in the bars, so you can find it at a glance. Nodes keep their own colors.</div>' +
+        '<div class="shb-ebtn-row"><span>Paint</span><span class="shb-seg shb-ebtn-seg" data-rbi-seg>' +
+          '<button type="button" data-rbi-fill="0" title="Only its dot, icon or number">Mark</button>' +
+          '<button type="button" data-rbi-fill="1" title="The whole button, in a soft shade of the color">Whole button</button>' +
+        '</span></div>' +
+        '<div class="shb-ebtn-note">Pick a color, then paint just the mark or the whole button, so you can find it at a glance. Nodes keep their own colors.</div>' +
         '<div style="display:flex;justify-content:space-between;gap:8px">' +
           '<button class="shb-btn" data-rbi-reset title="Back to its own name and color">Reset</button>' +
           '<div style="display:flex;gap:6px">' +
@@ -6294,40 +6307,52 @@
       var c = '';
       for (var i = 1; cur && i < HB_SWATCHES.length; i++) if (HB_SWATCHES[i].name === cur) c = HB_SWATCHES[i].dot;
       prev.classList.toggle('shb-tinted', !!c);
+      prev.classList.toggle('shb-filled', !!c && fill);
       prev.style.setProperty('--shb-tint', c || '');
       Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-col]'), function (el) {
         el.classList.toggle('shb-on', el.getAttribute('data-rbi-col') === cur);
       });
+      /* with the default color there is nothing to paint */
+      bg.querySelector('[data-rbi-seg]').classList.toggle('shb-off', !c);
+      Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-fill]'), function (el) {
+        el.classList.toggle('shb-on', (el.getAttribute('data-rbi-fill') === '1') === fill);
+      });
     }
     paintPrev();
     function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
-    function saveBtn(val, col) {
+    function saveBtn(val, col, whole) {
       if (!S.customLabels || typeof S.customLabels !== 'object') S.customLabels = {};
       if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
+      if (!S.customFill || typeof S.customFill !== 'object') S.customFill = {};
       if (val && val !== item.label || val && S.customLabels[uid]) S.customLabels[uid] = val;
       else if (!val) delete S.customLabels[uid];
       if (col) S.customColors[uid] = col;
       else delete S.customColors[uid];
+      if (col && whole) S.customFill[uid] = true;
+      else delete S.customFill[uid];
       save();
       close();
       hbPaint();
     }
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
     bg.addEventListener('click', function (ev) {
-      var sw = ev.target && ev.target.closest ? ev.target.closest('[data-rbi-col]') : null;
-      if (!sw) return;
-      cur = sw.getAttribute('data-rbi-col');
+      var t = ev.target && ev.target.closest ? ev.target : null;
+      var sw = t && t.closest('[data-rbi-col]');
+      var fb = t && t.closest('[data-rbi-fill]');
+      if (sw) cur = sw.getAttribute('data-rbi-col');
+      else if (fb) fill = fb.getAttribute('data-rbi-fill') === '1';
+      else return;
       paintPrev();
     });
     inp.oninput = function () {
       bg.querySelector('[data-rbi-plbl]').textContent = String(inp.value || '').trim() || item.label;
     };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
-    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', ''); };
-    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur); };
+    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false); };
+    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur, fill); };
     inp.onkeydown = function (ev) {
       ev.stopPropagation();
-      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur); }
+      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur, fill); }
       if (ev.key === 'Escape') { ev.preventDefault(); close(); }
     };
     try { inp.focus(); inp.select(); } catch (e) {}
@@ -6362,6 +6387,7 @@
     if (grp) delete S.hbGroups[gid];
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
+    if (S.customFill) delete S.customFill[uid];
     delete HB.grpOpen[gid];
     setBarUids(barName, node, list);
     return kids.length;
@@ -8385,6 +8411,7 @@
           delete HB.grpOpen[u.slice(4)];
           if (S.customLabels) delete S.customLabels[u];
           if (S.customColors) delete S.customColors[u];
+          if (S.customFill) delete S.customFill[u];
         } else acc.push(u);
         return acc;
       }, []);
@@ -9316,6 +9343,7 @@
           S.customBotBar = null;
           S.customLabels = {};
           S.customColors = {};
+          S.customFill = {};
           save();
           hbPaint();
           setStatus('ok', '↺ Hotbox bars restored to defaults');
@@ -10433,6 +10461,7 @@
     Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
+    if (S.customFill) delete S.customFill[uid];
     save();
     setStatus('ok', 'Deleted the saved button "' + t.name + '"');
   }
@@ -11363,6 +11392,7 @@
           S.customBotBar = null;
           S.customLabels = {};
           S.customColors = {};
+          S.customFill = {};
           save();
           if (HB.el) hbPaint();
           setStatus('ok', '✓ Custom bars reset to defaults');
