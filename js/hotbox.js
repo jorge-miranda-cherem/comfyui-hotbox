@@ -102,7 +102,33 @@
       }
       S.hbLeaders = false;
     }
-    S.cfgRev = 3;
+    /* Moving a button up into another bar (the bottom bar's into the dock, say) could empty the bar it left.
+       Once: a bottom bar left without its everyday buttons gets its own buttons back (not the ones that live in
+       another bar now) and your saved buttons, and an emptied context bar goes back to its default */
+    if (rev < 4) {
+      var elsewhere = {};
+      [S.customAddBySig, S.customToolsBar].forEach(function (m) {
+        Object.keys(m && typeof m === 'object' ? m : {}).forEach(function (k) {
+          (Array.isArray(m[k]) ? m[k] : []).forEach(function (u) { elsewhere[u] = 1; });
+        });
+      });
+      var bot = S.customBotBar;
+      if (Array.isArray(bot) && !['tool:prev', 'tool:bypass', 'tool:magic', 'tool:render'].some(function (u) { return bot.indexOf(u) >= 0; })) {
+        var fixed = BOT_DEFAULTS.filter(function (u) { return !elsewhere[u]; });
+        bot.forEach(function (u) { if (fixed.indexOf(u) < 0) fixed.push(u); });
+        (S.templates || []).forEach(function (t) {
+          var tu = t && t.id ? 'tpl:' + t.id : '';
+          if (tu && fixed.indexOf(tu) < 0 && !elsewhere[tu]) fixed.push(tu);
+        });
+        S.customBotBar = fixed;
+      }
+      if (S.customToolsBar && typeof S.customToolsBar === 'object') {
+        Object.keys(S.customToolsBar).forEach(function (k) {
+          if (Array.isArray(S.customToolsBar[k]) && !S.customToolsBar[k].length) delete S.customToolsBar[k];
+        });
+      }
+    }
+    S.cfgRev = 4;
     if (!Array.isArray(S.templates)) S.templates = [];
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
@@ -411,6 +437,10 @@
       if (typeof onDone === 'function') onDone();
     });
   }
+
+  /* The bottom bar's own buttons, in their order */
+  var BOT_DEFAULTS = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
+    'tool:swappair', 'tool:magic', 'tool:render'];
 
   function hbKeyRefused(key, code) {
     var no = {
@@ -6217,8 +6247,7 @@
     if (barName === 'bot') {
       /* Every action is listed and each one shows only where it applies (resolveBarItem), so the first
          customization, wherever it happens, keeps them all */
-      var out = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
-        'tool:swappair', 'tool:magic', 'tool:render'];
+      var out = BOT_DEFAULTS.slice();
       hbPinList(node).forEach(function (t) {
         var u = 'node:' + t;
         if (out.indexOf(u) < 0) out.push(u);
@@ -8409,7 +8438,7 @@
       return out;
     }
     ['add', 'tools', 'bot'].forEach(function (barName) {
-      var container = rootEl.querySelector('[data-hb-bar="' + barName + '"]');
+      var container = rootEl.querySelector('.shb-bar-items[data-hb-bar="' + barName + '"]');
       if (!container) return;
       dom[barName] = uidsOf(container);
       shown = shown.concat(dom[barName]);
@@ -8452,8 +8481,8 @@
          never reshuffles it for another */
       old.forEach(function (u, i) {
         if (u === removedUid || inTrays.indexOf(u) >= 0 || keep.indexOf(u) >= 0) return;
-        /* one that would show here and is gone was moved to another bar; one that does not show here stays */
-        if (resolveBarItem(u, node, false, barName)) return;
+        /* in another bar now and it would show here: it was moved there. Anything else stays where it was */
+        if (shown.indexOf(u) >= 0 && resolveBarItem(u, node, false, barName)) return;
         var at = 0;
         for (var j = i - 1; j >= 0; j--) {
           var k = keep.indexOf(old[j]);
@@ -8639,7 +8668,7 @@
       e.preventDefault();
       var dWrap = DRAWER_DRAG.wrap;
       var px = e.clientX, py = e.clientY;
-      var botC = HB.el.querySelector('[data-hb-bar="bot"]');
+      var botC = HB.el.querySelector('.shb-bar-items[data-hb-bar="bot"]');
       var target = null, before = null;
       DRAWER_DRAG.merge = null;
       DRAWER_DRAG.tray = null;
@@ -10315,7 +10344,7 @@
     /* ghosts first, while the nodes are still on screen */
     var root = mgOverlay();
     var ghosts = nodes.map(function (n) { return mgGhost(root, n); }).filter(Boolean);
-    var bar = HB.el && HB.el.querySelector('[data-hb-bar="bot"]');
+    var bar = HB.el && HB.el.querySelector('.shb-bar-items[data-hb-bar="bot"]');
     var slot = null, chip = null;
     if (bar && ghosts.length) {
       slot = document.createElement('span');
