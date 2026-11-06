@@ -82,7 +82,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 While the hotbox is open it owns these keys, so other extensions (or ComfyUI keybindings) on the same keys don't fire at the same time.
 
 ### Power Tools
-Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Swap Nodes, Save as Button, Bypass All APIs, Zoom to Selection and Arrange Nodes are listed in **Settings → Power Tools** (hover one for what it does). **Drag any of them straight onto a hotbox bar**; a pinned tool only shows up on the nodes it works on.
+Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Selected, Super Stitch, Swap Nodes, Save as Button, Bypass All APIs, Zoom to Selection and Arrange Nodes are listed in **Settings → Power Tools** (hover one for what it does). **Drag any of them straight onto any hotbox bar**, saved buttons too (from **Settings → Saved Buttons**). What you place stays where you put it: on a node it does not work on (Swap Nodes with one node selected, Load in Canvas on a Load Image) it is dimmed, and a click says when it works. The bottom bar is the same on every node; the top bar and the context bar are kept per kind of node, so a button placed there shows on nodes like the one it was placed on. The buttons that come with Hotbox still show only where they apply, so the bars stay short, and editing a bar on one node never moves the buttons hidden there.
 
 ---
 
