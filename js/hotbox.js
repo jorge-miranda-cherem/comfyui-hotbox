@@ -59,6 +59,8 @@
     customBotBar: null,     /* array of item uids for Bottom Bar */
     customLabels: {},       /* user custom short labels by uid */
     customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
+    customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
+    hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
     hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
@@ -879,6 +881,16 @@
       '.shb-tinted > .shb-pin-dot{background:var(--shb-tint) !important}',
       '.shb-tinted > .shb-ico,.shb-tinted > .shb-tpl-ico .shb-ico{color:var(--shb-tint) !important}',
       '.shb-tinted > .shb-num{color:var(--shb-tint) !important;box-shadow:inset 0 0 0 1.5px var(--shb-tint)}',
+      /* Whole button: a soft wash of the color and a thin ring of it, so the label stays easy to read */
+      '.shb-tinted.shb-filled{background:color-mix(in srgb,var(--shb-tint) 26%,transparent) !important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--shb-tint) 60%,transparent) !important;color:#fff !important}',
+      '.shb-tinted.shb-filled:hover{background:color-mix(in srgb,var(--shb-tint) 38%,transparent) !important}',
+      '.shb-ebtn-seg.shb-off{opacity:.4;pointer-events:none}',
+      /* a power tool you placed where it does not apply right now: it stays, dimmed, and says when it works */
+      '.shb-btn.shb-na{opacity:.38}',
+      '.shb-btn.shb-na:hover{opacity:.62}',
+      '.shb-editing .shb-btn.shb-na{opacity:1}',
+      /* Quiet's numbers are bare digits: the color alone marks them, a ring would sit on the digit */
+      '.shb-quiet .shb-tinted > .shb-num{box-shadow:none !important}',
       '.shb-ebtn-prev{display:flex;justify-content:center;padding:14px 8px;border-radius:8px;background:#161616;border:1px solid #2c2c2c}',
       '.shb-ebtn-prev .shb-btn{pointer-events:none;gap:8px;padding:8px 13px;border-radius:10px;background:#262626;color:#e6e6e6;font:500 13px/1 Inter,system-ui,sans-serif}',
       '.shb-ebtn-prev .shb-pin-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#5aa2f0}',
@@ -4043,7 +4055,8 @@
 
   function barTintAttrs(uid) {
     var c = barTint(uid);
-    return c ? { cls: ' shb-tinted', style: ' style="--shb-tint:' + esc(c) + '"' } : { cls: '', style: '' };
+    var fill = c && S.customFill && S.customFill[uid];
+    return c ? { cls: ' shb-tinted' + (fill ? ' shb-filled' : ''), style: ' style="--shb-tint:' + esc(c) + '"' } : { cls: '', style: '' };
   }
 
   function actCollapseNode(node) {
@@ -5854,9 +5867,56 @@
     }).map(function (id) { return mt[id]; }).filter(Boolean);
   }
 
+  /* When a tool cannot run on this node (or the canvas): a short line saying when it does, or '' */
+  function hbToolWhy(tid, node, sel) {
+    if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
+      return 'works on a node: open the hotbox over one';
+    }
+    if (node && tid === 'prev' && imageOutSlot(node) < 0 && !isPreviewNode(node)) return 'works on nodes with an image output';
+    if (node && tid === 'seedtoggle' && !seedControls(node).length) return 'works on nodes with a seed';
+    if (tid === 'loadcanvas' && !(hbHasImage(node) || isPreviewNode(node) || outKind(node) === 'save')) {
+      return 'works on Preview, Save Image and Save Video nodes, or a node showing an image';
+    }
+    if (hbToolIsSelf(tid, node)) return 'this node already is one';
+    if (tid === 'swappair' && sel.length !== 2) return 'select two nodes to swap them';
+    if (tid === 'magic' && !sel.length && !node) return 'select some nodes first';
+    if (tid === 'apibypass' && !allNodes(getGraph()).some(function (n) {
+      return !!(SRV.api && SRV.api[String(n.type || n.comfyClass || '')]);
+    })) return 'works when the workflow has API nodes';
+    return '';
+  }
+
+  /* kept per bar: a tool placed on the top bar stays there, and the bottom bar's own copy still hides where it
+     does not apply */
+  function hbKept(uid, bar) {
+    return !!(bar && S.hbKeep && S.hbKeep[bar + ':' + uid]);
+  }
+
+  /* a power tool the user put on a bar themselves stays in that bar, dimmed where it does not apply */
+  function hbKeepUid(uid, bar) {
+    if (!bar || !/^tool:/.test(String(uid || ''))) return;
+    if (!S.hbKeep || typeof S.hbKeep !== 'object') S.hbKeep = {};
+    S.hbKeep[bar + ':' + uid] = true;
+  }
+
+  /* once it is in none of that bar's lists (one per kind of node) and in no group, it is forgotten there */
+  function hbForgetIfGone(uid) {
+    if (!S.hbKeep) return;
+    var inGroup = Object.keys(S.hbGroups || {}).some(function (k) { return ((S.hbGroups[k] || {}).items || []).indexOf(uid) >= 0; });
+    var byBar = { bot: [S.customBotBar || []], add: [], tools: [] };
+    Object.keys(S.customAddBySig || {}).forEach(function (k) { byBar.add.push(S.customAddBySig[k] || []); });
+    Object.keys(S.customToolsBar || {}).forEach(function (k) { byBar.tools.push(S.customToolsBar[k] || []); });
+    Object.keys(byBar).forEach(function (bar) {
+      var there = byBar[bar].some(function (l) { return Array.isArray(l) && l.indexOf(uid) >= 0; });
+      if (!there && !inGroup) delete S.hbKeep[bar + ':' + uid];
+    });
+  }
+
   /* Resolve any bar item uid ('model:...', 'node:...', 'tool:...', 'tpl:...') into a unified renderable & executable
-     item. `loose` (a power tool dragged in from Settings) skips the "only where it applies" filter. */
-  function resolveBarItem(uid, node, loose) {
+     item. `loose` (a power tool dragged in from Settings) skips the "only where it applies" filter. A tool the
+     user placed on a bar themselves (hbKeep) is never hidden: where it does not apply it comes back with `off`,
+     the reason, and the bar shows it dimmed. */
+  function resolveBarItem(uid, node, loose, bar) {
     if (!uid) return null;
     var u = String(uid);
     var customLbl = (S.customLabels && S.customLabels[u]) || '';
@@ -5867,7 +5927,7 @@
     if (u.indexOf('grp:') === 0) {
       var gid = u.slice(4), grp = grpById(gid);
       if (!grp) return null;
-      var kids = (grp.items || []).map(function (k) { return /^grp:/.test(k) ? null : resolveBarItem(k, node, loose); }).filter(Boolean);
+      var kids = (grp.items || []).map(function (k) { return /^grp:/.test(k) ? null : resolveBarItem(k, node, loose, bar); }).filter(Boolean);
       /* an empty group (or one whose buttons do not apply here) waits for edit mode */
       if (!kids.length && !HB.editMode) return null;
       return {
@@ -5883,36 +5943,9 @@
       var tid = u.slice(5);
       /* A power tool switched off in Settings is gone everywhere */
       if (!hbToolOn(tid)) return null;
-      /* Hide node-specific tools on empty canvas (unless in edit mode) to prevent bottom bar clutter */
-      if (!HB.editMode && !loose) {
-        if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
-          return null;
-        }
-        if (node && tid === 'prev' && imageOutSlot(node) < 0 && !isPreviewNode(node)) {
-          return null;
-        }
-        if (node && tid === 'seedtoggle' && !seedControls(node).length) {
-          return null;
-        }
-        /* on any Preview / Save Image / Save Video, or on a node already showing an image or a video */
-        if (tid === 'loadcanvas' && !(hbHasImage(node) || isPreviewNode(node) || outKind(node) === 'save')) {
-          return null;
-        }
-        if (hbToolIsSelf(tid, node)) {
-          return null;
-        }
-        if (tid === 'swappair' && sel.length !== 2) {
-          return null;
-        }
-        if (tid === 'magic' && !sel.length && !node) {
-          return null;
-        }
-        if (tid === 'apibypass' && !allNodes(getGraph()).some(function (n) {
-          return !!(SRV.api && SRV.api[String(n.type || n.comfyClass || '')]);
-        })) {
-          return null;
-        }
-      }
+      /* a tool shows only where it applies (the bars stay short); one the user placed stays, dimmed */
+      var why = (!HB.editMode && !loose) ? hbToolWhy(tid, node, sel) : '';
+      if (why && !hbKept(u, bar)) return null;
       var mt = getMasterTools(node);
       var t = mt[tid];
       if (!t) return null;
@@ -5920,8 +5953,9 @@
         uid: u,
         kind: 'tool',
         id: tid,
+        off: why,
         label: customLbl || t.label,
-        title: t.label,
+        title: t.label + (why ? ' · ' + why : ''),
         icon: t.icon || 'plus',
         kbd: t.kbd || '',
         cls: t.cls || '',
@@ -6252,9 +6286,9 @@
     }
   }
 
-  /* Edit mode: a tap on a button opens this. Its name, and a color for its mark (the dot, icon or number at its
-     start), shown on a copy of the button as it changes. The color is a tag for the button only: the button
-     keeps its own look, and nodes keep theirs */
+  /* Edit mode: a tap on a button opens this. Its name, and a color: on its mark (the dot, icon or number at its
+     start) or on the whole button, shown on a copy of the button as it changes. The color is for the button
+     only: nodes keep theirs */
   function promptRenameBarItem(uid, node, btnEl) {
     var item = resolveBarItem(uid, node);
     if (!item) return;
@@ -6265,6 +6299,7 @@
     } catch (e) {}
     if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' : '<i class="shb-pin-dot"></i>');
     var cur = (S.customColors && S.customColors[uid]) || '';
+    var fill = !!(S.customFill && S.customFill[uid]);
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
     bg.innerHTML =
@@ -6278,7 +6313,11 @@
             return '<i class="shb-swatch' + (on ? ' shb-on' : '') + '" data-rbi-col="' + (i ? esc(sw.name) : '') + '" style="background:' + sw.dot + '" title="' + esc(i ? sw.name : 'Default color') + '"></i>';
           }).join('') +
         '</div></div>' +
-        '<div class="shb-ebtn-note">The color marks this button in the bars, so you can find it at a glance. Nodes keep their own colors.</div>' +
+        '<div class="shb-ebtn-row"><span>Paint</span><span class="shb-seg shb-ebtn-seg" data-rbi-seg>' +
+          '<button type="button" data-rbi-fill="0" title="Only its dot, icon or number">Mark</button>' +
+          '<button type="button" data-rbi-fill="1" title="The whole button, in a soft shade of the color">Whole button</button>' +
+        '</span></div>' +
+        '<div class="shb-ebtn-note">Pick a color, then paint just the mark or the whole button, so you can find it at a glance. Nodes keep their own colors.</div>' +
         '<div style="display:flex;justify-content:space-between;gap:8px">' +
           '<button class="shb-btn" data-rbi-reset title="Back to its own name and color">Reset</button>' +
           '<div style="display:flex;gap:6px">' +
@@ -6294,40 +6333,52 @@
       var c = '';
       for (var i = 1; cur && i < HB_SWATCHES.length; i++) if (HB_SWATCHES[i].name === cur) c = HB_SWATCHES[i].dot;
       prev.classList.toggle('shb-tinted', !!c);
+      prev.classList.toggle('shb-filled', !!c && fill);
       prev.style.setProperty('--shb-tint', c || '');
       Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-col]'), function (el) {
         el.classList.toggle('shb-on', el.getAttribute('data-rbi-col') === cur);
       });
+      /* with the default color there is nothing to paint */
+      bg.querySelector('[data-rbi-seg]').classList.toggle('shb-off', !c);
+      Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-fill]'), function (el) {
+        el.classList.toggle('shb-on', (el.getAttribute('data-rbi-fill') === '1') === fill);
+      });
     }
     paintPrev();
     function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
-    function saveBtn(val, col) {
+    function saveBtn(val, col, whole) {
       if (!S.customLabels || typeof S.customLabels !== 'object') S.customLabels = {};
       if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
+      if (!S.customFill || typeof S.customFill !== 'object') S.customFill = {};
       if (val && val !== item.label || val && S.customLabels[uid]) S.customLabels[uid] = val;
       else if (!val) delete S.customLabels[uid];
       if (col) S.customColors[uid] = col;
       else delete S.customColors[uid];
+      if (col && whole) S.customFill[uid] = true;
+      else delete S.customFill[uid];
       save();
       close();
       hbPaint();
     }
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
     bg.addEventListener('click', function (ev) {
-      var sw = ev.target && ev.target.closest ? ev.target.closest('[data-rbi-col]') : null;
-      if (!sw) return;
-      cur = sw.getAttribute('data-rbi-col');
+      var t = ev.target && ev.target.closest ? ev.target : null;
+      var sw = t && t.closest('[data-rbi-col]');
+      var fb = t && t.closest('[data-rbi-fill]');
+      if (sw) cur = sw.getAttribute('data-rbi-col');
+      else if (fb) fill = fb.getAttribute('data-rbi-fill') === '1';
+      else return;
       paintPrev();
     });
     inp.oninput = function () {
       bg.querySelector('[data-rbi-plbl]').textContent = String(inp.value || '').trim() || item.label;
     };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
-    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', ''); };
-    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur); };
+    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false); };
+    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur, fill); };
     inp.onkeydown = function (ev) {
       ev.stopPropagation();
-      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur); }
+      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur, fill); }
       if (ev.key === 'Escape') { ev.preventDefault(); close(); }
     };
     try { inp.focus(); inp.select(); } catch (e) {}
@@ -6362,6 +6413,7 @@
     if (grp) delete S.hbGroups[gid];
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
+    if (S.customFill) delete S.customFill[uid];
     delete HB.grpOpen[gid];
     setBarUids(barName, node, list);
     return kids.length;
@@ -6629,6 +6681,7 @@
     if (barName === 'tools' && /^(cropedit|paintedit|lupa)$/.test(item.id)) btnCls += ' shb-btn-primary';
     if (item.id === 'apibypass') btnCls += ' shb-danger';
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
+    if (item.off) btnCls += ' shb-na';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
       : (isTpl ? '<span class="shb-tpl-ico">' + ico('sparkles', hbIsFluid() ? 15 : 13) + '</span>'
         : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13)));
@@ -7230,9 +7283,9 @@
     try {
       var node = HB.node;
       var tools = hbContextTools(node);
-      var addItems = hbUngrouped(getBarUids('add', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
-      var toolItems = hbUngrouped(getBarUids('tools', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
-      var botItems = hbUngrouped(getBarUids('bot', node).map(function (u) { return resolveBarItem(u, node); }).filter(Boolean));
+      var addItems = hbUngrouped(getBarUids('add', node).map(function (u) { return resolveBarItem(u, node, false, 'add'); }).filter(Boolean));
+      var toolItems = hbUngrouped(getBarUids('tools', node).map(function (u) { return resolveBarItem(u, node, false, 'tools'); }).filter(Boolean));
+      var botItems = hbUngrouped(getBarUids('bot', node).map(function (u) { return resolveBarItem(u, node, false, 'bot'); }).filter(Boolean));
       var isAdd = ndAdds(node);
       var sel = selNodes();
       var isPair = sel.length >= 2 && isAdd;
@@ -7244,6 +7297,7 @@
       addItems.slice(0, 9).forEach(function (it, idx) {
         var k = String(idx + 1);
         HB.keyMap[k] = function () {
+          if (it.off) { setStatus('ok', it.label + ': ' + it.off); return; }
           if (!it.stayOpen) hbClose();
           if (it.run) it.run();
         };
@@ -7262,7 +7316,7 @@
       if (hbToolOn('zoom')) HB.keyMap['.'] = function () { hbClose(); actDotZoom(node); };
       if (sel.length === 2) HB.keyMap['w'] = function () { hbClose(); actSwapPair(); };
       if (sel.length || node) HB.keyMap['x'] = function () { actMagic(node); };
-      if (toolItems[0] && toolItems[0].run) {
+      if (toolItems[0] && toolItems[0].run && !toolItems[0].off) {
         HB.keyMap['c'] = function () {
           if (!toolItems[0].stayOpen) hbClose();
           toolItems[0].run();
@@ -8345,7 +8399,7 @@
      are kept unless they were just removed or moved to another bar. */
   function commitDomBarsOrder(rootEl, node, removedUid) {
     if (!rootEl) return;
-    var dom = {}, trays = {}, shown = [];
+    var dom = {}, trays = {}, shown = [], inTrays = [];
     function uidsOf(box, noGroups) {
       var out = [];
       Array.prototype.forEach.call(box.children, function (el) {
@@ -8364,6 +8418,7 @@
         var k = uidsOf(tr, true);
         trays[tr.getAttribute('data-hb-gtray')] = k;
         shown = shown.concat(k);
+        inTrays = inTrays.concat(k);
       });
     });
     Object.keys(trays).forEach(function (gid) {
@@ -8385,14 +8440,26 @@
           delete HB.grpOpen[u.slice(4)];
           if (S.customLabels) delete S.customLabels[u];
           if (S.customColors) delete S.customColors[u];
+          if (S.customFill) delete S.customFill[u];
         } else acc.push(u);
         return acc;
       }, []);
     });
     Object.keys(dom).forEach(function (barName) {
       var keep = dom[barName];
-      getBarUids(barName, node).forEach(function (u) {
-        if (u !== removedUid && shown.indexOf(u) < 0) keep.push(u);
+      var old = getBarUids(barName, node);
+      /* a button that does not show here goes back after the one it followed, so editing the bar on one node
+         never reshuffles it for another */
+      old.forEach(function (u, i) {
+        if (u === removedUid || inTrays.indexOf(u) >= 0 || keep.indexOf(u) >= 0) return;
+        /* one that would show here and is gone was moved to another bar; one that does not show here stays */
+        if (resolveBarItem(u, node, false, barName)) return;
+        var at = 0;
+        for (var j = i - 1; j >= 0; j--) {
+          var k = keep.indexOf(old[j]);
+          if (k >= 0) { at = k + 1; break; }
+        }
+        keep.splice(at, 0, u);
       });
       setBarUids(barName, node, keep);
     });
@@ -8453,6 +8520,12 @@
       if (n && n.pos && gy < n.pos[1] && gy >= n.pos[1] - th) return n;
     } catch (err) {}
     return null;
+  }
+
+  /* why a just-placed button is dimmed here, or '' */
+  function dItem2Off(uid, bar) {
+    var it = resolveBarItem(uid, HB.node, false, bar);
+    return (it && it.off) || '';
   }
 
   function nodeTypeOf(node) {
@@ -8726,6 +8799,11 @@
         hbSetBotDrop(false);
         var dw = dd.wrap;
         hbGrpHot(null);
+        /* the bar it lands in: a group's tray or the button it is grouped with sit in a bar too */
+        var dLand = (dd.tray && dd.tray.isConnected && dd.tray.closest('[data-hb-bar]'))
+          || (dd.merge && dd.merge.isConnected && dd.merge)
+          || (dd.inBar && dw && dw.parentNode && dw.parentNode.closest && dw.parentNode.closest('[data-hb-bar]'));
+        if (dLand) hbKeepUid(dd.uid, dLand.getAttribute('data-hb-bar'));
         if (dd.tray && dd.tray.isConnected && dw) {
           dw.classList.remove('shb-drag-src');
           dd.tray.appendChild(dw);
@@ -8742,12 +8820,18 @@
           setStatus('ok', 'Grouped with "' + (dd.item ? dd.item.label : 'button') + '" · drop more on it');
         } else if (dd.inBar && dw && dw.parentNode && (dw.parentNode.hasAttribute('data-hb-bar') || dw.parentNode.hasAttribute('data-hb-gtray'))) {
           dw.classList.remove('shb-drag-src');
+          /* the bar it landed in (the dragged copy itself carries a bar name of its own) */
+          var dBox = dw.parentNode && dw.parentNode.closest('[data-hb-bar]');
+          var dBar = dBox && dBox.getAttribute('data-hb-bar');
           commitDomBarsOrder(HB.el, HB.node);
           hbPaint();
           hbFlashUid(dd.uid);
-          /* a power tool pinned where it does not apply waits, hidden, for the nodes it works on */
-          var shown = !!HB.el.querySelector('[data-hb-bar] > .shb-item-wrap[data-hb-uid="' + cssEsc(dd.uid) + '"]');
-          setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"' + (shown ? '' : ' · it shows up on the nodes it works on'));
+          /* where it went: the bottom bar is the same everywhere, the other two follow the kind of node */
+          var dHere = dItem2Off(dd.uid, dBar);
+          setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"' +
+            (dBar === 'bot' ? ' to the bottom bar (every node)'
+              : ' to the ' + (dBar === 'add' ? 'top bar' : 'context bar') + ' of ' + (HB.node ? 'nodes like "' + (HB.node.title || nodeTypeOf(HB.node)) + '"' : 'the canvas')) +
+            (dHere ? ' · dimmed here: ' + dHere : ''));
         } else {
           if (dw && dw.parentNode) dw.parentNode.removeChild(dw);
           /* a saved button let go over the canvas adds its nodes right there */
@@ -8813,6 +8897,7 @@
       hbPoof(e.clientX, e.clientY, name);
       if (/^grp:/.test(uid)) grpDissolve(w.getAttribute('data-hb-bar') || 'bot', uid, HB.node);
       else commitDomBarsOrder(HB.el, HB.node, uid);
+      hbForgetIfGone(uid);
       hbPaint();
       setStatus('ok', /^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Removed "' + name + '" · Reset (edit mode) restores the defaults');
     } else if (lp.tray && lp.tray.isConnected && !w.contains(lp.tray)) {
@@ -8832,6 +8917,8 @@
       setStatus('ok', 'Grouped "' + (mLbl ? mLbl.textContent : '') + '" + "' + name + '" · drop more on it · tap it in edit mode to rename');
     } else {
       w.classList.remove('shb-drag-src', 'shb-collapsed');
+      var toBar = w.parentNode && w.parentNode.getAttribute && w.parentNode.getAttribute('data-hb-bar');
+      if (toBar && toBar !== w.getAttribute('data-hb-bar')) hbKeepUid(uid, toBar);
       commitDomBarsOrder(HB.el, HB.node);
       hbPaint();
     }
@@ -9124,6 +9211,7 @@
           } else {
             setBarUids(rmBar, HB.node, getBarUids(rmBar, HB.node).filter(function (u) { return u !== rmUid; }));
           }
+          hbForgetIfGone(rmUid);
           if (HB.el) hbPaint();
         }, 130);
         return;
@@ -9248,7 +9336,12 @@
       }
       if (runBtn) {
         var rUid = runBtn.getAttribute('data-hb-run');
-        var item = resolveBarItem(rUid, HB.node);
+        var rWrap = runBtn.closest('[data-hb-bar]');
+        var item = resolveBarItem(rUid, HB.node, false, rWrap && rWrap.getAttribute('data-hb-bar'));
+        if (item && item.off) {
+          setStatus('ok', item.label + ': ' + item.off);
+          return;
+        }
         if (item && item.run) {
           if (!item.stayOpen) hbClose();
           item.run();
@@ -9316,6 +9409,8 @@
           S.customBotBar = null;
           S.customLabels = {};
           S.customColors = {};
+          S.customFill = {};
+          S.hbKeep = {};
           save();
           hbPaint();
           setStatus('ok', '↺ Hotbox bars restored to defaults');
@@ -10433,6 +10528,7 @@
     Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
+    if (S.customFill) delete S.customFill[uid];
     save();
     setStatus('ok', 'Deleted the saved button "' + t.name + '"');
   }
@@ -10864,8 +10960,8 @@
     });
   }
 
-  /* The user's own power tools. Settings lists them as buttons to drag onto any hotbox bar; a pinned one only
-     shows up on the nodes it works on. */
+  /* The user's own power tools. Settings lists them as buttons to drag onto any hotbox bar; a placed one stays
+     there, dimmed on the nodes it does not work on (hbKeep). */
   var POWER_TOOLS = [
     { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
@@ -11108,7 +11204,7 @@
             '</div>' +
             setLabel('tools', 'Power Tools', true) +
             '<div>' +
-              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto a hotbox bar. A pinned tool only shows up on the nodes it works on (hover one to see what it does)">' +
+              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does)">' +
                 '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
                 ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
               '</button>' +
@@ -11363,6 +11459,8 @@
           S.customBotBar = null;
           S.customLabels = {};
           S.customColors = {};
+          S.customFill = {};
+          S.hbKeep = {};
           save();
           if (HB.el) hbPaint();
           setStatus('ok', '✓ Custom bars reset to defaults');
