@@ -25,6 +25,14 @@ Restart ComfyUI and press <kbd>`</kbd> over any node.
 
 <img src="docs/media/hotkeys.webp" alt="Open the hotbox on a Load Image, C to crop, pick 16:9, Shift+R to render" width="100%">
 
+**Find any node**
+
+<img src="docs/media/find-any-node.webp" alt="F opens the search on a VAE Decode: upscale lists the nodes that take its IMAGE first, Enter adds and wires one, then a typo, previw, still finds Preview Image" width="100%">
+
+It ranks like ComfyUI's own search: ComfyUI's nodes first, a check on the ones that fit the node's output,
+the pack's name beside a custom node. Typos and short forms (`previw`, `load img`, `ckpt`) still find it.
+<kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired.
+
 **Swap the model, keep the prompt**
 
 <img src="docs/media/swap-image-models.webp" alt="Nano Banana 2 swapped to other image models, the prompt carried over" width="100%">
@@ -49,6 +57,27 @@ Saved buttons can live in a shared folder too (a studio drive, one per show), so
 **Make it yours**
 
 <img src="docs/media/make-it-yours.webp" alt="Edit mode: buttons removed from every bar, Nano Banana pinned, a smaller hotbox" width="100%">
+
+**Color your buttons**
+
+<img src="docs/media/button-colors.webp" alt="Edit mode: Render Selected painted green, Bypass marked red, VAE Decode painted purple" width="100%">
+
+In edit mode, tap a button to rename it or give it a color: on its mark only, or on the whole button.
+
+**Put any tool anywhere**
+
+<img src="docs/media/tools-anywhere.webp" alt="Zoom dragged from the bottom bar up into the top bar, then Arrange Nodes dragged from Settings into the bottom bar" width="100%">
+
+Drag a button from one bar to another, or a power tool straight out of Settings. It stays where you put it, and
+where it does not apply it is dimmed.
+
+**One setup per project**
+
+<img src="docs/media/projects.png" alt="Settings: the Night Shift project, its hotbox.json, Set Project with Spring Ad and Brand Film under Recent, and Backup & Share" width="460">
+
+Everything you change is saved to a `hotbox.json`. **Set Project** points Hotbox at another folder (one per show,
+a synced drive, a team folder), and your recent projects are one click away. **Download a Copy** and
+**Load from File** take it to another computer or a teammate.
 
 ## More
 
