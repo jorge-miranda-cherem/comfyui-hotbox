@@ -105,6 +105,8 @@ On Linux it sits in your home folder, outside ComfyUI, so reinstalling or moving
 Because it lives on disk (not in the browser), your setup follows you to any browser and survives clearing the cache.
 
 ### Projects
+<img src="media/projects.png" alt="Settings: the Night Shift project, its hotbox.json, Set Project with Spring Ad and Brand Film under Recent, and Backup & Share" width="460">
+
 The folder your preferences live in is the **project**. **Settings → Project** shows its name (the folder's, or `Default`) and the full path of the file (**Copy Path** and **Copy Folder Path** put it on the clipboard).
 
 **Set Project…** points Hotbox at any other folder (one per show, a synced drive, a team folder…): preferences already in it load right away; a folder without any starts with a copy of yours. A path copied from Explorer or Finder works as it is, quotes and all, and so does the path of a `hotbox.json`. A folder called `hotbox` is named after the folder above it (`MyShow/hotbox` is the `MyShow` project). The projects you used last show up under **Recent**, one click each, and **Back to Default** returns to the default folder. The choice and the recent list are kept in `folder.json` in the default folder.
