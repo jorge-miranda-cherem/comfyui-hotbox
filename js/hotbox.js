@@ -102,7 +102,49 @@
       }
       S.hbLeaders = false;
     }
-    S.cfgRev = 3;
+    /* Moving a button up into another bar (the bottom bar's into the dock, say) could empty the bar it left.
+       Only the version that remembers placed tools (its files carry hbKeep) did it, so only its files are
+       mended, once: a bottom bar that lost its everyday buttons gets back its own buttons (not one you moved to
+       another bar), its groups, your saved buttons and, once the libraries load, the shared library's; an emptied
+       context bar goes back to its default */
+    HB_LIB_FIX = false;
+    if (rev < 4 && Object.prototype.hasOwnProperty.call(raw, 'hbKeep')) {
+      var keepM = (S.hbKeep && typeof S.hbKeep === 'object') ? S.hbKeep : {};
+      var placed = {}, listed = {};
+      var lists = function (m) {
+        return Object.keys(m && typeof m === 'object' ? m : {}).map(function (k) { return Array.isArray(m[k]) ? m[k] : []; });
+      };
+      lists(S.customAddBySig).forEach(function (l) { l.forEach(function (u) { placed[u] = listed[u] = 1; }); });
+      /* the context bars hold Preview of their own: only a tool you moved there counts as moved */
+      lists(S.customToolsBar).forEach(function (l) {
+        l.forEach(function (u) { listed[u] = 1; if (!/^tool:/.test(u) || keepM['tools:' + u]) placed[u] = 1; });
+      });
+      Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (g) {
+        ((S.hbGroups[g] || {}).items || []).forEach(function (u) { placed[u] = 1; });
+      });
+      var bot = S.customBotBar;
+      var onBot = function (u) { return bot.indexOf(u) >= 0; };
+      /* Render Selected shows everywhere, so it went every time */
+      if (Array.isArray(bot) && (!onBot('tool:render') || !['tool:prev', 'tool:bypass', 'tool:magic'].some(onBot))) {
+        var fixed = BOT_DEFAULTS.filter(function (u) { return onBot(u) || !placed[u]; });
+        bot.forEach(function (u) { if (fixed.indexOf(u) < 0) fixed.push(u); });
+        Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (g) {
+          if (!listed['grp:' + g] && fixed.indexOf('grp:' + g) < 0) fixed.push('grp:' + g);
+        });
+        (Array.isArray(S.templates) ? S.templates : []).forEach(function (t) {
+          var tu = t && t.id ? 'tpl:' + t.id : '';
+          if (tu && fixed.indexOf(tu) < 0 && !placed[tu]) fixed.push(tu);
+        });
+        S.customBotBar = fixed;
+        HB_LIB_FIX = true;
+      }
+      if (S.customToolsBar && typeof S.customToolsBar === 'object') {
+        Object.keys(S.customToolsBar).forEach(function (k) {
+          if (Array.isArray(S.customToolsBar[k]) && !S.customToolsBar[k].length) delete S.customToolsBar[k];
+        });
+      }
+    }
+    S.cfgRev = 4;
     if (!Array.isArray(S.templates)) S.templates = [];
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
@@ -411,6 +453,12 @@
       if (typeof onDone === 'function') onDone();
     });
   }
+
+  /* The bottom bar's own buttons, in their order */
+  var BOT_DEFAULTS = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
+    'tool:swappair', 'tool:magic', 'tool:render'];
+  /* set when an emptied bottom bar was mended: the shared library's buttons go back once the libraries load */
+  var HB_LIB_FIX = false;
 
   function hbKeyRefused(key, code) {
     var no = {
@@ -6217,8 +6265,7 @@
     if (barName === 'bot') {
       /* Every action is listed and each one shows only where it applies (resolveBarItem), so the first
          customization, wherever it happens, keeps them all */
-      var out = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
-        'tool:swappair', 'tool:magic', 'tool:render'];
+      var out = BOT_DEFAULTS.slice();
       hbPinList(node).forEach(function (t) {
         var u = 'node:' + t;
         if (out.indexOf(u) < 0) out.push(u);
@@ -8409,7 +8456,7 @@
       return out;
     }
     ['add', 'tools', 'bot'].forEach(function (barName) {
-      var container = rootEl.querySelector('[data-hb-bar="' + barName + '"]');
+      var container = rootEl.querySelector('.shb-bar-items[data-hb-bar="' + barName + '"]');
       if (!container) return;
       dom[barName] = uidsOf(container);
       shown = shown.concat(dom[barName]);
@@ -8452,8 +8499,8 @@
          never reshuffles it for another */
       old.forEach(function (u, i) {
         if (u === removedUid || inTrays.indexOf(u) >= 0 || keep.indexOf(u) >= 0) return;
-        /* one that would show here and is gone was moved to another bar; one that does not show here stays */
-        if (resolveBarItem(u, node, false, barName)) return;
+        /* in another bar now and it would show here: it was moved there. Anything else stays where it was */
+        if (shown.indexOf(u) >= 0 && resolveBarItem(u, node, false, barName)) return;
         var at = 0;
         for (var j = i - 1; j >= 0; j--) {
           var k = keep.indexOf(old[j]);
@@ -8639,7 +8686,7 @@
       e.preventDefault();
       var dWrap = DRAWER_DRAG.wrap;
       var px = e.clientX, py = e.clientY;
-      var botC = HB.el.querySelector('[data-hb-bar="bot"]');
+      var botC = HB.el.querySelector('.shb-bar-items[data-hb-bar="bot"]');
       var target = null, before = null;
       DRAWER_DRAG.merge = null;
       DRAWER_DRAG.tray = null;
@@ -9903,12 +9950,37 @@
             return l;
           });
           LIB.at = Date.now();
+          if (HB_LIB_FIX) {
+            HB_LIB_FIX = false;
+            hbLibFix();
+          }
         }
         return LIB.list;
       })
       .catch(function () { return LIB.list; })
       .then(function (l) { LIB.busy = null; return l; });
     return LIB.busy;
+  }
+
+  /* the second half of mending an emptied bottom bar: the buttons of the library you save into come back to it,
+     unless they sit in a bar or a group already */
+  function hbLibFix() {
+    var tl = libSaveTarget();
+    if (!tl || !Array.isArray(S.customBotBar)) return;
+    var there = {};
+    S.customBotBar.forEach(function (u) { there[u] = 1; });
+    [S.customAddBySig, S.customToolsBar].forEach(function (m) {
+      Object.keys(m && typeof m === 'object' ? m : {}).forEach(function (k) {
+        (Array.isArray(m[k]) ? m[k] : []).forEach(function (u) { there[u] = 1; });
+      });
+    });
+    Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (g) {
+      ((S.hbGroups[g] || {}).items || []).forEach(function (u) { there[u] = 1; });
+    });
+    var back = (tl.buttons || []).map(function (b) { return 'tpl:' + b.id; }).filter(function (u) { return !there[u]; });
+    if (!back.length) return;
+    S.customBotBar = S.customBotBar.concat(back);
+    save();
   }
 
   function libByKey(key) {
@@ -10315,7 +10387,7 @@
     /* ghosts first, while the nodes are still on screen */
     var root = mgOverlay();
     var ghosts = nodes.map(function (n) { return mgGhost(root, n); }).filter(Boolean);
-    var bar = HB.el && HB.el.querySelector('[data-hb-bar="bot"]');
+    var bar = HB.el && HB.el.querySelector('.shb-bar-items[data-hb-bar="bot"]');
     var slot = null, chip = null;
     if (bar && ghosts.length) {
       slot = document.createElement('span');
