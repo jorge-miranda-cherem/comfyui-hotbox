@@ -139,6 +139,8 @@ GET  /hotbox/libraries   (?buttons=1 to include them)
 
 or from the page: `window.__hotbox.addLibrary(path, { label, readOnly })`, `window.__hotbox.removeLibrary(path)` and `window.__hotbox.libraries()`. A studio can also set the `HOTBOX_EXTRA_PATHS` environment variable (folders separated like `PATH`) before starting ComfyUI: those are always read-only and marked **Studio**.
 
+Which folders Hotbox uses is decided on the computer running ComfyUI: **Set Project** and the list of libraries change only from that computer (a loopback address, or ComfyUI's own address). From another computer, or through a proxy, those requests answer `403`, so a ComfyUI started with `--listen` never lets someone else point Hotbox at a folder; everything else keeps working there, inside the folders already set. A button saved into a library only ever replaces another Hotbox button: any other file of the same name is left alone.
+
 > Upgrading from *Super Hotbox*? Your settings are picked up automatically. Remove the old `super_hotbox` folder from `custom_nodes` so the two don't load side by side.
 
 ---
