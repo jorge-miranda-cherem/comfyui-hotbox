@@ -13,8 +13,16 @@ Shared libraries: other folders (a studio's shared drive, one per show) whose sa
 the user's own, one JSON file per button so a synced drive never has two people writing the same file. The
 list is kept in libraries.json in the default folder, set from Settings or by a script (POST
 /hotbox/libraries), plus any read-only folders in the HOTBOX_EXTRA_PATHS environment variable (separated
-like PATH). Only folders on that list are read, and only <button id>.json files are ever written there.
+like PATH). Only folders on that list are read, and only <button id>.json files are ever written there,
+and only over a file that is already a saved Hotbox button: any other JSON of the same name is left alone.
+
+Which folders are used is decided on the computer running ComfyUI: Set Project (POST /hotbox/folder) and
+the list of shared libraries (POST /hotbox/libraries) answer only requests from that computer (a loopback
+address, or the address ComfyUI itself answers on). From any other computer, or through a proxy, they
+answer 403, so a ComfyUI started with --listen never lets someone else point Hotbox at a folder. Everything
+else keeps working from anywhere, inside the folders already set.
 """
+import ipaddress
 import json
 import logging
 import os
@@ -40,6 +48,45 @@ def _server():
 
 def _same(a, b):
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+PROXY_HEADERS = ("Forwarded", "X-Forwarded-For", "X-Real-IP")
+
+
+def _ip(raw):
+    try:
+        ip = ipaddress.ip_address(str(raw or "").split("%")[0])
+    except ValueError:
+        return None
+    if ip.version == 6 and ip.ipv4_mapped:
+        return ip.ipv4_mapped
+    return ip
+
+
+def is_same_machine(request):
+    """True for a request from the computer running ComfyUI: a loopback address, or the address ComfyUI
+    itself answers on (the machine's own network address). A request that came through a proxy counts as
+    another computer, since the proxy's own address says nothing about who is behind it."""
+    if any(h in request.headers for h in PROXY_HEADERS):
+        return False
+    peer = _ip(request.remote)
+    if peer is None:
+        return False
+    if peer.is_loopback:
+        return True
+    try:
+        own = request.transport.get_extra_info("sockname") if request.transport else None
+    except Exception:
+        own = None
+    return bool(own) and _ip(own[0]) == peer
+
+
+def _only_here(request, what):
+    """None on the computer running ComfyUI; from anywhere else, the 403 that says why"""
+    if is_same_machine(request):
+        return None
+    msg = what + " can only be changed on the computer running ComfyUI"
+    return web.json_response({"error": msg, "errors": [msg]}, status=403)
 
 
 HOME_DIR = os.path.join("~", "comfyui", "hotbox")
@@ -241,6 +288,19 @@ def _button(raw, fallback_id):
             "at": str(raw.get("at") or ""), "data": raw["data"]}
 
 
+def _is_button_file(path):
+    """True when path is a saved Hotbox button: the only kind of file a library write or delete may touch"""
+    if os.path.islink(path) or not os.path.isfile(path):
+        return False
+    try:
+        if os.path.getsize(path) > MAX_BUTTON_BYTES:
+            return False
+        with open(path, encoding="utf-8") as f:
+            return _button(json.load(f), "button") is not None
+    except (OSError, ValueError):
+        return False
+
+
 def library_buttons(folder):
     """every saved button in a library folder: one <id>.json per button, and the saved buttons of a hotbox.json"""
     out, seen = [], set()
@@ -294,7 +354,11 @@ def setup(routes):
     async def set_folder(request):
         """Set Project: use another folder. Hotbox files already there are used as they are; otherwise the
         current ones are copied in, so nothing changes but the location ({copy: false} leaves it empty, for
-        preferences loaded from a file to start it). An empty folder means the default."""
+        preferences loaded from a file to start it). An empty folder means the default. Only on the computer
+        running ComfyUI."""
+        refused = _only_here(request, "The project folder")
+        if refused:
+            return refused
         try:
             body = await request.json()
         except ValueError:
@@ -336,7 +400,10 @@ def setup(routes):
     @routes.post("/hotbox/libraries")
     async def set_libraries(request):
         """{add: [{path, label, readOnly}], remove: [path], update: [{path, label, readOnly}]}: the folders set by
-        the environment stay as they are"""
+        the environment stay as they are. Only on the computer running ComfyUI."""
+        refused = _only_here(request, "The shared libraries")
+        if refused:
+            return refused
         try:
             body = await request.json()
         except ValueError:
@@ -385,6 +452,8 @@ def setup(routes):
         if not _button(raw, bid):
             return web.json_response({"error": "Not a saved button"}, status=400)
         path = os.path.join(lib["path"], bid + ".json")
+        if os.path.lexists(path) and not _is_button_file(path):
+            return web.json_response({"error": "Another file is already called " + bid + ".json there"}, status=409)
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(text)
@@ -400,7 +469,9 @@ def setup(routes):
         if not BUTTON_ID_RE.match(bid):
             return web.json_response({"error": "Not a button id: " + bid}, status=400)
         path = os.path.join(lib["path"], bid + ".json")
-        if os.path.isfile(path):
+        if os.path.lexists(path):
+            if not _is_button_file(path):
+                return web.json_response({"error": bid + ".json there is not a Hotbox button"}, status=409)
             os.remove(path)
         return web.json_response({"ok": True})
 
