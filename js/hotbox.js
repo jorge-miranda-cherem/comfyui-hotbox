@@ -164,7 +164,10 @@
 
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) {}
-    if (!CFG.ready) return;
+    if (!CFG.ready) {
+      if (CFG.hostWait) CFG.pending = true;
+      return;
+    }
     if (CFG.timer) clearTimeout(CFG.timer);
     CFG.state = 'saving';
     CFG.timer = setTimeout(cfgWrite, 400);
@@ -178,11 +181,15 @@
    * localStorage keeps a copy for an instant start. hotbox.json is the original: an import never
    * overwrites it but becomes the next version (hotbox_v2.json, ...); active.json remembers which
    * one is in use.
+   * A page that carries Hotbox on a ComfyUI shared by many people, where neither the Python side nor one
+   * user-data folder can tell them apart, keeps the files itself: window.__hotboxFiles, set before Hotbox
+   * loads (see docs/REFERENCE.md). Hotbox then never writes to ComfyUI's user folder.
    * --------------------------------------------------------------------- */
   var CFG_DIR = 'hotbox';
   var CFG_NAME_RE = /^hotbox(?:_v(\d+))?\.json$/;
   var CFG = { file: 'hotbox.json', ready: false, booted: false, timer: 0, state: 'local', err: '', savedAt: 0, versions: [], userDir: '', origin: 'browser',
-    srv: false, dir: '', defDir: '', custom: false, missing: '', sep: '/', recent: [] };
+    srv: false, dir: '', defDir: '', custom: false, missing: '', sep: '/', recent: [],
+    host: null, hostWait: '', pending: false };
   /* Set once this browser has read or written the file. A browser without it still carries its preferences
      from before the file existed. */
   var CFG_SYNCED_KEY = 'hotbox_cfg_synced';
@@ -212,6 +219,7 @@
   }
 
   function cfgRead(name) {
+    if (CFG.host) return Promise.resolve().then(function () { return CFG.host.read(name); });
     return apiFetch(cfgUrl(name), { cache: 'no-store' }).then(function (r) {
       if (r.status === 404) return null;
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -220,6 +228,7 @@
   }
 
   function cfgPut(name, obj) {
+    if (CFG.host) return Promise.resolve().then(function () { return CFG.host.write(name, obj); });
     return apiFetch(cfgUrl(name) + (CFG.srv ? '' : '?overwrite=true'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -241,6 +250,7 @@
       if (CFG.versions.indexOf(CFG.file) < 0) CFG.versions.push(CFG.file);
       cfgShow();
     }).catch(function (err) {
+      if (CFG.host) CFG.pending = true;
       CFG.state = 'error';
       CFG.err = msgOf(err);
       cfgShow();
@@ -273,7 +283,7 @@
     if (CFG.state === 'saved') return '✓ Saved ' + new Date(CFG.savedAt || Date.now()).toLocaleTimeString();
     if (CFG.state === 'new') return 'Created with your first change';
     if (CFG.state === 'error') return 'Could not write the file (' + CFG.err + ') · kept in this browser';
-    return 'Waiting for ComfyUI · kept in this browser';
+    return (CFG.hostWait || 'Waiting for ComfyUI') + ' · kept in this browser';
   }
 
   function cfgShow() {
@@ -292,7 +302,9 @@
   }
 
   function cfgListVersions() {
-    var req = CFG.srv
+    var req = CFG.host
+      ? Promise.resolve().then(function () { return CFG.host.list(); })
+      : CFG.srv
       ? apiFetch('/hotbox/files', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { return (j && j.files) || []; })
       : apiFetch('/userdata?dir=' + encodeURIComponent(CFG_DIR)).then(function (r) { return r.ok ? r.json() : []; });
     return req.then(function (list) {
@@ -341,14 +353,49 @@
         CFG.userDir = String(a[bd + 1]).replace(/[\\/]+$/, '') + (String(a[bd + 1]).indexOf('\\') >= 0 ? '\\' : '/') + 'user';
       }
     }).catch(function () {});
-    cfgFolderInfo().then(function () { return cfgLoad(true); });
+    cfgFolderInfo().then(cfgStart);
   }
 
-  /* Where the files live, from the Python side (hotbox_files.py). Without it, ComfyUI's user-data API is used */
+  /* Reads the files, unless the page that keeps them cannot reach them yet */
+  function cfgStart() {
+    if (CFG.hostWait) {
+      CFG.ready = false;
+      CFG.state = 'local';
+      cfgShow();
+      return;
+    }
+    return cfgLoad(true);
+  }
+
+  /* Where the files live, from the page that keeps them or the Python side (hotbox_files.py). Without
+     either, ComfyUI's user-data API is used */
   function cfgFolderInfo() {
+    if (window.__hotboxFiles) return cfgHostInfo();
     return apiFetch('/hotbox/folder', { cache: 'no-store' }).then(function (r) {
       return r.ok ? r.json() : null;
     }).then(cfgTakeFolder).catch(function () {});
+  }
+
+  function cfgHostInfo() {
+    CFG.host = window.__hotboxFiles;
+    CFG.hostWait = CFG.hostWait || 'Looking for your files';
+    return Promise.resolve().then(function () { return CFG.host.folder(); }).catch(function (err) {
+      return { why: msgOf(err) };
+    }).then(function (j) {
+      j = j || {};
+      CFG.dir = String(j.folder || '');
+      CFG.defDir = CFG.dir;
+      CFG.sep = j.sep || (CFG.dir.indexOf('\\') >= 0 ? '\\' : '/');
+      CFG.hostWait = j.ready ? '' : String(j.why || 'Waiting for your files');
+    });
+  }
+
+  /* The page that keeps the files says they can be reached now, or no longer */
+  function cfgFilesChanged() {
+    if (!CFG.host) return Promise.resolve();
+    return cfgFolderInfo().then(cfgStart).then(function () {
+      if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
+    });
   }
 
   function cfgTakeFolder(j) {
@@ -389,6 +436,14 @@
       return cfgRead(CFG.file);
     }).then(function (raw) {
       CFG.ready = true;
+      /* Changed while the files could not be reached: this browser has the newest copy */
+      if (CFG.pending) {
+        CFG.pending = false;
+        CFG.origin = 'browser';
+        cfgWrite();
+        cfgListVersions();
+        return;
+      }
       var local = null, synced = false;
       if (boot) {
         try {
@@ -10930,7 +10985,7 @@
      folder that already has some, its next version) */
   function importAsVersion(src, fname, onDone) {
     if (!CFG.ready) {
-      setStatus('error', 'Loading a file needs ComfyUI running, so it can be kept as a new version');
+      setStatus('error', CFG.hostWait ? CFG.hostWait + ' · loading a file needs your Hotbox folder' : 'Loading a file needs ComfyUI running, so it can be kept as a new version');
       return;
     }
     var next = cfgNewVersionName();
@@ -11779,6 +11834,7 @@
     swapNodes: actSwapPair,
     mergeToButton: actMagic,
     configFile: function () { return cfgPath(); },
+    filesChanged: cfgFilesChanged,
     /* shared libraries, for a tool that follows the shot you are on: addLibrary(path, { label, readOnly }) */
     libraries: function () {
       return libRefresh(true).then(function (list) {

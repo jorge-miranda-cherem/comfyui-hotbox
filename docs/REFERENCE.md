@@ -122,6 +122,20 @@ Your preferences save themselves into the project on every change; these are for
 
 A browser that still has preferences from an older Hotbox moves them into the file the first time it loads.
 
+### A ComfyUI shared by many people
+On a ComfyUI that everyone logs into as the same user, one user folder cannot tell people apart, and the Python side may not be installed at all. A page that carries Hotbox there can keep the files itself: it sets `window.__hotboxFiles` before Hotbox loads, and Hotbox then reads and writes only through it, never in ComfyUI's user folder.
+
+```js
+window.__hotboxFiles = {
+  folder: () => Promise,        // { folder, sep, ready, why }: ready false = the files cannot be reached now, why says so
+  read:   (name) => Promise,    // the parsed file, null when it does not exist yet
+  write:  (name, obj) => Promise,
+  list:   () => Promise         // the file names in the folder
+};
+```
+
+While `ready` is false Hotbox keeps working from this browser's copy and Settings shows `why`. Call `window.__hotbox.filesChanged()` when the files can be reached, or no longer: what changed in the meantime is written to the file, otherwise the file is read.
+
 ## 🗂️ Shared libraries
 A shared library is another folder of saved buttons (a studio's shared drive, one folder per show) whose buttons show up beside your own: in the <kbd>N</kbd> drawer, grouped by library, and in **Settings → Saved Buttons**, ready to drag onto any bar.
 
