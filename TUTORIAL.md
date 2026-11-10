@@ -71,7 +71,8 @@ subgraph the hotbox opens in swap mode too.
 1. Click the canvas, <kbd>Ctrl</kbd>+<kbd>A</kbd>, open the hotbox and press <kbd>G</kbd>: the nodes are grouped and the
    title editor opens; type a name, <kbd>Enter</kbd>.
 2. Click the group's title, open the hotbox and press <kbd>X</kbd> (**Save as Button**): the group melts into a button
-   in the Bottom bar, named after the group. The nodes stay where they are.
+   in the Bottom bar, named after the group. The nodes stay where they are. (Select a label along with the nodes
+   and the button takes the label's text as its name instead.)
 3. In any workflow, open the hotbox and click the button (or drag it onto the canvas): the nodes, their settings,
    their wires and the group come back.
 
@@ -103,7 +104,7 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 
 ![Group two buttons, find one in the drawer, drag it onto the canvas](docs/tutorial/09-saved-buttons-library.gif)
 
-- **Group buttons**: drag a button onto the middle of another. Hover the group to see its list; its arrow keeps it open until the hotbox closes.
+- **Group buttons**: drag a button onto the middle of another. Hover the group to see its list; its arrow keeps it open until the hotbox closes. A group left with one button, or none, asks whether to keep it.
 - **Find any button**: press <kbd>N</kbd> and type — saved buttons have their own section in the drawer.
 - **Drag a button onto the canvas** to add its nodes there, or **onto a bar** to pin it to that bar.
 - **Manage them** in **Settings → Saved Buttons** (rename in edit mode, delete with two clicks on the trash).
