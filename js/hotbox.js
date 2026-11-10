@@ -63,7 +63,7 @@
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
-    hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
+    hbGroups: {},           /* button groups: { id: { name, items: [uid…], keep? } }, each one a bar button ('grp:<id>'); keep = stays in its bar with one button or none */
     repN: 3,                /* Replicate: copies last asked for */
     repDir: 'down',         /* Replicate: 'down' (stacked below) or 'right' */
     repColors: true,        /* Replicate: each copy's groups and labels take its letter's color */
@@ -827,6 +827,9 @@
       '.shb-editbar{display:none;align-items:center;white-space:nowrap}',
       '.shb-editing .shb-editbar{display:flex}',
       '.shb-editbar-b{border:0;background:transparent;cursor:pointer}',
+      '.shb-editbar-b.shb-editbar-on{background:rgba(255,255,255,.14)}',
+      /* edit mode shows an empty context bar as a place to drop buttons: it hangs under the dock instead of pushing it up, so the dock stays under the pointer */
+      '.shb-editing .shb-zone-top > .shb-ctx:not(:has(.shb-item-wrap:not(.shb-drag-src),.shb-segc,.shb-w-host)){position:absolute;top:100%;left:50%;translate:-50% 0;margin-top:6px}',
 
       /* Ratio segmented control with sliding thumb */
       '.shb-segc{position:relative;display:flex}',
@@ -6107,12 +6110,14 @@
       var gid = u.slice(4), grp = grpById(gid);
       if (!grp) return null;
       var kids = (grp.items || []).map(function (k) { return /^grp:/.test(k) ? null : resolveBarItem(k, node, loose, bar); }).filter(Boolean);
-      /* an empty group (or one whose buttons do not apply here) waits for edit mode */
-      if (!kids.length && !HB.editMode) return null;
+      /* a group whose buttons do not apply here waits for "+N hidden here" in edit mode; so does an empty one,
+         unless it was kept on purpose (grpAskKeep): that one stays in its bar, ready to be filled again */
+      if (!kids.length && !hbAllBtns() && !(grp.keep && !(grp.items || []).length)) return null;
       return {
         uid: u, kind: 'group', id: gid,
         label: customLbl || grp.name,
-        title: (customLbl || grp.name) + ' · ' + kids.length + (kids.length === 1 ? ' button' : ' buttons') + ' · click to open · drop buttons on it to add them',
+        title: (customLbl || grp.name) + ' · ' + (kids.length ? kids.length + (kids.length === 1 ? ' button' : ' buttons') + ' · click to open · drop buttons on it to add them'
+          : 'empty · drop buttons on it to fill it'),
         icon: 'folder', kbd: '', cls: '', count: kids.length, kids: kids, stayOpen: true,
         run: function () { hbGroupToggle(gid); }
       };
@@ -6123,7 +6128,7 @@
       /* A power tool switched off in Settings is gone everywhere */
       if (!hbToolOn(tid)) return null;
       /* a tool shows only where it applies (the bars stay short); one the user placed stays, dimmed */
-      var why = (!HB.editMode && !loose) ? hbToolWhy(tid, node, sel) : '';
+      var why = (!hbAllBtns() && !loose) ? hbToolWhy(tid, node, sel) : '';
       if (why && !hbKept(u, bar)) return null;
       var mt = getMasterTools(node);
       var t = mt[tid];
@@ -6195,7 +6200,7 @@
 
     if (u.indexOf('node:') === 0) {
       var nType = u.slice(5);
-      if (!HB.editMode && (hbSameNode(nType, node) || isDeprecatedType(nType))) return null;
+      if (!hbAllBtns() && (hbSameNode(nType, node) || isDeprecatedType(nType))) return null;
       var nDef = (SRV.types && SRV.types[nType]) || null;
       var subName = '';
       if (nType.indexOf('subgraph:') === 0) subName = subNamed(nType);
@@ -6595,6 +6600,74 @@
     delete HB.grpOpen[gid];
     setBarUids(barName, node, list);
     return kids.length;
+  }
+
+  /* A group down to one button, or none, no longer unfolds by itself: it asks first, once. Kept, it stays in
+     its bar with its name and color (empty too) until its × ungroups it; removed, it unfolds as it always did.
+     The question waits for the next tick, so the click that ends a drag can never answer it */
+  var GRP_ASK = null, GRP_ASK_T = 0;
+
+  function grpAskLone(node) {
+    if (GRP_ASK || GRP_ASK_T) return;
+    GRP_ASK_T = setTimeout(function () {
+      GRP_ASK_T = 0;
+      if (GRP_ASK) return;
+      var found = null;
+      ['add', 'tools', 'bot'].forEach(function (barName) {
+        getBarUids(barName, node).forEach(function (u) {
+          var g = !found && /^grp:/.test(u) ? grpById(u.slice(4)) : null;
+          if (g && !g.keep && (g.items || []).length < 2) found = { gid: u.slice(4), bar: barName };
+        });
+      });
+      if (found) grpAskKeep(found.gid, found.bar, node);
+    }, 0);
+  }
+
+  function grpAskKeep(gid, barName, node) {
+    var grp = grpById(gid);
+    if (!grp || grp.keep || GRP_ASK) return;
+    var uid = 'grp:' + gid;
+    var name = (S.customLabels && S.customLabels[uid]) || grp.name;
+    var left = (grp.items || []).length;
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg';
+    bg.innerHTML =
+      '<div class="shb-modal" style="width:min(400px,92vw)">' +
+        '<div class="shb-modal-t"><span>Keep the group "' + esc(name) + '"?</span></div>' +
+        '<div class="shb-ebtn-note" style="font-size:12.5px">' +
+          (left ? 'It has one button left. ' : 'It has no buttons left. ') +
+          'Keep it in the bar, with its name and color, to fill it again; or remove it' +
+          (left ? ' and its last button goes back to the bar.' : '.') +
+        '</div>' +
+        '<div style="display:flex;justify-content:flex-end;gap:8px">' +
+          '<button class="shb-btn" data-gk-no>Remove group</button>' +
+          '<button class="shb-btn shb-btn-pri" data-gk-yes>Keep group</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bg);
+    function answer(keep) {
+      if (!GRP_ASK) return;
+      GRP_ASK = null;
+      if (bg.parentNode) bg.parentNode.removeChild(bg);
+      var g = grpById(gid);
+      if (g && keep) {
+        g.keep = true;
+        save();
+        setStatus('ok', 'Kept the group "' + name + '" · drop buttons on it to fill it · its × (edit mode) removes it');
+      } else if (g) {
+        var back = grpDissolve(barName, uid, node);
+        setStatus('ok', 'Removed the group "' + name + '"' + (back ? ' · its button stays in the bar' : ''));
+      }
+      if (HB.el) hbPaint();
+      /* another group may have been emptied by the same move */
+      grpAskLone(node);
+    }
+    /* Enter and Esc keep it (the window key listener): closing the question never loses a group */
+    GRP_ASK = { answer: answer };
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) answer(true); });
+    bg.querySelector('[data-gk-no]').onclick = function () { answer(false); };
+    bg.querySelector('[data-gk-yes]').onclick = function () { answer(true); };
+    try { bg.querySelector('[data-gk-yes]').focus(); } catch (e) {}
   }
 
   /* A button that already lives in a group of this bar is not drawn twice */
@@ -7172,8 +7245,13 @@
 
   function hbEditBarHTML() {
     var fl = hbIsFluid();
+    var hid = HB.editMode ? hbHiddenHere() : 0;
     return '<div class="shb-editbar">' +
       '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename or color · drop a button on another to group them' : 'edit · × or drag out · tap = name & color · drop on a button = group') + '</span>' +
+      (hid ? '<button type="button" class="shb-editbar-b' + (HB.editAll ? ' shb-editbar-on' : '') + '" data-hb-act="editall" title="' +
+        esc(hid + (hid === 1 ? ' button does' : ' buttons do') + ' not apply to this node, so ' + (hid === 1 ? 'it stays' : 'they stay') +
+          ' hidden and the bars do not move when edit mode starts · show ' + (hid === 1 ? 'it' : 'them') + ' to move, rename or remove ' + (hid === 1 ? 'it' : 'them') + ' too') + '">' +
+        (HB.editAll ? 'Hide ' + (hid === 1 ? 'that 1' : 'those ' + hid) : '+' + hid + ' hidden here') + '</button>' : '') +
       '<button type="button" class="shb-editbar-b" data-hb-act="editreset">Reset</button>' +
       '<button type="button" class="shb-editbar-b shb-editbar-done" data-hb-act="editdone">Done</button>' +
     '</div>';
@@ -7214,9 +7292,39 @@
     });
   }
 
+  /* Edit mode used to list, at once, every button a bar can hold: the ones that do not apply to this node came
+     back in between the others, the bars grew, and the button under the pointer was somewhere else by the time
+     you let go. Now it starts with the very same buttons, where they were, and those hidden ones wait behind
+     "+N hidden here" in the edit bar (HB.editAll) */
+  function hbAllBtns() {
+    return !!(HB.editMode && HB.editAll);
+  }
+
+  /* How many buttons the bars hold that do not show on this node (a group counts with what is in it) */
+  function hbHiddenHere() {
+    var node = HB.node, was = HB.editAll, n = 0;
+    function count() {
+      var c = 0;
+      ['add', 'tools', 'bot'].forEach(function (b) {
+        hbUngrouped(getBarUids(b, node).map(function (u) { return resolveBarItem(u, node, false, b); }).filter(Boolean))
+          .forEach(function (it) { c += it.kind === 'group' ? 1 + it.kids.length : 1; });
+      });
+      return c;
+    }
+    try {
+      HB.editAll = false;
+      var shown = count();
+      HB.editAll = true;
+      n = count() - shown;
+    } catch (e) { n = 0; }
+    HB.editAll = was;
+    return Math.max(0, n);
+  }
+
   function hbSetEdit(on) {
     on = !!on;
     var was = !!HB.editMode;
+    if (on !== was) HB.editAll = false;
     HB.editMode = on;
     if (!HB.el) return;
     HB.el.classList.toggle('shb-editing', on);
@@ -7224,7 +7332,7 @@
     if (tb) tb.classList.toggle('shb-btn-on', on);
     hbSyncEditAnim();
     if (on === was) return;
-    /* edit mode lists every button a bar can hold; leaving it must drop the ones that don't apply here */
+    /* the edit bar needs its "+N hidden here"; leaving edit mode must drop the buttons that don't apply here */
     hbPaint();
     if (!on) return;
     var fl = hbIsFluid();
@@ -8629,21 +8737,8 @@
       });
       grp.items = keep;
     });
-    /* a group left with one button (or none) unfolds into the bar, like a folder on a phone */
-    Object.keys(dom).forEach(function (barName) {
-      dom[barName] = dom[barName].reduce(function (acc, u) {
-        var g = /^grp:/.test(u) && trays[u.slice(4)] ? grpById(u.slice(4)) : null;
-        if (g && (g.items || []).length < 2) {
-          (g.items || []).forEach(function (k) { if (acc.indexOf(k) < 0) acc.push(k); });
-          delete S.hbGroups[u.slice(4)];
-          delete HB.grpOpen[u.slice(4)];
-          if (S.customLabels) delete S.customLabels[u];
-          if (S.customColors) delete S.customColors[u];
-          if (S.customFill) delete S.customFill[u];
-        } else acc.push(u);
-        return acc;
-      }, []);
-    });
+    /* a group left with one button (or none) used to unfold into the bar by itself, like a folder on a phone,
+       and its name and color went with it: now it stays where it is and asks first (grpAskLone) */
     Object.keys(dom).forEach(function (barName) {
       var keep = dom[barName];
       var old = getBarUids(barName, node);
@@ -8662,6 +8757,7 @@
       });
       setBarUids(barName, node, keep);
     });
+    grpAskLone(node);
   }
 
   /* While a button is dragged over the middle of a group's own button, the group lights up and takes it */
@@ -9298,7 +9394,17 @@
           if (!LP_DRAG || LP_DRAG.wrap !== wrap || !HB.el) return;
           LP_DRAG.timer = 0;
           LP_DRAG.fired = true;
+          var lpBar = wrap.getAttribute('data-hb-bar') || '';
+          var lpTray = (wrap.parentNode && wrap.parentNode.getAttribute && wrap.parentNode.getAttribute('data-hb-gtray')) || '';
           hbSetEdit(true);
+          /* the bars were drawn again with the button still under the pointer: the press goes on with that new
+             copy of it, so it can be dragged right away */
+          var again = null;
+          try {
+            again = HB.el && HB.el.querySelector((lpTray ? '[data-hb-gtray="' + cssEsc(lpTray) + '"]' : '.shb-bar-items[data-hb-bar="' + cssEsc(lpBar) + '"]') +
+              ' > .shb-item-wrap[data-hb-uid="' + cssEsc(wUid) + '"]');
+          } catch (err) { again = null; }
+          if (again && LP_DRAG) LP_DRAG.wrap = again;
         }, 420)
       };
     });
@@ -9412,6 +9518,7 @@
           }
           hbForgetIfGone(rmUid);
           if (HB.el) hbPaint();
+          if (inGrp) grpAskLone(HB.node);
         }, 130);
         return;
       }
@@ -9598,6 +9705,11 @@
         }
         if (a === 'editdone') {
           hbSetEdit(false);
+          return;
+        }
+        if (a === 'editall') {
+          HB.editAll = !HB.editAll;
+          hbPaint();
           return;
         }
         if (a === 'editreset') {
@@ -10780,13 +10892,54 @@
     return name;
   }
 
+  /* A label on the canvas is a name someone already wrote: the text of a Label (rgthree) or a Pixaroma label,
+     or of the note Label Studio leaves when neither is installed (its title and its text are the same). Its
+     first line, without the quick icon Label Studio puts in front */
+  function mgLabelText(n) {
+    var t = nodeTypeOf(n), s = '';
+    if (t === LABEL_RG_TYPE) s = n.title;
+    else if (t === LABEL_PIX_TYPE) {
+      try { s = JSON.parse(String((widgetNamed(n, 'label_json') || {}).value || '')).text; } catch (e) { s = ''; }
+    } else if (t === 'MarkdownNote' || t === 'Note') {
+      var body = String((widgetNamed(n, 'text') || (n.widgets || [])[0] || {}).value || '').replace(/^#+\s*/, '').trim();
+      s = String(n.title || '').trim();
+      if (!s || s !== body) s = '';
+    }
+    s = String(s || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean)[0] || '';
+    for (var i = 0; i < LABEL_ICONS.length; i++) {
+      var gl = LABEL_ICONS[i].g.replace(/[\uFE0E\uFE0F]/g, '');
+      if (s.indexOf(gl) !== 0) continue;
+      var rest = s.slice(gl.length);
+      if (!rest || /^[\uFE0E\uFE0F]?(\s|$)/.test(rest)) s = rest.replace(/^[\uFE0E\uFE0F]/, '');
+      break;
+    }
+    return s.replace(/\s+/g, ' ').trim();
+  }
+
+  /* The label that names a set of nodes: the top one, then the leftmost. `picked` takes only the labels that
+     are selected themselves, not the ones a selected group brought along */
+  function mgLabelName(nodes, picked) {
+    var sel = picked ? selNodes() : null, best = null, name = '';
+    nodes.forEach(function (n) {
+      if (sel && sel.indexOf(n) < 0) return;
+      var txt = mgLabelText(n);
+      if (!txt) return;
+      var p = n.pos || [0, 0];
+      if (!best || p[1] < best[1] || (p[1] === best[1] && p[0] < best[0])) { best = p; name = txt; }
+    });
+    return name;
+  }
+
   /* The name alone, without the "2", "3"… that keeps saved buttons apart (groups made with G use it too) */
   function mgSmartName(nodes, items) {
-    var name = '';
+    /* a label selected along with the nodes is the name already written for them, so it comes first; then a
+       titled group; then a label that came inside a selected group */
+    var name = mgLabelName(nodes, true);
     for (var i = 0; i < items.length && !name; i++) {
       var tt = String((!isGraphNode(items[i]) && items[i].children && items[i].title) || '').trim();
       if (tt && !/^group$/i.test(tt)) name = tt;
     }
+    if (!name) name = mgLabelName(nodes, false);
     if (!name && nodes.length === 1) name = String(nodes[0].title || nodes[0].type || 'Node');
     if (!name) {
       var types = nodes.map(nodeTypeOf);
@@ -11135,6 +11288,11 @@
     S.customBotBar = strip(S.customBotBar);
     Object.keys(S.customToolsBar || {}).forEach(function (k) { S.customToolsBar[k] = strip(S.customToolsBar[k]); });
     Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
+    /* a group that held it lets go of it too, and asks before it goes if that was its last button but one */
+    Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (k) {
+      if (S.hbGroups[k] && Array.isArray(S.hbGroups[k].items)) S.hbGroups[k].items = strip(S.hbGroups[k].items);
+    });
+    grpAskLone(HB.node);
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
     if (S.customFill) delete S.customFill[uid];
@@ -12150,6 +12308,13 @@
   /* Main Hotbox Trigger & In-Hotbox Quick Keys (window capture runs before every document-level listener) */
   listen(window, 'keydown', function (e) {
     if (HB.binding) return;
+
+    /* "Keep the group?" is on screen: Enter and Esc keep it, and no other key reaches the hotbox behind it */
+    if (GRP_ASK) {
+      hbEat(e);
+      if (!e.repeat && (e.key === 'Enter' || e.key === 'Escape')) GRP_ASK.answer(true);
+      return;
+    }
 
     /* When Hotbox is open and user is not typing in the drawer search box */
     if (HB.el && !hbTyping()) {
