@@ -64,6 +64,9 @@
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
     hbGroups: {},           /* button groups: { id: { name, items: [uid…] } }, each one a bar button ('grp:<id>') */
+    repN: 3,                /* Replicate: copies last asked for */
+    repDir: 'down',         /* Replicate: 'down' (stacked below) or 'right' */
+    repColors: true,        /* Replicate: each copy's groups and labels take its letter's color */
     cfgRev: 0,              /* config migrations already applied */
     lbLast: null
   };
@@ -1037,6 +1040,11 @@
       '.shb-fluid .shb-num{width:18px;height:18px;border-radius:6px;background:rgba(255,255,255,.1);display:grid;place-items:center;font:600 10.5px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.7);flex-shrink:0}',
       '.shb-fluid .shb-models-btn{padding:9px 12px;gap:6px;color:rgba(235,235,245,.8)}',
       '.shb-fluid .shb-dock-mode{display:inline-flex;align-items:center;gap:6px;padding:0 6px 0 8px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--shb-t3)}',
+      /* Swap mode wears its own color, and so does each button that swaps, so they never pass for buttons that add */
+      '.shb-fluid .shb-dock-swap{padding:6px 10px 6px 9px;margin-left:2px;border-radius:9px;color:#5fd6c6;background:rgba(95,214,198,.15);box-shadow:inset 0 0 0 1px rgba(95,214,198,.4)}',
+      '.shb-fluid .shb-swapi:not(.shb-tinted) > .shb-num{color:#5fd6c6;background:rgba(95,214,198,.16)}',
+      '.shb-swapi:not(.shb-tinted) > .shb-pin-dot{background:#5fd6c6}',
+      '.shb-swapi:not(.shb-tinted) > .shb-ico{color:#5fd6c6}',
       '.shb-fluid .shb-key,.shb-fluid .shb-kbd{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border:0;border-radius:6px;background:rgba(255,255,255,.08);display:inline-grid;place-items:center;font:600 10.5px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.55);flex-shrink:0}',
       '.shb-fluid .shb-act{padding:9px 13px;border-radius:19px}',
       '.shb-fluid .shb-act .shb-key{background:none;min-width:0;padding:0;height:auto;color:rgba(235,235,245,.45)}',
@@ -1163,6 +1171,8 @@
       '.shb-quiet .shb-num,.shb-quiet .shb-key,.shb-quiet .shb-kbd{font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted);background:none;border:0;padding:0;min-width:0;height:auto}',
       '.shb-quiet .shb-models-btn{color:#9a9a9a;gap:5px}',
       '.shb-quiet .shb-dock-mode{display:inline-flex;align-items:center;gap:5px;padding:0 6px;font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted)}',
+      '.shb-quiet .shb-dock-swap{color:#5fd6c6}',
+      '.shb-quiet .shb-swapi:not(.shb-tinted) > .shb-num{color:#5fd6c6}',
       '.shb-quiet .shb-btn-primary{color:#fff}',
       '.shb-quiet .shb-btn-primary .shb-ico{color:var(--shb-qblue)}',
       '.shb-quiet .shb-danger .shb-ico{color:#e8735f}',
@@ -1252,6 +1262,28 @@
       '.shb-modal-bg{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font:400 12.5px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg)}',
       '.shb-modal{width:min(540px,94vw);max-height:90vh;overflow-y:auto;background:var(--shb-bg);border:1px solid var(--shb-border);border-radius:8px;padding:16px 18px;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}',
       '.shb-modal-t{font:600 14px/1.2 Inter,system-ui,sans-serif;color:var(--shb-fg);display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #333333}',
+      /* Replicate */
+      '.shb-rep .shb-modal-t > span:first-child{display:inline-flex;align-items:center;gap:8px}',
+      '.shb-rep-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
+      '.shb-rep-k{width:56px;color:var(--shb-fg-muted);font-size:12px;font-weight:500}',
+      '.shb-rep-n{display:inline-flex;align-items:center;border:1px solid var(--shb-border);border-radius:6px;overflow:hidden;background:var(--shb-bg-input)}',
+      '.shb-rep-n button{all:unset;cursor:pointer;width:26px;height:28px;display:grid;place-items:center;color:var(--shb-fg);font:600 14px/1 Inter,system-ui,sans-serif}',
+      '.shb-rep-n button:hover{background:var(--shb-bg-hover)}',
+      '.shb-rep-n input{width:34px;height:28px;border:0;background:none;color:var(--shb-fg);text-align:center;font:600 13px/1 Inter,system-ui,sans-serif;outline:none}',
+      '.shb-rep-chips{display:flex;gap:4px;flex-wrap:wrap;margin-left:4px}',
+      '.shb-rep-chip{min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;display:grid;place-items:center;font:700 11.5px/1 Inter,system-ui,sans-serif;color:#fff}',
+      '.shb-rep-L{width:34px !important;height:28px;text-align:center;text-transform:uppercase;font:700 13px/1 Inter,system-ui,sans-serif;padding:0}',
+      '.shb-rep-col{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--shb-fg-muted);font-size:12px;cursor:pointer}',
+      '.shb-rep-col input,.shb-rep-row input{accent-color:#5fd6c6;margin:0;flex-shrink:0}',
+      '.shb-rep-hd{color:var(--shb-fg-muted);font:600 10.5px/1 Inter,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.05em}',
+      '.shb-rep-list{max-height:260px;overflow-y:auto;border:1px solid var(--shb-border);border-radius:6px;background:var(--shb-bg-input)}',
+      '.shb-rep-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:1px solid #2a2a2a;cursor:pointer;font-size:12px}',
+      '.shb-rep-row:last-child{border-bottom:0}',
+      '.shb-rep-row:hover{background:var(--shb-bg-hover)}',
+      '.shb-rep-w{color:var(--shb-fg-dim);flex:0 0 150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-rep-ft{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--shb-fg-muted)}',
+      '.shb-rep-ft b{color:#5fd6c6;font-weight:600}',
+      '.shb-rep-note{color:var(--shb-fg-muted);font-size:11.5px}',
       '.shb-grid{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:9px 12px}',
       '.shb-settings .shb-grid{grid-template-columns:128px minmax(0,1fr)}',
       '.shb-grid label{color:var(--shb-fg-muted);font-weight:500;font-size:12px}',
@@ -2285,6 +2317,46 @@
       if (!Object.keys(part).length) throw new Error('the selected outputs are not in the prompt (muted or bypassed?)');
       return api.queuePrompt(0, { output: part, workflow: p.workflow });
     }).then(done, failed);
+  }
+
+  /* Text to the clipboard. A ComfyUI opened by its network address (--listen, no https) has no clipboard API,
+     so a hidden text field is copied there instead. */
+  function hbClipText(text) {
+    function viaField() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      return ok ? Promise.resolve() : Promise.reject(new Error('the browser did not allow the clipboard'));
+    }
+    try {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).catch(viaField);
+    } catch (e) {}
+    return viaField();
+  }
+
+  /* Copy Workflow: the whole workflow, as Export saves it, on the clipboard */
+  function actCopyWorkflow() {
+    var app = getApp();
+    if (!app || !app.graph) {
+      setStatus('error', 'Copy Workflow: no workflow is open');
+      return;
+    }
+    function plain() { return app.graph.serialize(); }
+    var wf = typeof app.graphToPrompt === 'function'
+      ? Promise.resolve(app.graphToPrompt()).then(function (p) { return (p && p.workflow) || plain(); }, plain)
+      : Promise.resolve().then(plain);
+    wf.then(function (w) {
+      var n = (w && w.nodes && w.nodes.length) || 0;
+      return hbClipText(JSON.stringify(w, null, 2)).then(function () {
+        setStatus('ok', '⧉ Workflow copied (' + n + (n === 1 ? ' node' : ' nodes') + ')');
+      });
+    }).catch(function (err) { setStatus('error', 'Copy Workflow failed: ' + msgOf(err)); });
   }
 
   function outGroup(title, color, members) {
@@ -3777,7 +3849,8 @@
     try {
       w.value = val;
       if (w.callback) w.callback(val, null, node);
-      node.title = (isSetNode(node) ? 'Set_' : 'Get_') + val;
+      /* the node may have made the name unique (NAME_0): the title follows what it kept */
+      node.title = (isSetNode(node) ? 'Set_' : 'Get_') + (w.value || val);
       return true;
     } catch (e) { return false; }
   }
@@ -5821,6 +5894,8 @@
       apibypass:  { id: 'apibypass',  icon: 'zapOff',     label: 'Bypass All APIs', kbd: 'K', fn: function () { actBypassApi(); } },
       zoom:       { id: 'zoom',       icon: 'zoom',       label: 'Zoom',           kbd: '.', fn: function () { actDotZoom(node); } },
       arrange:    { id: 'arrange',    icon: 'arrange',    label: 'Arrange',        kbd: '',  fn: function () { actArrange(node); } },
+      copywf:     { id: 'copywf',     icon: 'copy',       label: 'Copy Workflow',  kbd: '',  fn: function () { actCopyWorkflow(); } },
+      replicate:  { id: 'replicate',  icon: 'copy',       label: 'Replicate',      kbd: '',  fn: function () { actReplicate(node); } },
       render:     { id: 'render',     icon: 'play',       label: 'Render Selected', kbd: '⇧R', fn: function () { actRenderSelected(); } },
       stitch:     { id: 'stitch',     icon: 'stitch',     label: 'Super Stitch',   kbd: '',  fn: function () { actStitch(node); } },
       stitchupd:  { id: 'stitchupd',  icon: 'sync',       label: 'Update Stitch',  kbd: '',  fn: function () { actStitchUpdate(node); } },
@@ -5983,6 +6058,7 @@
     if (hbToolIsSelf(tid, node)) return 'this node already is one';
     if (tid === 'swappair' && sel.length !== 2) return 'select two nodes to swap them';
     if (tid === 'magic' && !sel.length && !node) return 'select some nodes first';
+    if (tid === 'replicate' && !sel.length && !node && !mgItems(null).length) return 'select a group or some nodes first';
     if (tid === 'apibypass' && !allNodes(getGraph()).some(function (n) {
       return !!(SRV.api && SRV.api[String(n.type || n.comfyClass || '')]);
     })) return 'works when the workflow has API nodes';
@@ -6106,7 +6182,7 @@
         title: (isAdd ? 'Add & wire ' : 'Swap to ') + ((mObj && mObj.fullName) || rawName),
         icon: isAdd ? 'plus' : 'swap',
         kbd: '',
-        cls: 'shb-btn-pri',
+        cls: isAdd ? 'shb-btn-pri' : 'shb-swapi',
         run: function () {
           hbReady(mType).then(function () {
             if (isPair) addModelPair(sel, mType);
@@ -7850,8 +7926,29 @@
   /* Hotbox's own bars come first, then the extensions', each in the place it asked for:
      'context' (the Context bar, under the dock) or 'bottom' (the Custom Bar, above the bottom bar) */
   var HB_OWN_BARS = {
-    'hotbox-label': { where: 'context', items: function (ctx) { return hbLabelBarItems(ctx.node); } }
+    'hotbox-label': { where: 'context', items: function (ctx) { return hbLabelBarItems(ctx.node); } },
+    'hotbox-setname': { where: 'context', items: function (ctx) { return hbSetNameBarItems(ctx.node); } }
   };
+
+  /* A Set node's name, typed right in its Context bar. It is applied on Enter or on leaving the field, never
+     per letter: the Set node renames its Gets and makes the name unique on every change. */
+  function hbSetNameBarItems(node) {
+    if (!node || !isSetNode(node) || !(node.widgets && node.widgets[0])) return [];
+    return [{
+      type: 'text', label: 'Name', value: setGetName(node), width: 170, placeholder: 'Type a name',
+      title: 'The Set name · Enter to apply, Esc to undo',
+      onCommit: function (v, ctx) {
+        var want = String(v || '').trim();
+        if (!want || want === setGetName(node)) return;
+        setNameOn(node, want);
+        var got = setGetName(node);
+        var g = getGraph();
+        if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
+        setStatus('ok', got === want ? 'Set named "' + got + '"' : 'Set named "' + got + '" ("' + want + '" was taken)');
+        ctx.repaint();
+      }
+    }];
+  }
 
   function hbBarGroups(where) {
     var groups = [];
@@ -8103,7 +8200,7 @@
     var dcInfo = HB_CATS[dc];
     var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' + hbEditBarHTML() +
       '<div class="shb-bar shb-dock">' +
-        ((!isAdd || isPair) ? '<span class="shb-dock-mode" title="' + (isPair ? 'Adds the model and wires both selected loaders' : 'Swaps the selected model in place') + '">' +
+        ((!isAdd || isPair) ? '<span class="shb-dock-mode' + (isPair ? '' : ' shb-dock-swap') + '" title="' + (isPair ? 'Adds the model and wires both selected loaders' : 'The numbered buttons swap the selected model in place') + '">' +
           ico('swap', 13) + '<span>' + (isPair ? 'Wire ' + sel.length : 'Swap') + '</span>' +
         '</span><span class="shb-vsep"></span>' : '') +
         '<div class="shb-bar-items" data-hb-bar="add">' +
@@ -10205,6 +10302,391 @@
     if (waiting && tries < 10) setTimeout(function () { mgRelink(data, made, tries + 1); }, 120);
   }
 
+  /* ---------------------------------------------------------------------
+   * REPLICATE: the selection (a group and its label, a whole branch) copied as many times as you ask, stacked
+   * under it or beside it. Each copy moves on one letter, A → B, C, D…, in its group titles, labels, Set / Get
+   * names and file names (Save Video, Save EXR, OCIO Read / Write, a "Crop_A_v" text…), a file picked from a
+   * list moves on when that file is there (jacket_A.png → jacket_B.png), and the wires coming in from outside
+   * stay plugged into the same nodes.
+   * --------------------------------------------------------------------- */
+  var REP_GROUP_HUES = ['#b8912f', '#b86a2f', '#a83a32', '#a8326e', '#8a32a8', '#5e3ab0', '#3260a8', '#2f8a8a', '#3a8a3f', '#8a8a2f'];
+  var REP_LABEL_HUES = ['#f5b400', '#ff7a00', '#e01b1b', '#d6186b', '#b100f5', '#6a1bf5', '#2d6cf5', '#14a3a3', '#2fa84f', '#a8a814'];
+
+  /* A letter standing on its own between separators: Group_A, crop A, shot_a.exr, A01. Never one inside a code
+     (the a of 4b7d-a13c) or the one that starts a sentence ("A woman…") */
+  function repLetterRe(L) {
+    var u = L.toUpperCase(), l = L.toLowerCase();
+    return new RegExp('(^|[^A-Za-z0-9])([' + u + l + '])(?=\\d*(?:[^A-Za-z0-9]|$))(?!\\d* [A-Za-z])', 'g');
+  }
+
+  function repHasLetter(s, L) { return !!L && repLetterRe(L).test(String(s || '')); }
+
+  function repSwapLetter(s, from, to) {
+    return String(s).replace(repLetterRe(from), function (m, pre, ch) {
+      return pre + (ch === ch.toUpperCase() ? to.toUpperCase() : to.toLowerCase());
+    });
+  }
+
+  /* The last number standing on its own (IMAGE_1, take 02, plate_1.exr), never a version's (v001), a decimal (4.0)
+     or one inside a code (4b7d) */
+  function repNumAt(s) {
+    var re = /(^|[^A-Za-z0-9.])(\d{1,4})(?=[^A-Za-z0-9]|$)(?!\.\d)/g, m, last = null;
+    s = String(s || '');
+    while ((m = re.exec(s))) last = { at: m.index + m[1].length, txt: m[2] };
+    return last;
+  }
+
+  function repBump(s, k) {
+    s = String(s);
+    var t = repNumAt(s);
+    if (!t) return s;
+    var v = String(parseInt(t.txt, 10) + k);
+    while (v.length < t.txt.length) v = '0' + v;
+    return s.slice(0, t.at) + v + s.slice(t.at + t.txt.length);
+  }
+
+  /* a prompt rather than a name: long, or several words */
+  function repProse(s) {
+    s = String(s || '');
+    return s.length > 60 || (s.match(/\s/g) || []).length >= 4;
+  }
+
+  function repIsGroup(it) {
+    var LG = litegraph();
+    if (LG && LG.LGraphGroup && it instanceof LG.LGraphGroup) return true;
+    return !!(it && !isGraphNode(it) && typeof it.title === 'string' && typeof it.recomputeInsideNodes === 'function');
+  }
+
+  /* Every name in the selection a copy could move on */
+  function repSpots(items) {
+    var spots = [], setsInside = {};
+    items.forEach(function (it) { if (isGraphNode(it) && isSetNode(it)) setsInside[setGetName(it)] = 1; });
+    items.forEach(function (it) {
+      if (repIsGroup(it)) {
+        if (it.title) spots.push({ kind: 'group', src: it, text: String(it.title), where: 'Group' });
+        return;
+      }
+      if (!isGraphNode(it)) return;
+      var nm = String(it.title || it.type || '');
+      if (isSetNode(it) || isGetNode(it)) {
+        var v = setGetName(it);
+        /* a Get of a Set that is copied too follows that Set */
+        if (v && !(isGetNode(it) && setsInside[v])) spots.push({ kind: isSetNode(it) ? 'set' : 'get', src: it, text: v, where: isSetNode(it) ? 'Set' : 'Get' });
+        return;
+      }
+      if (it.title) spots.push({ kind: 'title', src: it, text: String(it.title), where: labelIsRg(it) ? 'Label' : 'Title' });
+      (it.widgets || []).forEach(function (w, wi) {
+        if (!w || typeof w.value !== 'string' || !w.value || /^(button|toggle)$/.test(String(w.type))) return;
+        var combo = String(w.type) === 'combo';
+        /* from a list, only a file name can move on, and only to a file that is there */
+        if (combo && !/\.[a-z0-9]{2,5}$/i.test(w.value)) return;
+        spots.push({ kind: combo ? 'combo' : 'widget', src: it, wi: wi, text: w.value, where: nm + ' · ' + String(w.label || w.name || '') });
+      });
+    });
+    return spots;
+  }
+
+  /* The letter the names carry now: the one in the group titles first, else the most common one */
+  function repGuessLetter(spots) {
+    var score = {}, best = '', bs = 0;
+    spots.forEach(function (sp) {
+      if (repProse(sp.text)) return;
+      var re = /(^|[^A-Za-z0-9])([A-Z])(?=\d*(?:[^A-Za-z0-9]|$))(?!\d* [A-Za-z])/g, m;
+      while ((m = re.exec(sp.text))) score[m[2]] = (score[m[2]] || 0) + (sp.kind === 'group' ? 10 : 1);
+    });
+    Object.keys(score).sort().forEach(function (k) { if (score[k] > bs) { best = k; bs = score[k]; } });
+    return best;
+  }
+
+  /* What can move on in each copy: a letter is on unless it sits in a prompt; a number is offered off, except on
+     a Set with no letter (a copied Set needs a name of its own) */
+  function repRows(spots, L) {
+    var rows = [];
+    spots.forEach(function (sp, i) {
+      var hasL = repHasLetter(sp.text, L), num = repNumAt(sp.text), prose = repProse(sp.text);
+      if (hasL) rows.push({ id: i + ':L', spot: i, mode: 'L', on: !prose });
+      if (num && !prose) rows.push({ id: i + ':N', spot: i, mode: 'N', on: !hasL && sp.kind === 'set' });
+    });
+    return rows;
+  }
+
+  function repMove(text, letterOn, numOn, L, k) {
+    var t = String(text);
+    if (letterOn) t = repSwapLetter(t, L, String.fromCharCode(L.charCodeAt(0) + k));
+    if (numOn) t = repBump(t, k);
+    return t;
+  }
+
+  /* The block's box in graph units: its nodes (title bars included) and its groups */
+  function repBox(items) {
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    items.forEach(function (it) {
+      var b = null;
+      if (repIsGroup(it)) {
+        var p = it.pos || [0, 0], s = it.size || [0, 0];
+        b = { x: +p[0], y: +p[1], w: +s[0], h: +s[1] };
+      } else if (isGraphNode(it)) b = hbTitledBox(it);
+      if (!b) return;
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+      x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    });
+    return x0 === 1e9 ? null : { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  function repRun(items, spots, on, L, count, dir, colors) {
+    var c = getCanvas(), g = getGraph();
+    var nodes = items.filter(isGraphNode), groups = items.filter(repIsGroup);
+    var box = repBox(items);
+    if (!c || !g || !box || !nodes.length) return;
+    /* each node carries a mark through the copy, so its copies are found again however the paste orders them */
+    nodes.forEach(function (n) { n.properties = n.properties || {}; n.properties.__hbRep = String(n.id); });
+    var data;
+    try { data = mgSerialize(items); } finally {
+      nodes.forEach(function (n) { try { delete n.properties.__hbRep; } catch (e) {} });
+    }
+    var ids = {}, outer = [];
+    nodes.forEach(function (n) { ids[n.id] = 1; });
+    nodes.forEach(function (n) {
+      (n.inputs || []).forEach(function (inp) {
+        var l = inp && inp.link != null ? linkById(g, inp.link) : null;
+        if (!l || ids[l.origin_id]) return;
+        var from = g.getNodeById ? g.getNodeById(l.origin_id) : null;
+        if (from) outer.push({ src: String(n.id), input: inp.name, from: from, slot: l.origin_slot });
+      });
+    });
+    /* the paste puts the block's top-left corner (nodes and groups) on the position it is given */
+    var ox = 1e9, oy = 1e9;
+    (data.nodes || []).forEach(function (n) { if (n.pos) { ox = Math.min(ox, +n.pos[0] || 0); oy = Math.min(oy, +n.pos[1] || 0); } });
+    (data.groups || []).forEach(function (gr) { var b = gr.bounding; if (b) { ox = Math.min(ox, b[0]); oy = Math.min(oy, b[1]); } });
+    var GAP = 60, right = dir === 'right';
+    var step = right ? [box.w + GAP, 0] : [0, box.h + GAP];
+    var all = right ? { x: box.x + box.w + GAP, y: box.y, w: count * (box.w + GAP) - GAP, h: box.h }
+      : { x: box.x, y: box.y + box.h + GAP, w: box.w, h: count * (box.h + GAP) - GAP };
+    /* the copies never land on other nodes: the whole stack slides on until it is clear */
+    var extra = hbFreeShift(g, all, nodes, right ? 0 : 1);
+    var t0 = Date.now(), plugs = [], made = [], missing = [], letters = [];
+    try { if (c.emitBeforeChange) c.emitBeforeChange(); } catch (e) {}
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    for (var k = 1; k <= count; k++) {
+      var to = String.fromCharCode(L.charCodeAt(0) + k);
+      letters.push(to);
+      var dx = step[0] * k + (right ? extra : 0), dy = step[1] * k + (right ? 0 : extra);
+      var res = null;
+      try { res = c._deserializeItems(JSON.parse(JSON.stringify(data)), { position: [ox + dx, oy + dy] }); } catch (e) {
+        setStatus('error', 'Replicate: copy ' + to + ' failed: ' + msgOf(e));
+        break;
+      }
+      var created = (res && res.created) || [];
+      var cn = created.filter(isGraphNode), cg = created.filter(repIsGroup);
+      var byOld = {};
+      cn.forEach(function (n) {
+        var p = n.properties || {};
+        if (p.__hbRep != null) { byOld[p.__hbRep] = n; delete p.__hbRep; }
+      });
+      mgRelink(data, cn);
+      /* groups come back in the order they were copied; the title confirms the pair */
+      var gOf = function (src) {
+        var i = groups.indexOf(src), cand = cg[i];
+        if (cand && cand.title === src.title) return cand;
+        for (var j = 0; j < cg.length; j++) if (cg[j].title === src.title) return cg[j];
+        return null;
+      };
+      var setMap = {}, known = setNames();
+      /* Sets first, so the Gets copied with them can follow */
+      var order = spots.map(function (sp, i) { return i; }).sort(function (a, b) {
+        return (spots[a].kind === 'set' ? 0 : 1) - (spots[b].kind === 'set' ? 0 : 1);
+      });
+      order.forEach(function (i) {
+        var sp = spots[i], lOn = !!on[i + ':L'], nOn = !!on[i + ':N'];
+        if (!lOn && !nOn) return;
+        var nt = repMove(sp.text, lOn, nOn, L, k);
+        if (nt === sp.text) return;
+        if (sp.kind === 'group') { var cgp = gOf(sp.src); if (cgp) cgp.title = nt; return; }
+        var cnode = byOld[String(sp.src.id)];
+        if (!cnode) return;
+        if (sp.kind === 'set') {
+          setNameOn(cnode, nt);
+          setMap[sp.text] = setGetName(cnode);
+          known.push(setGetName(cnode));
+        } else if (sp.kind === 'get') {
+          if (known.indexOf(nt) >= 0) setNameOn(cnode, nt);
+          else if (missing.indexOf(nt) < 0) missing.push(nt);
+        } else if (sp.kind === 'title') {
+          cnode.title = nt;
+        } else {
+          var w = cnode.widgets && cnode.widgets[sp.wi];
+          if (!w) return;
+          if (sp.kind === 'combo') {
+            var vals = w.options && w.options.values;
+            try { if (typeof vals === 'function') vals = vals(w, cnode); } catch (e) { vals = null; }
+            if (!Array.isArray(vals) || vals.indexOf(nt) < 0) return;
+          }
+          w.value = nt;
+          try { if (w.callback) w.callback(nt, c, cnode); } catch (e) {}
+        }
+      });
+      cn.forEach(function (n) {
+        if (isGetNode(n) && setMap[setGetName(n)]) setNameOn(n, setMap[setGetName(n)]);
+      });
+      if (colors) {
+        var hue = (to.charCodeAt(0) - 65) % REP_GROUP_HUES.length;
+        cg.forEach(function (gr) { gr.color = REP_GROUP_HUES[hue]; });
+        cn.forEach(function (n) { if (labelIsRg(n)) { n.properties = n.properties || {}; n.properties.backgroundColor = REP_LABEL_HUES[hue]; } });
+      }
+      outer.forEach(function (o) { if (byOld[o.src]) plugs.push({ node: byOld[o.src], input: o.input, from: o.from, slot: o.slot }); });
+      made = made.concat(cn);
+    }
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    var first = letters[0], last = letters[letters.length - 1];
+    setStatus(made.length ? 'ok' : 'error', made.length
+      ? '⧉ Replicated ' + L + ' → ' + (first === last ? first : first + '…' + last) + ' (' + letters.length + (letters.length === 1 ? ' copy, ' : ' copies, ') + made.length + ' nodes)' +
+        (missing.length ? ' · no Set named ' + missing.join(', ') + ': those Gets kept their name' : '')
+      : 'Replicate: nothing was copied');
+    /* wires from outside go into the same inputs; an input a node grows after the paste gets a few tries, and the
+       whole thing is one step for Ctrl+Z once the late wires are in */
+    (function plug(tries) {
+      var left = [];
+      plugs.forEach(function (p) {
+        var ins = p.node.inputs || [], idx = -1;
+        for (var i = 0; i < ins.length; i++) if (ins[i] && ins[i].name === p.input) { idx = i; break; }
+        if (idx < 0) { left.push(p); return; }
+        if (ins[idx].link == null) { try { p.from.connect(p.slot, p.node, idx); } catch (e) {} }
+      });
+      plugs = left;
+      if (plugs.length && tries < 12) { setTimeout(function () { plug(tries + 1); }, 120); return; }
+      setTimeout(function () {
+        try { if (g.afterChange) g.afterChange(); } catch (e) {}
+        try { if (c.emitAfterChange) c.emitAfterChange(); } catch (e) {}
+        try { g.setDirtyCanvas(true, true); } catch (e) {}
+      }, Math.max(0, 1300 - (Date.now() - t0)));
+    })(0);
+  }
+
+  /* The Replicate dialog: how many copies, the letter the names carry now, below or to the right, a color per
+     copy, and every name that moves on (each one can be switched off) */
+  function actReplicate(node) {
+    var c = getCanvas();
+    var items = mgItems(node);
+    if (!items.filter(isGraphNode).length) {
+      setStatus('error', 'Replicate: select the nodes or the group to copy first');
+      return;
+    }
+    if (!c || typeof c._deserializeItems !== 'function') {
+      setStatus('error', 'Replicate needs a newer ComfyUI frontend');
+      return;
+    }
+    var spots = repSpots(items);
+    var st = { L: repGuessLetter(spots) || 'A', n: +S.repN || 3, dir: S.repDir === 'right' ? 'right' : 'down', colors: S.repColors !== false, off: {} };
+    var nN = items.filter(isGraphNode).length, nG = items.filter(repIsGroup).length;
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg';
+    document.body.appendChild(bg);
+
+    function maxN() { return Math.max(0, 90 - st.L.charCodeAt(0)); }
+    function rowsNow() {
+      return repRows(spots, st.L).map(function (r) {
+        if (st.off[r.id] != null) r.on = !st.off[r.id];
+        return r;
+      });
+    }
+    function cut(s) { s = String(s); return s.length > 44 ? s.slice(0, 43) + '…' : s; }
+    function paint() {
+      st.n = Math.max(maxN() ? 1 : 0, Math.min(st.n, maxN()));
+      var rows = rowsNow(), chips = '';
+      for (var k = 1; k <= st.n; k++) {
+        var ch = String.fromCharCode(st.L.charCodeAt(0) + k);
+        var hue = st.colors ? REP_LABEL_HUES[(ch.charCodeAt(0) - 65) % REP_LABEL_HUES.length] : '#4a4a4a';
+        chips += '<span class="shb-rep-chip" style="background:' + hue + '">' + ch + '</span>';
+      }
+      var list = rows.map(function (r) {
+        var sp = spots[r.spot];
+        var a = repMove(sp.text, r.mode === 'L', r.mode === 'N', st.L, 1);
+        var z = st.n > 1 ? repMove(sp.text, r.mode === 'L', r.mode === 'N', st.L, st.n) : '';
+        return '<label class="shb-rep-row" data-tip="' + esc(sp.where + ': ' + sp.text) + '">' +
+          '<input type="checkbox" data-rep-row="' + esc(r.id) + '"' + (r.on ? ' checked' : '') + '>' +
+          '<span class="shb-rep-w">' + esc(sp.where) + (r.mode === 'N' ? ' · #' : '') + '</span>' +
+          '<span class="shb-rep-ft">' + esc(cut(sp.text)) + ' → <b>' + esc(cut(a)) + '</b>' + (z ? ' … <b>' + esc(cut(z)) + '</b>' : '') + '</span>' +
+        '</label>';
+      }).join('');
+      bg.innerHTML =
+        '<div class="shb-modal shb-rep" style="width:min(560px,94vw)">' +
+          '<div class="shb-modal-t"><span>' + ico('copy', 15) + ' Replicate</span>' +
+            '<span class="shb-rep-note">' + nN + (nN === 1 ? ' node' : ' nodes') + (nG ? ' · ' + nG + (nG === 1 ? ' group' : ' groups') : '') + '</span></div>' +
+          '<div class="shb-rep-line">' +
+            '<span class="shb-rep-k">Copies</span>' +
+            '<span class="shb-rep-n"><button type="button" data-rep-n="-1">−</button>' +
+              '<input data-rep-count value="' + st.n + '" inputmode="numeric">' +
+              '<button type="button" data-rep-n="1">+</button></span>' +
+            '<span class="shb-rep-chips">' + (chips || '<span class="shb-rep-note">Z is the last letter</span>') + '</span>' +
+          '</div>' +
+          '<div class="shb-rep-line">' +
+            '<span class="shb-rep-k">Letter</span>' +
+            '<input class="shb-input shb-rep-L" data-rep-letter maxlength="1" value="' + esc(st.L) + '" data-tip="The letter the names carry now; each copy moves it on one (A → B, C, D…)">' +
+            '<span class="shb-rep-k" style="width:auto;margin-left:10px">Place</span>' +
+            '<button type="button" class="shb-btn' + (st.dir === 'down' ? ' shb-btn-on' : '') + '" data-rep-dir="down">↓ Below</button>' +
+            '<button type="button" class="shb-btn' + (st.dir === 'right' ? ' shb-btn-on' : '') + '" data-rep-dir="right">→ Right</button>' +
+            '<label class="shb-rep-col" data-tip="Each copy\'s groups and labels take the color of its letter"><input type="checkbox" data-rep-colors' + (st.colors ? ' checked' : '') + '> A color per copy</label>' +
+          '</div>' +
+          (list
+            ? '<div class="shb-rep-hd">Moves on in each copy</div><div class="shb-rep-list">' + list + '</div>'
+            : '<div class="shb-rep-note">No "' + esc(st.L) + '" on its own in these names (Group_' + esc(st.L) + ', Crop_' + esc(st.L) + '_v…), so the copies keep the same names. Type the letter they carry, or add one first.</div>') +
+          '<div class="shb-rep-note">Wires coming in from outside stay plugged into the same nodes.</div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px">' +
+            '<button type="button" class="shb-btn" data-rep-cancel>Cancel</button>' +
+            '<button type="button" class="shb-btn shb-btn-pri" data-rep-ok' + (st.n ? '' : ' disabled') + '>Replicate ×' + st.n + '</button>' +
+          '</div>' +
+        '</div>';
+    }
+    function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
+    function go() {
+      if (!st.n) return;
+      var on = {};
+      rowsNow().forEach(function (r) { if (r.on) on[r.id] = 1; });
+      S.repN = st.n; S.repDir = st.dir; S.repColors = st.colors;
+      save();
+      close();
+      repRun(items, spots, on, st.L, st.n, st.dir, st.colors);
+    }
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
+    bg.addEventListener('click', function (ev) {
+      var t = ev.target.closest ? ev.target.closest('button,input') : null;
+      if (!t) return;
+      if (t.hasAttribute('data-rep-cancel')) close();
+      else if (t.hasAttribute('data-rep-ok')) go();
+      else if (t.hasAttribute('data-rep-n')) { st.n += +t.getAttribute('data-rep-n'); paint(); }
+      else if (t.hasAttribute('data-rep-dir')) { st.dir = t.getAttribute('data-rep-dir'); paint(); }
+    });
+    bg.addEventListener('change', function (ev) {
+      var t = ev.target;
+      if (t.hasAttribute('data-rep-row')) st.off[t.getAttribute('data-rep-row')] = !t.checked;
+      else if (t.hasAttribute('data-rep-colors')) { st.colors = t.checked; paint(); }
+      else if (t.hasAttribute('data-rep-count')) { st.n = parseInt(t.value, 10) || 1; paint(); }
+    });
+    bg.addEventListener('input', function (ev) {
+      var t = ev.target;
+      if (!t.hasAttribute('data-rep-letter')) return;
+      var v = String(t.value || '').toUpperCase().replace(/[^A-Z]/g, '');
+      if (!v) return;
+      st.L = v; st.off = {};
+      paint();
+      var f = bg.querySelector('[data-rep-letter]');
+      if (f) { f.focus(); f.select(); }
+    });
+    bg.addEventListener('keydown', function (ev) {
+      ev.stopPropagation();
+      if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+      else if (ev.key === 'Enter') {
+        ev.preventDefault();
+        var t = ev.target;
+        if (t && t.hasAttribute && t.hasAttribute('data-rep-count')) { st.n = parseInt(t.value, 10) || 1; paint(); }
+        go();
+      }
+    });
+    paint();
+    var okb = bg.querySelector('[data-rep-ok]');
+    try { if (okb) okb.focus(); } catch (e) {}
+  }
+
   /* Model families, read from the model file a loader holds (or from the node types) */
   var MG_FAMILIES = [
     [/kontext/i, 'Flux Kontext'], [/flux/i, 'Flux'], [/qwen/i, 'Qwen'], [/hidream/i, 'HiDream'], [/chroma/i, 'Chroma'],
@@ -11109,7 +11591,11 @@
     { uid: 'tool:zoom', icon: 'zoom', name: 'Zoom to Selection', keys: '.', desc: 'Frame the selection, press again to go back',
       tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' },
     { uid: 'tool:arrange', icon: 'arrange', name: 'Arrange Nodes', keys: 'L', desc: 'Line up the selection along its wires, as in Nuke',
-      tip: 'With the hotbox closed, select nodes and press L. Wired nodes go into columns that follow the wires, each wire as straight as it can be; nodes with no wires between them line up in a row or a column. One node lines up with the node that feeds it. The selection keeps its corner, and Ctrl+Z puts it back.' }
+      tip: 'With the hotbox closed, select nodes and press L. Wired nodes go into columns that follow the wires, each wire as straight as it can be; nodes with no wires between them line up in a row or a column. One node lines up with the node that feeds it. The selection keeps its corner, and Ctrl+Z puts it back.' },
+    { uid: 'tool:copywf', icon: 'copy', name: 'Copy Workflow', keys: 'click', desc: 'The whole workflow to the clipboard',
+      tip: 'Copies the whole workflow, exactly as Export saves it, to the clipboard: paste it into a chat or a .json file, or press Ctrl+V on any ComfyUI canvas to open it there. Works from any node or from the bare canvas.' },
+    { uid: 'tool:replicate', icon: 'copy', name: 'Replicate', keys: 'A → B, C…', desc: 'Copies of the selection, each with its own letter',
+      tip: 'Select a group (with its label) or any nodes and choose how many copies: they stack below or to the right, and each one moves the letter on (A → B, C, D…) in its group titles, labels, Set / Get names, texts and file names (Save Video, Save EXR, OCIO Read / Write, Crop_A_v → Crop_B_v). A file picked from a list moves on when that file is there (jacket_A.png → jacket_B.png). Every name that moves is listed first and can be switched off; numbers (IMAGE_1 → IMAGE_2) can be switched on. Wires coming in from outside stay plugged into the same nodes, and one Ctrl+Z takes all the copies back.' }
   ];
 
   /* One floating tooltip for anything that carries data-tip (it lives on body, so a scrolling modal never clips it) */
@@ -11833,6 +12319,8 @@
     arrange: actArrange,
     swapNodes: actSwapPair,
     mergeToButton: actMagic,
+    copyWorkflow: actCopyWorkflow,
+    replicate: actReplicate,
     configFile: function () { return cfgPath(); },
     filesChanged: cfgFilesChanged,
     /* shared libraries, for a tool that follows the shot you are on: addLibrary(path, { label, readOnly }) */
