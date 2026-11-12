@@ -108,7 +108,7 @@ The **H** button in ComfyUI's top bar: click it for settings (hotkey, toggle vs.
 
 **Glass Blur** (Fluid and Compact) is the frosted glass behind the bars and cards. It asks a lot of a browser that draws without a graphics card (a remote desktop, some Linux workstations): switched off, the bars are plain panels.
 
-Compact is the style a new Hotbox starts with. Preferences saved before 1.2.9 keep the style they had; <kbd>Tab</kbd> switches it.
+Compact is the style Hotbox opens in. Preferences saved with Fluid before 1.2.9 open in Compact once, since nothing in them tells a Fluid that was chosen from one that was just the default: <kbd>Tab</kbd> (or **UI Style** here) brings Fluid back, and from then on it stays.
 
 ---
 

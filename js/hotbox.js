@@ -164,7 +164,11 @@
       });
       if (S.hbEditAnim === 'jiggle') S.hbEditAnim = 'none';
     }
-    S.cfgRev = 5;
+    /* Compact is the style Hotbox opens in now. A file saved before that carries Fluid, whether it was chosen
+       or was just the default of its day, and nothing tells the two apart: it opens in Compact once. Tab (or
+       Settings → UI Style) brings Fluid back, and from then on it stays */
+    if (rev < 6 && S.hbStyle === 'pro') S.hbStyle = 'classic';
+    S.cfgRev = 6;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
