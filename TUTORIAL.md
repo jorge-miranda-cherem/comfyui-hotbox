@@ -16,7 +16,7 @@ The names used below: the **Dock** is the numbered row on top, the **Context bar
 2. Point at the new node and press <kbd>`</kbd> again. The Context bar now holds the actions for an image: press
    <kbd>C</kbd> (its first action, **Crop**) and a crop with its preview is added, already wired.
 3. Press <kbd>Shift</kbd>+<kbd>R</kbd> (**Render Selected**) to run only the selected node's outputs.
-4. While the hotbox is open, <kbd>Tab</kbd> switches style (Fluid → Compact → Quiet) and <kbd>.</kbd> frames the selection.
+4. While the hotbox is open, <kbd>Tab</kbd> switches style (Compact, the one it starts with → Quiet → Fluid) and <kbd>.</kbd> frames the selection.
 
 Every key works on the node under the cursor or the selected one, so a whole graph can be built without menus.
 
@@ -104,10 +104,12 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 
 ![Group two buttons, find one in the drawer, drag it onto the canvas](docs/tutorial/09-saved-buttons-library.gif)
 
-- **Group buttons**: drag a button onto the middle of another. Hover the group to see its list; its arrow keeps it open until the hotbox closes. A group left with one button, or none, asks whether to keep it.
+- **Group buttons**: drag a button over the middle of another and rest there until it lights up, then let go. Hover the group to see its list; its arrow keeps it open until the hotbox closes. A group left with one button, or none, asks whether to keep it.
 - **Find any button**: press <kbd>N</kbd> and type — saved buttons have their own section in the drawer.
 - **Drag a button onto the canvas** to add its nodes there, or **onto a bar** to pin it to that bar.
-- **Manage them** in **Settings → Saved Buttons** (rename in edit mode, delete with two clicks on the trash).
+- **Change a button, keep the button**: change its nodes on the canvas, select them, right-click the button and choose **Use selection**. Or **Edit its nodes…** to change a value, a title or the JSON right there. It stays where it is, with its name, color and key, and what it held before is kept as a version.
+- **Give it a key**: right-click a button → **Key**, and press the key that runs it while the hotbox is open.
+- **Manage them** in **Settings → Saved Buttons → Browse…**: every button and group on cards, to rename, color, group, edit and delete, with **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>).
 - **Share them**: **Settings → Shared Libraries → Add Folder** adds a team folder (a studio drive, one per show). Its
   buttons show up in the drawer beside yours; make it **Writable** and **Save Here** and the buttons you save go there
   for everyone. See [shared libraries](docs/REFERENCE.md#%EF%B8%8F-shared-libraries).

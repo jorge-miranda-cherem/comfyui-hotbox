@@ -62,7 +62,12 @@ Saved buttons can live in a shared folder too (a studio drive, one per show), so
 
 <img src="docs/media/button-colors.webp" alt="Edit mode: Render Selected painted green, Bypass marked red, VAE Decode painted purple" width="100%">
 
-In edit mode, tap a button to rename it or give it a color: on its mark only, or on the whole button.
+In edit mode, click a button (or right-click it any time) to rename it, give it a color (on its mark only, or on the
+whole button) and a key of its own. Drag it anywhere, into a group too; let go outside a bar and it goes back where it
+was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
+
+A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
+nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** shows every button and group on cards.
 
 **Put any tool anywhere**
 

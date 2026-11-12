@@ -29,10 +29,11 @@
     hbCode: 'Backquote',
     hbMods: '',
     hbHold: false,          /* false = toggle on press, true = hold & release */
-    hbStyle: 'pro',         /* 'pro' (Fluid glass cards), 'quiet' (native panels) or 'classic' (Compact: Fluid look, bars only) */
+    hbStyle: 'classic',     /* 'classic' (Compact: Fluid look, bars only), 'pro' (Fluid glass cards) or 'quiet' (native panels) */
     hbDockCat: 'models',    /* category shortcut at the end of the dock: 'models' | 'tools' | 'subs' | 'search' | 'none' */
-    hbEditAnim: 'jiggle',   /* edit-mode idle animation: 'jiggle' | 'tilt' | 'float' | 'outline' */
+    hbEditAnim: 'none',     /* edit-mode idle animation: 'none' (still) | 'outline' | 'tilt' | 'float' | 'jiggle' */
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
+    hbBlur: true,           /* Fluid & Compact: frosted glass behind bars and cards (costly without a GPU: off = plain panels) */
     hbLeaders: false,       /* Quiet: hairlines from the cursor to each zone (off: they cover the node) */
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
@@ -60,6 +61,7 @@
     customLabels: {},       /* user custom short labels by uid */
     customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
     customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
+    customKeys: {},         /* a key of its own for a bar button (uid: 'q'), set in its Edit Button box; it works while the button shows */
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
@@ -147,8 +149,23 @@
         });
       }
     }
-    S.cfgRev = 4;
     if (!Array.isArray(S.templates)) S.templates = [];
+    /* One name per button: a saved button or a group renamed on a bar used to keep that name beside its own
+       (customLabels), so Settings went on showing the old one. The bar's name becomes its name. And the buttons
+       that shook in edit mode stand still now (Settings → Edit Mode brings any of the motions back) */
+    if (rev < 5) {
+      var lbls = (S.customLabels && typeof S.customLabels === 'object') ? S.customLabels : {};
+      S.templates.forEach(function (t) {
+        var tu = t && t.id ? 'tpl:' + t.id : '';
+        if (tu && lbls[tu]) { t.name = String(lbls[tu]); delete lbls[tu]; }
+      });
+      Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (g) {
+        if (S.hbGroups[g] && lbls['grp:' + g]) { S.hbGroups[g].name = String(lbls['grp:' + g]); delete lbls['grp:' + g]; }
+      });
+      if (S.hbEditAnim === 'jiggle') S.hbEditAnim = 'none';
+    }
+    S.cfgRev = 5;
+    if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
       S.hbCode = 'Backquote';
@@ -299,9 +316,10 @@
   /* A config came in from the file (start-up, version switch, import): redraw whatever shows it */
   function cfgApplied() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) {}
+    /* the steps to undo belonged to the preferences that were in use until now */
+    HB_UNDO = [];
     updateTopBarButtonState();
-    if (HB.el) hbPaint();
-    if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
+    hbRedrawAll();
   }
 
   function cfgListVersions() {
@@ -818,7 +836,7 @@
       '.shb-grp-drop > .shb-btn{box-shadow:inset 0 0 0 1.5px #5aa2f0 !important;background:rgba(90,162,240,.18) !important}',
       '.shb-item-wrap > .shb-btn{position:relative}',
       '.shb-item-wrap.shb-removing{max-width:0;opacity:0;transform:scale(.3);overflow:hidden;transition:max-width 120ms cubic-bezier(.2,.9,.1,1),opacity 90ms ease,transform 120ms cubic-bezier(.2,.9,.1,1)}',
-      '.shb-item-wrap.shb-drag-src{opacity:.35;pointer-events:none}',
+      '.shb-item-wrap.shb-drag-src{pointer-events:none}',
       '.shb-item-wrap.shb-collapsed{max-width:0;opacity:0;overflow:hidden;transition:max-width 120ms cubic-bezier(.2,.9,.1,1),opacity 90ms}',
       '.shb-editing [data-hb-bar] .shb-btn{cursor:grab}',
       '.shb-btn.shb-outline{outline:1px dashed rgba(255,255,255,.3);outline-offset:1px}',
@@ -828,6 +846,28 @@
       '.shb-editing .shb-editbar{display:flex}',
       '.shb-editbar-b{border:0;background:transparent;cursor:pointer}',
       '.shb-editbar-b.shb-editbar-on{background:rgba(255,255,255,.14)}',
+      '.shb-editbar{position:relative}',
+      '.shb-editbar-b:disabled{opacity:.35;cursor:default;pointer-events:none}',
+      /* edit mode says so quietly: "Editing" in the edit bar and a fine line around every bar */
+      '.shb-editbar-tag{display:inline-flex;align-items:center;gap:6px;margin-right:8px;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#9cc2f5}',
+      '.shb-editbar-tag i{width:6px;height:6px;border-radius:50%;background:#64a8f0}',
+      '.shb-editing .shb-bar{outline:calc(1.5px / var(--shb-zoom,1)) solid rgba(100,168,240,.6);outline-offset:calc(-1.5px / var(--shb-zoom,1))}',
+      /* while a button is dragged the edit bar is where it can be dropped to take it off its bar */
+      '.shb-editbar-trash{position:absolute;inset:0;z-index:3;display:none;align-items:center;justify-content:center;gap:8px;border-radius:inherit;background:rgba(92,36,32,.97);color:#ffd9d3;font:600 12px/1 Inter,system-ui,sans-serif;box-shadow:inset 0 0 0 1px rgba(224,112,95,.55)}',
+      '.shb-dragging .shb-editbar-trash{display:flex}',
+      '.shb-editbar-trash.shb-hot{background:#a8433a;color:#fff;box-shadow:inset 0 0 0 2px #ffb3a6}',
+      /* the place a dragged button will take: an empty slot, drawn where it lands */
+      '.shb-item-wrap.shb-drag-src > .shb-btn{background:rgba(92,148,240,.16) !important;box-shadow:inset 0 0 0 1.5px rgba(110,165,245,.95) !important;border-color:transparent !important;outline:none !important}',
+      '.shb-item-wrap.shb-drag-src > .shb-btn > *{visibility:hidden}',
+      '.shb-item-wrap.shb-drag-gone > .shb-btn{background:rgba(224,112,95,.12) !important;box-shadow:inset 0 0 0 1.5px rgba(224,112,95,.75) !important}',
+      /* ...and the button itself, lifted: a little bigger, with a shadow, under the pointer */
+      '.shb-ghost.shb-lift,.shb-ghost.shb-lift.shb-fluid,.shb-ghost.shb-lift.shb-quiet,.shb-ghost.shb-lift.shb-fluid.shb-ghost-over,.shb-ghost.shb-lift.shb-fluid.shb-ghost-rm,.shb-ghost.shb-lift.shb-quiet.shb-ghost-rm{padding:0;border:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;flex-direction:column;gap:9px;transform:translate(-50%,-50%);transition:none}',
+      '.shb-lift > .shb-btn{transform:scale(1.12);box-shadow:0 16px 36px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.22) !important;cursor:grabbing}',
+      '.shb-lift.shb-ghost-rm > .shb-btn{box-shadow:0 16px 36px rgba(0,0,0,.6),0 0 0 2px #e0705f !important;opacity:.85}',
+      '.shb-lift .shb-ghost-hint,.shb-ghost.shb-lift.shb-fluid .shb-ghost-hint,.shb-ghost.shb-lift.shb-quiet .shb-ghost-hint{padding:4px 8px;border-radius:8px;background:rgba(20,20,22,.9);color:#d8d8dc;font:500 11px/1 Inter,system-ui,sans-serif}',
+      '.shb-lift .shb-ghost-hint:empty{display:none}',
+      /* Glass Blur off (Settings → Effects): plain panels, for a browser without a GPU */
+      '.shb-fluid.shb-noblur .shb-bar,.shb-fluid.shb-noblur .shb-card,.shb-fluid.shb-noblur .shb-drawer,.shb-fluid.shb-noblur .shb-editbar,.shb-fluid.shb-noblur .shb-dial-in,.shb-fluid.shb-noblur .shb-catmenu,.shb-fluid.shb-noblur .shb-wmenu,.shb-ghost.shb-fluid.shb-noblur{-webkit-backdrop-filter:none;backdrop-filter:none;background:#29292d}',
       /* edit mode shows an empty context bar as a place to drop buttons: it hangs under the dock instead of pushing it up, so the dock stays under the pointer */
       '.shb-editing .shb-zone-top > .shb-ctx:not(:has(.shb-item-wrap:not(.shb-drag-src),.shb-segc,.shb-w-host)){position:absolute;top:100%;left:50%;translate:-50% 0;margin-top:6px}',
 
@@ -1014,6 +1054,84 @@
       '.shb-tpl-del{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;opacity:.45;cursor:pointer}',
       '.shb-tpl-del:hover{opacity:1;background:rgba(232,115,95,.18)}',
       '.shb-tpl-del.shb-armed{opacity:1;background:rgba(232,115,95,.32);color:#ffb3a6}',
+      '.shb-btn.shb-armed{background:rgba(232,115,95,.28);border-color:#e0705f;color:#ffd0c8}',
+      '.shb-ebtn-row{flex-wrap:wrap}',
+      '.shb-ebtn-key{min-width:96px;justify-content:center;font-weight:600}',
+      '.shb-ebtn-row .shb-btn.shb-na{opacity:.45}',
+      /* The button browser */
+      '.shb-modal.shb-brw{width:min(1040px,95vw);height:min(780px,90vh);max-height:90vh;padding:0;gap:0;overflow:hidden}',
+      '.shb-brw > .shb-modal-t,.shb-ted > .shb-modal-t{padding:14px 18px 12px;gap:12px;flex-shrink:0}',
+      '.shb-brw-title{display:inline-flex;align-items:center;gap:9px;min-width:0}',
+      '.shb-brw-title > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-brw-title small{font:400 11.5px/1.2 Inter,system-ui,sans-serif;color:#8a8a8a;margin-left:4px;white-space:nowrap}',
+      '.shb-brw-tools{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}',
+      '.shb-brw-tools .shb-btn:disabled,.shb-ted-foot .shb-btn:disabled{opacity:.4;pointer-events:none}',
+      '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
+      '.shb-brw-find{position:relative;display:inline-flex;align-items:center}',
+      '.shb-brw-find .shb-ico{position:absolute;left:9px;color:#7d7d7d;pointer-events:none}',
+      '.shb-brw-find .shb-input{width:200px;padding-left:28px}',
+      '.shb-brw-body{flex:1;min-height:0;overflow-y:auto;padding:2px 18px 18px;scrollbar-width:thin}',
+      '.shb-brw-sec{margin:16px 0 9px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:#a9a9a9}',
+      '.shb-brw-sec small{font-weight:400;letter-spacing:0;text-transform:none;color:#6e6e6e;margin-left:8px}',
+      '.shb-brw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}',
+      '.shb-brw-card{--shb-tint:#b9a6ff;position:relative;display:flex;flex-direction:column;gap:6px;padding:11px 12px 9px 14px;border-radius:10px;background:#262628;border:1px solid #34343a;cursor:pointer;user-select:none;touch-action:none;transition:border-color .12s,background .12s}',
+      '.shb-brw-card:hover{border-color:#5a5a64;background:#2b2b2e}',
+      '.shb-brw-card::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--shb-tint)}',
+      '.shb-brw-card.shb-brw-fill{background:color-mix(in srgb,var(--shb-tint) 18%,#262628)}',
+      '.shb-brw-c1{display:flex;align-items:center;gap:8px;min-width:0}',
+      '.shb-brw-c1 b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px/1.25 Inter,system-ui,sans-serif;color:#f0f0f0}',
+      '.shb-brw-ico{display:inline-grid;place-items:center;color:var(--shb-tint);flex-shrink:0}',
+      '.shb-brw-ico .shb-ico{color:inherit !important}',
+      '.shb-brw-c2{font:400 11.5px/1.35 Inter,system-ui,sans-serif;color:#8f8f95;min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-brw-c3{display:flex;align-items:center;gap:6px;min-height:26px}',
+      '.shb-brw-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#33333a;color:#cfcfd6;font:500 10.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;max-width:140px;overflow:hidden}',
+      '.shb-brw-chip > span{overflow:hidden;text-overflow:ellipsis}',
+      '.shb-brw-chip-no{background:transparent;color:#66666c;padding-left:0}',
+      '.shb-brw-acts{margin-left:auto;display:inline-flex;gap:2px;opacity:0;transition:opacity .12s}',
+      '.shb-brw-card:hover .shb-brw-acts,.shb-brw-grp:hover .shb-brw-acts{opacity:1}',
+      '.shb-brw .shb-key{font:600 10px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#d6d6d6;background:#1b1b1d;border:1px solid #45454c;border-radius:4px;padding:3px 5px;flex-shrink:0}',
+      '.shb-brw-dragging{opacity:.4}',
+      '.shb-brw-grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}',
+      '.shb-brw-grp{--shb-tint:#7aa7e0;display:flex;flex-direction:column;gap:9px;padding:10px 12px 12px;border-radius:10px;background:#1f1f21;border:1px dashed #3d3d44;transition:border-color .12s,background .12s}',
+      '.shb-brw-grp.shb-brw-hot{border-color:#6ea5f5;border-style:solid;background:#222a36}',
+      '.shb-brw-ghd{display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;min-height:28px}',
+      '.shb-brw-ghd b{font:600 13px/1.25 Inter,system-ui,sans-serif;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-brw-ghd small{font:400 11px/1 Inter,system-ui,sans-serif;color:#7d7d83;white-space:nowrap}',
+      '.shb-brw-mems{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center}',
+      '.shb-brw-mem{--shb-tint:#b0b0b8;display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 8px;border-radius:8px;background:#2c2c30;border:1px solid #3a3a41;color:#e4e4e8;font:500 12px/1 Inter,system-ui,sans-serif;cursor:grab;user-select:none;touch-action:none}',
+      '.shb-brw-mem:hover{border-color:#5a5a64}',
+      '.shb-brw-out{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;font:600 12px/1 Inter,system-ui,sans-serif;font-style:normal;color:#9a9aa2;cursor:pointer}',
+      '.shb-brw-out:hover{background:rgba(232,115,95,.3);color:#fff}',
+      '.shb-brw-none{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:#6e6e74}',
+      '.shb-brw-foot{flex-shrink:0;padding:9px 18px;border-top:1px solid #2e2e32;font:400 11px/1.3 Inter,system-ui,sans-serif;color:#7d7d83}',
+      /* The nodes of a saved button */
+      '.shb-modal.shb-ted{width:min(920px,95vw);height:min(700px,90vh);max-height:90vh;padding:0;gap:0;overflow:hidden}',
+      '.shb-select.shb-ted-hist{width:auto;max-width:210px}',
+      '.shb-ted-main{flex:1;min-height:0;display:flex}',
+      '.shb-ted-list{width:240px;flex-shrink:0;overflow-y:auto;padding:8px;border-right:1px solid #2e2e32;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin}',
+      '.shb-ted-n{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;padding:7px 9px;border-radius:7px;border:1px solid transparent;background:transparent;color:#dcdce0;cursor:pointer;min-width:0;flex-shrink:0}',
+      '.shb-ted-n b{font:500 12.5px/1.25 Inter,system-ui,sans-serif;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-ted-n small{font:400 10.5px/1.2 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#77777d;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-ted-n:hover{background:#27272a}',
+      '.shb-ted-n.shb-on{background:#2d3542;border-color:var(--shb-accent);color:#fff}',
+      '.shb-ted-pane{flex:1;min-width:0;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}',
+      '.shb-ted-row{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:start;gap:10px;flex-shrink:0}',
+      '.shb-ted-row > label:first-child{padding-top:7px;font:500 12px/1.2 Inter,system-ui,sans-serif;color:#9a9aa0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-input.shb-ted-ta{min-height:74px;resize:vertical;line-height:1.4}',
+      '.shb-ted-mono{font:400 11.5px/1.45 "JetBrains Mono",ui-monospace,Consolas,monospace !important;white-space:pre;tab-size:2}',
+      '.shb-ted-chk{display:inline-flex;align-items:center;gap:8px;padding-top:6px;color:#cfcfd4;cursor:pointer}',
+      '.shb-ted-sec{flex-shrink:0;margin-top:6px;padding-top:11px;border-top:1px solid #2e2e32;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:#8a8a90}',
+      '.shb-ted-rm{margin-top:auto;padding-top:12px;flex-shrink:0}',
+      '.shb-ted-jbar{display:flex;align-items:center;gap:10px;flex-shrink:0}',
+      '.shb-ted-jbar small{color:#7d7d83;font-size:11px}',
+      '.shb-ted-raw{flex:1;min-height:240px;resize:none}',
+      '.shb-ted-foot{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:1px solid #2e2e32}',
+      '.shb-ted-err{color:#f0a196;font-size:11.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      /* Settings → Saved Buttons: groups, and a button's own color on its row */
+      '.shb-sb-grp > .shb-ico{color:var(--shb-tint,#7aa7e0)}',
+      '.shb-pt-row[style*="--shb-tint"] .shb-tpl-ico .shb-ico{color:var(--shb-tint) !important}',
+      '.shb-sb-top{display:flex;gap:6px;align-items:stretch}',
+      '.shb-sb-top .shb-ptmenu{flex:1;min-width:0}',
 
       /* Drawer for Categories / Search / Models */
       '.shb-drawer{display:flex;flex-direction:column;gap:6px;width:320px;max-height:420px;overflow:hidden;box-sizing:border-box}',
@@ -6469,12 +6587,64 @@
     }
   }
 
-  /* Edit mode: a tap on a button opens this. Its name, and a color: on its mark (the dot, icon or number at its
-     start) or on the whole button, shown on a copy of the button as it changes. The color is for the button
+  /* A key of its own for a bar button (Edit Button → Key): one key, no Ctrl / Alt, kept by the button's uid.
+     It works while the button shows, and takes the key over from whatever had it in the hotbox */
+  function hbKeyFor(uid) {
+    return (S.customKeys && typeof S.customKeys === 'object' && S.customKeys[uid]) || '';
+  }
+
+  function hbKeyName(k) {
+    k = String(k || '');
+    return k.length <= 1 ? k.toUpperCase() : k.charAt(0).toUpperCase() + k.slice(1);
+  }
+
+  var HB_KEY_BUILTIN = { f: 'opens Search', n: 'opens the image / video kit', a: 'opens Models & APIs', u: 'opens Subgraphs', '+': 'opens the + menu',
+    '=': 'opens the + menu', p: 'steps the seed mode', l: 'adds a label', f2: 'renames the node', r: 'adds a reroute', s: 'adds a Set bus',
+    g: 'groups the selection', v: 'is Load in Canvas', t: 'adds a preview', b: 'bypasses the node', m: 'mutes the node', k: 'bypasses every API node',
+    z: 'opens the Magnifier', '.': 'frames the selection', w: 'swaps two nodes', x: 'is Save as Button', c: 'runs the first button of the context bar' };
+
+  /* who has that key already, if anyone: another button's own key (it moves), or something the hotbox does with it */
+  function hbKeyClash(k, uid) {
+    var other = '';
+    Object.keys(S.customKeys || {}).forEach(function (u) { if (u !== uid && S.customKeys[u] === k) other = u; });
+    if (other) return hbKeyName(k) + ' is the key of "' + hbUidLabel(other) + '": it moves to this button';
+    if (/^[1-9]$/.test(k)) return k + ' is also button ' + k + ' of the dock: this button takes the key while it shows';
+    if (HB_KEY_BUILTIN[k]) return hbKeyName(k) + ' ' + HB_KEY_BUILTIN[k] + ' in the hotbox: this button takes the key while it shows';
+    return '';
+  }
+
+  /* The one name a button shows everywhere (bars, drawer, Settings, the button browser). A saved button of your
+     own and a group keep it in themselves; anything else (a tool, a node, a shared library's button) keeps the
+     name you gave it in customLabels */
+  function hbBtnName(uid, own) {
+    return (S.customLabels && S.customLabels[uid]) || own || '';
+  }
+
+  function hbUidLabel(uid) {
+    var u = String(uid || ''), it = null;
+    try { it = resolveBarItem(u, HB.node, true); } catch (e) { it = null; }
+    if (it) return it.label;
+    if (/^grp:/.test(u)) { var g = grpById(u.slice(4)); return hbBtnName(u, g ? g.name : 'Group'); }
+    if (/^tpl:/.test(u)) { var t = tplById(u.slice(4)); return hbBtnName(u, t ? t.name : 'Saved button'); }
+    return hbBtnName(u, u.replace(/^[a-z]+:/, ''));
+  }
+
+  /* Edit Button: a click on a button in edit mode, or a right-click on it any time, opens this. Its name, a
+     color (on its mark: the dot, icon or number at its start; or on the whole button, shown on a copy of the
+     button as it changes), a key of its own and, for a saved button, its nodes. The color is for the button
      only: nodes keep theirs */
   function promptRenameBarItem(uid, node, btnEl) {
-    var item = resolveBarItem(uid, node);
+    var item = resolveBarItem(uid, node, true);
     if (!item) return;
+    var ownTpl = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
+    var canNodes = !!(ownTpl && (!ownTpl.lib || ownTpl.canDelete));
+    var nSel = canNodes ? mgItems(null).filter(isGraphNode).length : 0;
+    var key = hbKeyFor(uid), grabbing = false, keyNote = '';
+    var defKey = '';
+    try {
+      var numEl = btnEl && btnEl.querySelector(':scope > .shb-num');
+      defKey = key ? '' : ((numEl && numEl.textContent) || (item.kind === 'tool' && item.kbd) || '');
+    } catch (e) { defKey = ''; }
     var lead = '';
     try {
       var src = btnEl && btnEl.querySelector(':scope > .shb-num, :scope > .shb-pin-dot, :scope > .shb-tpl-ico, :scope > .shb-ico');
@@ -6486,7 +6656,7 @@
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
     bg.innerHTML =
-      '<div class="shb-modal" style="width:min(380px,92vw)">' +
+      '<div class="shb-modal" style="width:min(430px,92vw)">' +
         '<div class="shb-modal-t"><span>Edit Button</span></div>' +
         '<div class="shb-ebtn-prev"><span class="shb-btn" data-rbi-prev>' + lead + '<span class="shb-lbl" data-rbi-plbl>' + esc(item.label) + '</span></span></div>' +
         '<div class="shb-ebtn-row"><span>Name</span><input class="shb-input" style="flex:1" data-rbi-in value="' + esc(item.label) + '" placeholder="Custom button name…"></div>' +
@@ -6501,8 +6671,18 @@
           '<button type="button" data-rbi-fill="1" title="The whole button, in a soft shade of the color">Whole button</button>' +
         '</span></div>' +
         '<div class="shb-ebtn-note">Pick a color, then paint just the mark or the whole button, so you can find it at a glance. Nodes keep their own colors.</div>' +
+        '<div class="shb-ebtn-row"><span>Key</span>' +
+          '<button type="button" class="shb-btn shb-btn-pri shb-ebtn-key" data-rbi-key title="Click, then press the key that runs this button while the hotbox is open"></button>' +
+          '<button type="button" class="shb-btn" data-rbi-keyclr title="No key of its own">Clear</button>' +
+        '</div>' +
+        '<div class="shb-ebtn-note" data-rbi-keynote></div>' +
+        (canNodes ? '<div class="shb-ebtn-row"><span>Nodes</span>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-rbi-nodes title="Open what this button holds: change a node\'s values or title, take a node out, or edit its JSON. It stays the same button">' + ico('edit', 13) + '<span>Edit its ' + esc(ownTpl.count) + (ownTpl.count === 1 ? ' node…' : ' nodes…') + '</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-pri' + (nSel ? '' : ' shb-na') + '" data-rbi-take title="' + (nSel ? 'The button takes the ' + nSel + ' selected ' + (nSel === 1 ? 'node' : 'nodes') + ' instead of the ones it holds, and stays the same button: same place, name, color and key'
+            : 'Select nodes on the canvas first: the button takes them instead of the ones it holds') + '">' + ico('sync', 13) + '<span>Use selection' + (nSel ? ' (' + nSel + ')' : '') + '</span></button>' +
+        '</div>' : '') +
         '<div style="display:flex;justify-content:space-between;gap:8px">' +
-          '<button class="shb-btn" data-rbi-reset title="Back to its own name and color">Reset</button>' +
+          '<button class="shb-btn" data-rbi-reset title="Back to its own name and color, and no key of its own">Reset</button>' +
           '<div style="display:flex;gap:6px">' +
             '<button class="shb-btn" data-rbi-cancel>Cancel</button>' +
             '<button class="shb-btn shb-btn-pri" data-rbi-ok>Save</button>' +
@@ -6528,20 +6708,61 @@
       });
     }
     paintPrev();
-    function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
-    function saveBtn(val, col, whole) {
+    var keyBtn = bg.querySelector('[data-rbi-key]');
+    function paintKey() {
+      keyBtn.textContent = grabbing ? 'Press a key…' : (key ? hbKeyName(key) : (defKey ? defKey + ' (as it comes)' : 'None'));
+      keyBtn.classList.toggle('shb-btn-on', grabbing);
+      bg.querySelector('[data-rbi-keynote]').textContent = grabbing ? 'A letter, a number, a sign or F1–F12 · Esc keeps it as it is · Backspace clears it'
+        : (keyNote || (key ? hbKeyClash(key, uid) || hbKeyName(key) + ' runs this button while the hotbox is open and the button shows.' : 'Click the key, then press the one that runs this button while the hotbox is open.'));
+    }
+    function grab(ev) {
+      var k = String(ev.key || '');
+      if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(k)) return;
+      grabbing = false;
+      HB.keyGrab = null;
+      keyNote = '';
+      var kl = k.toLowerCase();
+      if (k === 'Backspace' || k === 'Delete') key = '';
+      else if (k === 'Escape') keyNote = '';
+      else if (ev.ctrlKey || ev.altKey || ev.metaKey || !((kl.length === 1 && kl !== ' ') || /^f([1-9]|1[0-2])$/.test(kl))) {
+        keyNote = 'One key on its own, without Ctrl or Alt: a letter, a number, a sign or F1–F12.';
+      } else if (hbIsKey(ev) && !S.hbMods) keyNote = hbKeyName(kl) + ' opens and closes the hotbox: pick another key.';
+      else key = kl;
+      paintKey();
+    }
+    paintKey();
+    var done = false;
+    function close() {
+      if (done) return;
+      done = true;
+      if (HB.keyGrab === grab) HB.keyGrab = null;
+      modalShut(close);
+      if (bg.parentNode) bg.parentNode.removeChild(bg);
+    }
+    modalOpen(close);
+    function saveBtn(val, col, whole, k) {
+      hbUndoPush('editing "' + item.label + '"');
       if (!S.customLabels || typeof S.customLabels !== 'object') S.customLabels = {};
       if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
       if (!S.customFill || typeof S.customFill !== 'object') S.customFill = {};
-      if (val && val !== item.label || val && S.customLabels[uid]) S.customLabels[uid] = val;
+      if (!S.customKeys || typeof S.customKeys !== 'object') S.customKeys = {};
+      var grp = /^grp:/.test(uid) ? grpById(uid.slice(4)) : null;
+      /* a saved button of your own and a group carry their name themselves, so it is the same everywhere */
+      if (ownTpl && !ownTpl.lib) { if (val) ownTpl.name = val; delete S.customLabels[uid]; }
+      else if (grp) { if (val) grp.name = val; delete S.customLabels[uid]; }
+      else if (val && val !== item.label || val && S.customLabels[uid]) S.customLabels[uid] = val;
       else if (!val) delete S.customLabels[uid];
       if (col) S.customColors[uid] = col;
       else delete S.customColors[uid];
       if (col && whole) S.customFill[uid] = true;
       else delete S.customFill[uid];
+      if (k) {
+        Object.keys(S.customKeys).forEach(function (u) { if (S.customKeys[u] === k) delete S.customKeys[u]; });
+        S.customKeys[uid] = k;
+      } else delete S.customKeys[uid];
       save();
       close();
-      hbPaint();
+      hbRedrawAll();
     }
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) close(); });
     bg.addEventListener('click', function (ev) {
@@ -6556,12 +6777,45 @@
     inp.oninput = function () {
       bg.querySelector('[data-rbi-plbl]').textContent = String(inp.value || '').trim() || item.label;
     };
+    keyBtn.onclick = function () {
+      grabbing = !grabbing;
+      HB.keyGrab = grabbing ? grab : null;
+      try { keyBtn.focus(); } catch (e) {}
+      paintKey();
+    };
+    bg.querySelector('[data-rbi-keyclr]').onclick = function () {
+      grabbing = false;
+      HB.keyGrab = null;
+      key = '';
+      keyNote = '';
+      defKey = '';
+      paintKey();
+    };
+    var nodesB = bg.querySelector('[data-rbi-nodes]'), takeB = bg.querySelector('[data-rbi-take]');
+    if (nodesB) nodesB.onclick = function () { close(); tplEditOpen(ownTpl.id); };
+    if (takeB) takeB.onclick = function () {
+      var items = mgItems(null), nodes = items.filter(isGraphNode);
+      if (!nodes.length) { setStatus('error', 'Select the nodes on the canvas first, then use them for this button'); return; }
+      /* it replaces what the button holds, so it takes a second click */
+      if (!takeB.classList.contains('shb-armed')) {
+        takeB.classList.add('shb-armed');
+        takeB.querySelector('span').textContent = 'Click again: replace its nodes';
+        return;
+      }
+      var data = null;
+      try { data = mgSerialize(items); } catch (e) { data = null; }
+      if (!data || !data.nodes || !data.nodes.length) { setStatus('error', 'Could not read those nodes'); return; }
+      close();
+      tplSetData(ownTpl, data, 'replacing the nodes of "' + ownTpl.name + '"').then(function (ok) {
+        if (ok) setStatus('ok', '✓ "' + ownTpl.name + '" now holds the ' + data.nodes.length + ' selected ' + (data.nodes.length === 1 ? 'node' : 'nodes') + ' · same button, same place · what it held before is kept in its versions');
+      });
+    };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
-    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false); };
-    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur, fill); };
+    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false, ''); };
+    bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur, fill, key); };
     inp.onkeydown = function (ev) {
       ev.stopPropagation();
-      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur, fill); }
+      if (ev.key === 'Enter') { ev.preventDefault(); saveBtn(String(inp.value || '').trim(), cur, fill, key); }
       if (ev.key === 'Escape') { ev.preventDefault(); close(); }
     };
     try { inp.focus(); inp.select(); } catch (e) {}
@@ -6597,6 +6851,7 @@
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
     if (S.customFill) delete S.customFill[uid];
+    if (S.customKeys) delete S.customKeys[uid];
     delete HB.grpOpen[gid];
     setBarUids(barName, node, list);
     return kids.length;
@@ -6655,6 +6910,7 @@
         save();
         setStatus('ok', 'Kept the group "' + name + '" · drop buttons on it to fill it · its × (edit mode) removes it');
       } else if (g) {
+        hbUndoPush('removing the group "' + name + '"');
         var back = grpDissolve(barName, uid, node);
         setStatus('ok', 'Removed the group "' + name + '"' + (back ? ' · its button stays in the bar' : ''));
       }
@@ -6686,7 +6942,7 @@
     var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn' + tint.cls;
     return '<span class="shb-item-wrap shb-grp' + (pin ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '" data-hb-gkey="' + esc(item.id) + '">' +
       '<button type="button" class="' + cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
-        (numKey ? '<span class="shb-num">' + esc(numKey) + '</span>' : ico('folder', isz)) +
+        (numKey || hbKeyFor(item.uid) ? '<span class="shb-num">' + esc(hbKeyName(hbKeyFor(item.uid)) || numKey) + '</span>' : ico('folder', isz)) +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         '<span class="shb-w-badge">' + esc(item.count) + '</span>' +
         '<span class="shb-grp-chev" data-hb-grpchev title="Keep it open · click again to close it">' + ico('chevDown', 12) + '</span>' +
@@ -6925,7 +7181,10 @@
 
   function renderBarItemHTML(item, barName, numKey, grpId) {
     if (item.kind === 'group') return renderGroupHTML(item, barName, numKey);
-    var kbdStr = numKey ? String(numKey) : (item.kbd || '');
+    /* a key of its own shows where the button's key always shows: in the dock's number, or as its key chip */
+    var ownKey = hbKeyName(hbKeyFor(item.uid));
+    if (ownKey && numKey) numKey = ownKey;
+    var kbdStr = numKey ? String(numKey) : (ownKey || item.kbd || '');
     var isTpl = item.kind === 'template';
     var isPin = (barName === 'bot' && item.kind !== 'tool') || isTpl;
     var btnCls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (isPin ? 'shb-pin' : (barName === 'bot' ? 'shb-act' : 'shb-tool'))) + (isTpl ? ' shb-tpl' : '');
@@ -6944,7 +7203,7 @@
         lead +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         (isTpl ? '<span class="shb-tpl-n">' + esc(item.count) + '</span>' : '') +
-        (!numKey && !isPin && kbdStr ? '<span class="shb-key">' + esc(kbdStr) + '</span>' : '') +
+        (!numKey && (ownKey || !isPin) && kbdStr ? '<span class="shb-key">' + esc(kbdStr) + '</span>' : '') +
         '<span class="shb-x" data-hb-rm="' + esc(item.uid) + '" data-hb-rmbar="' + esc(barName) + '"' + (grpId ? ' data-hb-rmgrp="' + esc(grpId) + '"' : '') + ' title="Remove">×</span>' +
       '</button>' +
     '</span>';
@@ -7145,7 +7404,7 @@
   /* Compact wears the Fluid look and motion; it only leaves out the side cards */
   function hbThemeCls() {
     var t = hbTheme();
-    return t === 'quiet' ? 'shb-quiet' : (t === 'classic' ? 'shb-fluid shb-classic' : 'shb-fluid');
+    return t === 'quiet' ? 'shb-quiet' : ((t === 'classic' ? 'shb-fluid shb-classic' : 'shb-fluid') + (S.hbBlur === false ? ' shb-noblur' : ''));
   }
 
   function hbIsFluid() { return hbTheme() !== 'quiet'; }
@@ -7221,6 +7480,60 @@
     GHOST = null;
   }
 
+  /* A bar button picked up: the ghost is the button itself, a little bigger and with a shadow, so it is plain
+     which one is in the hand. It is a copy that carries its looks with it (the bar's own styles do not reach
+     a copy outside the bar) */
+  var LIFT_PROPS = ['display', 'alignItems', 'justifyContent', 'gap', 'padding', 'margin', 'border', 'borderRadius', 'backgroundColor',
+    'backgroundImage', 'color', 'font', 'letterSpacing', 'textTransform', 'opacity', 'width', 'height', 'minWidth', 'boxSizing', 'whiteSpace',
+    'flexShrink', 'placeItems'];
+  function ghostLift(wrap, x, y) {
+    ghostHide();
+    var src = wrap && wrap.querySelector(':scope > .shb-btn');
+    if (!src) { ghostShow('', x, y); return; }
+    var copy = src.cloneNode(true);
+    var a = [src].concat(Array.prototype.slice.call(src.querySelectorAll('*')));
+    var b = [copy].concat(Array.prototype.slice.call(copy.querySelectorAll('*')));
+    a.forEach(function (el, i) {
+      if (!b[i] || !b[i].style || el.ownerSVGElement) return;
+      var cs = getComputedStyle(el);
+      LIFT_PROPS.forEach(function (p) { try { b[i].style[p] = cs[p]; } catch (e) {} });
+    });
+    Array.prototype.forEach.call(copy.querySelectorAll('.shb-x,.shb-grp-chev'), function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+    copy.removeAttribute('data-hb-run');
+    copy.removeAttribute('title');
+    copy.style.animation = 'none';
+    GHOST = owns(document.createElement('div'));
+    GHOST.className = 'shb-ghost shb-lift ' + hbThemeCls();
+    GHOST.style.zoom = String(parseFloat(S.hbScale) || 1);
+    GHOST.appendChild(copy);
+    var hint = document.createElement('span');
+    hint.className = 'shb-ghost-hint';
+    GHOST.appendChild(hint);
+    document.body.appendChild(GHOST);
+    ghostMove(x, y, '', '');
+  }
+
+  /* While a button is dragged in edit mode, the edit bar is the place to drop it to take it off its bar */
+  function hbOverTrash(x, y) {
+    var eb = HB.el && HB.editMode ? HB.el.querySelector('.shb-editbar') : null;
+    var r = eb && eb.getBoundingClientRect();
+    return !!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8);
+  }
+
+  function hbTrashHot(on) {
+    var t = HB.el && HB.el.querySelector('.shb-editbar-trash');
+    if (t) t.classList.toggle('shb-hot', !!on);
+  }
+
+  /* a dragged button that leaves the bars waits where it was picked up */
+  function hbDragHome(lp) {
+    var w = lp.wrap, h = lp.home;
+    if (!w || !h || !h.parent || !h.parent.isConnected) return;
+    var next = (h.next && h.next.parentNode === h.parent) ? h.next : null;
+    if (w.parentNode === h.parent && w.nextSibling === next) return;
+    h.parent.insertBefore(w, next);
+  }
+
   /* Removal poof: Fluid expands a ring while the chip shrinks, Quiet just fades */
   function hbPoof(x, y, label) {
     var fl = hbIsFluid();
@@ -7243,11 +7556,82 @@
     setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 320);
   }
 
+  /* ---------------------------------------------------------------------
+   * UNDO, for edit mode and the button browser: every change to the bars, the groups, the saved buttons and
+   * their names, colors and keys is taken back one step at a time (Ctrl+Z, or Undo in the edit bar)
+   * --------------------------------------------------------------------- */
+  var HB_UNDO = [];
+  var HB_UNDO_KEYS = ['customAddBar', 'customAddBySig', 'customToolsBar', 'customBotBar', 'customLabels', 'customColors', 'customFill',
+    'customKeys', 'hbKeep', 'hotboxPins', 'templates', 'hbGroups'];
+
+  function hbUndoShot() {
+    var o = {};
+    HB_UNDO_KEYS.forEach(function (k) { o[k] = S[k] === undefined ? null : S[k]; });
+    return JSON.stringify(o);
+  }
+
+  /* called right before a change; `what` names it in the status line */
+  function hbUndoPush(what) {
+    var shot = hbUndoShot();
+    var top = HB_UNDO[HB_UNDO.length - 1];
+    if (top && top.shot === shot && !top.libs.length) { top.what = what || top.what; return top; }
+    top = { shot: shot, what: what || 'the last change', libs: [] };
+    HB_UNDO.push(top);
+    if (HB_UNDO.length > 40) HB_UNDO.shift();
+    return top;
+  }
+
+  /* how many steps there are to take back (a step that changed nothing is dropped) */
+  function hbUndoLeft() {
+    var cur = hbUndoShot();
+    while (HB_UNDO.length && HB_UNDO[HB_UNDO.length - 1].shot === cur && !HB_UNDO[HB_UNDO.length - 1].libs.length) HB_UNDO.pop();
+    return HB_UNDO.length;
+  }
+
+  function hbUndo() {
+    if (!hbUndoLeft()) { setStatus('ok', 'Nothing to undo'); return false; }
+    var u = HB_UNDO.pop(), o = null;
+    try { o = JSON.parse(u.shot); } catch (e) { o = null; }
+    if (!o) return false;
+    HB_UNDO_KEYS.forEach(function (k) { S[k] = o[k]; });
+    if (!Array.isArray(S.templates)) S.templates = [];
+    /* a button deleted from a shared library goes back into its folder */
+    u.libs.forEach(function (d) {
+      var l = libByKey(d.lib);
+      if (l) libWriteButton(l, d.tpl).then(function () { return libRefresh(true); }).then(hbRedrawAll);
+    });
+    save();
+    hbRedrawAll();
+    setStatus('ok', '↶ Undid ' + u.what);
+    return true;
+  }
+
+  /* whatever shows the buttons is drawn again: the hotbox, Settings and the button browser */
+  function hbRedrawAll() {
+    if (HB.el) hbPaint();
+    if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
+    if (BRW.el) brwRender();
+  }
+
+  /* Hotbox windows on top of the page (the button browser, the node editor, Edit Button): Esc closes the top
+     one, and no key reaches the hotbox or the canvas behind them */
+  var HB_MODALS = [];
+  function modalOpen(closeFn) { HB_MODALS.push(closeFn); return closeFn; }
+  function modalShut(closeFn) {
+    var i = HB_MODALS.indexOf(closeFn);
+    if (i >= 0) HB_MODALS.splice(i, 1);
+  }
+
   function hbEditBarHTML() {
     var fl = hbIsFluid();
     var hid = HB.editMode ? hbHiddenHere() : 0;
+    var un = HB.editMode ? hbUndoLeft() : 0;
     return '<div class="shb-editbar">' +
-      '<span class="shb-editbar-t">' + (fl ? 'Tap × or drag out to remove · tap to rename or color · drop a button on another to group them' : 'edit · × or drag out · tap = name & color · drop on a button = group') + '</span>' +
+      '<span class="shb-editbar-tag"><i></i>Editing</span>' +
+      '<span class="shb-editbar-t">' + (fl ? 'Drag to move · rest on a button to group · click for name, color and key · × removes'
+        : 'drag = move · rest on a button = group · click = name, color, key · × = remove') + '</span>' +
+      '<span class="shb-editbar-trash" data-hb-trash>' + ico('trash', 14) + '<span>Drop here to remove</span></span>' +
+      '<button type="button" class="shb-editbar-b" data-hb-act="editundo"' + (un ? '' : ' disabled') + ' title="Take back the last change (Ctrl+Z)">Undo</button>' +
       (hid ? '<button type="button" class="shb-editbar-b' + (HB.editAll ? ' shb-editbar-on' : '') + '" data-hb-act="editall" title="' +
         esc(hid + (hid === 1 ? ' button does' : ' buttons do') + ' not apply to this node, so ' + (hid === 1 ? 'it stays' : 'they stay') +
           ' hidden and the bars do not move when edit mode starts · show ' + (hid === 1 ? 'it' : 'them') + ' to move, rename or remove ' + (hid === 1 ? 'it' : 'them') + ' too') + '">' +
@@ -7271,7 +7655,9 @@
     hbStopEditAnim();
     if (!HB.el || !HB.editMode) return;
     var fl = hbIsFluid();
-    var st = S.hbEditAnim || 'jiggle';
+    var st = S.hbEditAnim || 'none';
+    /* still by default: the fine line around the bars and "Editing" in the edit bar say it is edit mode */
+    if (st === 'none') return;
     var btns = HB.el.querySelectorAll('[data-hb-bar] > .shb-item-wrap > .shb-btn, [data-hb-gtray] > .shb-item-wrap > .shb-btn');
     Array.prototype.forEach.call(btns, function (b, i) {
       if (st === 'outline') { b.classList.add('shb-outline'); return; }
@@ -7608,6 +7994,27 @@
           toolItems[0].run();
         };
       }
+      /* A button with a key of its own (Edit Button → Key) answers to it while it shows, in a bar or in a group
+         of one; the key it came with (its number in the dock, a tool's letter) lets go of it */
+      HB.custKeys = {};
+      var ownKeyOf = function (it, num) {
+        var k = hbKeyFor(it.uid);
+        if (!k) return;
+        HB.custKeys[k] = function () {
+          if (it.off) { setStatus('ok', it.label + ': ' + it.off); return; }
+          if (!it.stayOpen) hbClose();
+          if (it.run) it.run();
+        };
+        if (num) delete HB.keyMap[String(num)];
+        var dk = it.kind === 'tool' ? String(it.kbd || '').toLowerCase() : '';
+        if (dk && dk !== 'c' && (dk.length === 1 || dk === 'f2')) delete HB.keyMap[dk];
+      };
+      [addItems, toolItems, botItems].forEach(function (list, li) {
+        list.forEach(function (it, idx) {
+          ownKeyOf(it, (!li && idx < 9) ? idx + 1 : 0);
+          (it.kids || []).forEach(function (kid) { ownKeyOf(kid, 0); });
+        });
+      });
 
       el.className = 'shb-wrap ' + hbThemeCls() + (HB.editMode ? ' shb-editing' : '');
       hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, S.hbStyle === 'classic');
@@ -8784,12 +9191,19 @@
     if (!LP_DRAG) return;
     hbGrpHot(null);
     if (LP_DRAG.timer) clearTimeout(LP_DRAG.timer);
+    if (LP_DRAG.mergeT) clearTimeout(LP_DRAG.mergeT);
     if (LP_DRAG.wrap) {
-      LP_DRAG.wrap.classList.remove('shb-drag-src');
-      LP_DRAG.wrap.classList.remove('shb-collapsed');
+      if (LP_DRAG.active) hbDragHome(LP_DRAG);
+      LP_DRAG.wrap.classList.remove('shb-drag-src', 'shb-drag-gone', 'shb-collapsed');
     }
     if (LP_DRAG.active) ghostHide();
+    hbDragEnd();
     LP_DRAG = null;
+  }
+
+  function hbDragEnd() {
+    hbTrashHot(false);
+    if (HB.el) HB.el.classList.remove('shb-dragging');
   }
 
   /* A pointerdown on a node's title bar (Vue node header or canvas-drawn title) can become a drag-to-pin */
@@ -8861,7 +9275,8 @@
   /* Distance in px from point (px, py) to the nearest bar container inside rootEl */
   function distToNearestBar(rootEl, px, py) {
     if (!rootEl) return 0;
-    var bars = rootEl.querySelectorAll('.shb-bar');
+    /* an open group's list hangs outside its bar and counts as part of it: it is where its buttons are put in order */
+    var bars = rootEl.querySelectorAll('.shb-bar, .shb-grp-show > .shb-gdrop');
     var minDist = 1e9;
     for (var i = 0; i < bars.length; i++) {
       var r = bars[i].getBoundingClientRect();
@@ -9010,72 +9425,116 @@
       return;
     }
 
-    /* 2. Bar buttons: reorder within / across bars, drag out to remove (pins anytime, others in edit mode) */
+    /* 2. Bar buttons: moved to any place in a bar or in a group's list (edit mode; pinned ones any time).
+       Letting go away from the bars puts the button back where it was: only its × or the Remove strip (the
+       edit bar, while a button is in the hand) takes it off its bar */
     if (!LP_DRAG || !HB.el) return;
     var dist = Math.hypot(e.clientX - LP_DRAG.x0, e.clientY - LP_DRAG.y0);
     if (!LP_DRAG.active) {
-      if (dist <= 6) return;
+      /* a hand holding a press shakes a little: it stays a press until it clearly travels */
+      if (dist <= (LP_DRAG.timer ? 14 : 9)) return;
       if (LP_DRAG.timer) { clearTimeout(LP_DRAG.timer); LP_DRAG.timer = 0; }
       if (!HB.editMode && !LP_DRAG.isPin) { clearLpDrag(); return; }
       LP_DRAG.active = true;
+      LP_DRAG.home = { parent: LP_DRAG.wrap.parentNode, next: LP_DRAG.wrap.nextSibling };
+      ghostLift(LP_DRAG.wrap, e.clientX, e.clientY);
       LP_DRAG.wrap.classList.add('shb-drag-src');
-      var lblEl = LP_DRAG.wrap.querySelector('.shb-lbl');
-      ghostShow(lblEl ? lblEl.textContent : '', e.clientX, e.clientY);
+      if (HB.editMode) HB.el.classList.add('shb-dragging');
     }
     e.preventDefault();
 
     var dragWrap = LP_DRAG.wrap;
-    var out = distToNearestBar(HB.el, e.clientX, e.clientY) > 34 && !hbOverPlus(e.clientX, e.clientY, 16);
-    /* a template dragged onto the canvas drops its nodes there (edit mode still removes it) */
+    var mx = e.clientX, my = e.clientY;
+    var trash = hbOverTrash(mx, my);
+    var out = !trash && distToNearestBar(HB.el, mx, my) > 34 && !hbOverPlus(mx, my, 16);
+    /* outside edit mode, a saved button let go over the canvas drops its nodes there */
     var drop = /^tpl:/.test(dragWrap.getAttribute('data-hb-uid') || '') && !HB.editMode;
-    if (out !== !!LP_DRAG.outside) {
-      LP_DRAG.outside = out;
-      if (!drop) dragWrap.classList.toggle('shb-collapsed', out);
+    LP_DRAG.trash = trash;
+    LP_DRAG.outside = out;
+    hbTrashHot(trash);
+    dragWrap.classList.toggle('shb-drag-gone', trash);
+    if (trash || out) {
+      hbLpMerge(null);
+      LP_DRAG.tray = null;
+      hbGrpHot(null);
+      hbDragHome(LP_DRAG);
+      ghostMove(mx, my, trash ? 'Release to take it off the bar' : (drop ? 'Release to drop the nodes here' : 'Release to put it back'),
+        trash ? 'rm' : (drop ? 'over' : ''));
+      return;
     }
-    ghostMove(e.clientX, e.clientY,
-      drop ? (out ? 'Release to drop the nodes here' : 'Drag onto the canvas') : (out ? 'Release to remove' : 'Drag out to remove'),
-      out ? (drop ? 'over' : 'rm') : '');
-    if (out) return;
 
     LP_DRAG.tray = null;
     var under = null;
-    try { under = document.elementFromPoint(e.clientX, e.clientY); } catch (err) { under = null; }
-    if (!under || !under.closest) return;
+    try { under = document.elementFromPoint(mx, my); } catch (err) { under = null; }
+    if (!under || !under.closest) { ghostMove(mx, my, '', ''); return; }
 
     var overWrap = under.closest('.shb-item-wrap[data-hb-uid]');
-    if (overWrap && dragWrap.contains(overWrap)) return;
+    if (overWrap && dragWrap.contains(overWrap)) { ghostMove(mx, my, '', ''); return; }
     var dragIsGrp = /^grp:/.test(dragWrap.getAttribute('data-hb-uid') || '');
     /* a group moves as a whole, never into another group */
     if (overWrap && dragIsGrp && overWrap.parentNode && overWrap.parentNode.hasAttribute('data-hb-gtray')) {
       overWrap = overWrap.parentNode.closest('.shb-item-wrap[data-hb-uid]');
     }
-    var intoTray = dragIsGrp ? null : hbGrpTarget(overWrap, e.clientX, e.clientY);
-    var mergeOn = (intoTray || dragIsGrp) ? null : hbMergeTarget(overWrap, dragWrap, e.clientX, e.clientY);
-    LP_DRAG.merge = mergeOn;
-    hbGrpHot(intoTray ? overWrap : mergeOn);
+    var intoTray = dragIsGrp ? null : hbGrpTarget(overWrap, mx, my);
     if (intoTray) {
       /* it goes in on release: moving it into the list now would shift the bar under the pointer (a wide button
-         next to the group pulled the group away, and the button bounced in and out) */
+         next to the group pulled the group away, and the button bounced in and out). Waiting on the group opens
+         its list, and there the button goes to any place in it, the first one too */
+      hbLpMerge(null);
       LP_DRAG.tray = intoTray;
-      ghostMove(e.clientX, e.clientY, 'Release to put it in ' + ((overWrap.querySelector('.shb-lbl') || {}).textContent || 'the group'), 'over');
+      hbGrpHot(overWrap);
+      ghostMove(mx, my, 'Release to put it in ' + ((overWrap.querySelector('.shb-lbl') || {}).textContent || 'the group') + ' · wait, and pick its place', 'over');
       return;
     }
-    if (mergeOn) {
-      ghostMove(e.clientX, e.clientY, 'Release to group them', 'over');
+    /* resting on the middle of another button groups the two; passing over it only moves the button to that side */
+    hbLpMerge(dragIsGrp ? null : hbMergeTarget(overWrap, dragWrap, mx, my));
+    if (LP_DRAG.merge) {
+      hbGrpHot(LP_DRAG.merge);
+      ghostMove(mx, my, 'Release to group them', 'over');
       return;
     }
+    hbGrpHot(null);
+    ghostMove(mx, my, '', '');
+    var overTray = under.closest('[data-hb-gtray]');
     if (overWrap && overWrap !== dragWrap && overWrap.parentNode) {
       var r = overWrap.getBoundingClientRect();
       /* inside a group's list the buttons stack, so the halves are top and bottom */
-      var isBefore = overWrap.parentNode.hasAttribute('data-hb-gtray') ? e.clientY < (r.top + r.height / 2) : e.clientX < (r.left + r.width / 2);
-      overWrap.parentNode.insertBefore(dragWrap, isBefore ? overWrap : overWrap.nextSibling);
+      var isBefore = overWrap.parentNode.hasAttribute('data-hb-gtray') ? my < (r.top + r.height / 2) : mx < (r.left + r.width / 2);
+      var ref = isBefore ? overWrap : overWrap.nextSibling;
+      if (ref !== dragWrap && !(isBefore && overWrap.previousSibling === dragWrap)) overWrap.parentNode.insertBefore(dragWrap, ref);
+      return;
+    }
+    if (overTray && !dragIsGrp && !dragWrap.contains(overTray)) {
+      /* on the list's own edge, or in a gap of it: its first place or its last, whichever end is nearer */
+      var tr = overTray.getBoundingClientRect();
+      if (my < tr.top + tr.height / 2) {
+        if (overTray.firstElementChild !== dragWrap) overTray.insertBefore(dragWrap, overTray.firstElementChild);
+      } else if (overTray.lastElementChild !== dragWrap) overTray.appendChild(dragWrap);
       return;
     }
     var overBar = under.closest('[data-hb-bar]');
-    if (overBar && overBar !== dragWrap.parentNode) {
+    if (overBar && overBar !== dragWrap.parentNode && !overTray) {
       overBar.appendChild(dragWrap);
     }
   }, true);
+
+  /* Grouping two buttons takes a short rest on the middle of the other one, which lights up; a button that is
+     only passing over another on its way somewhere else just moves */
+  function hbLpMerge(cand) {
+    var lp = LP_DRAG;
+    if (!lp || (lp.mergeCand || null) === (cand || null)) return;
+    if (lp.mergeT) { clearTimeout(lp.mergeT); lp.mergeT = 0; }
+    lp.mergeCand = cand || null;
+    lp.merge = null;
+    if (!cand) return;
+    lp.mergeT = setTimeout(function () {
+      lp.mergeT = 0;
+      if (LP_DRAG !== lp || lp.mergeCand !== cand || !cand.isConnected) return;
+      lp.merge = cand;
+      hbGrpHot(cand);
+      if (GHOST) ghostMove(parseFloat(GHOST.style.left) || 0, parseFloat(GHOST.style.top) || 0, 'Release to group them', 'over');
+    }, 420);
+  }
 
   listen(document, 'pointerup', function (e) {
     if (PSLIDER_DRAG) {
@@ -9098,7 +9557,10 @@
         var dLand = (dd.tray && dd.tray.isConnected && dd.tray.closest('[data-hb-bar]'))
           || (dd.merge && dd.merge.isConnected && dd.merge)
           || (dd.inBar && dw && dw.parentNode && dw.parentNode.closest && dw.parentNode.closest('[data-hb-bar]'));
-        if (dLand) hbKeepUid(dd.uid, dLand.getAttribute('data-hb-bar'));
+        if (dLand) {
+          hbUndoPush('adding "' + (dd.item ? dd.item.label : 'a button') + '"');
+          hbKeepUid(dd.uid, dLand.getAttribute('data-hb-bar'));
+        }
         if (dd.tray && dd.tray.isConnected && dw) {
           dw.classList.remove('shb-drag-src');
           dd.tray.appendChild(dw);
@@ -9167,51 +9629,61 @@
     var lp = LP_DRAG;
     LP_DRAG = null;
     if (lp.timer) clearTimeout(lp.timer);
+    if (lp.mergeT) clearTimeout(lp.mergeT);
     if (!lp.active) {
       /* A long-press that only entered edit mode must not also run the button */
       if (lp.fired) HB.suppressClickUntil = Date.now() + 250;
       return;
     }
     ghostHide();
+    hbDragEnd();
     HB.suppressClickUntil = Date.now() + 250;
     if (!HB.el) return;
     var w = lp.wrap;
     var uid = w.getAttribute('data-hb-uid');
     var lbl = w.querySelector('.shb-lbl');
     var name = lbl ? lbl.textContent : uid;
+    w.classList.remove('shb-drag-src', 'shb-drag-gone', 'shb-collapsed');
     if (lp.outside && /^tpl:/.test(uid) && !HB.editMode) {
-      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      hbDragHome(lp);
       var dropTpl = tplById(uid.slice(4));
       hbClose();
       tplRun(dropTpl, { x: e.clientX, y: e.clientY }, { x: e.clientX, y: e.clientY });
       return;
     }
     hbGrpHot(null);
-    if (lp.outside) {
+    if (lp.trash) {
+      /* dropped on the Remove strip */
+      hbUndoPush('taking "' + name + '" off the bar');
       if (w.parentNode) w.parentNode.removeChild(w);
       hbPoof(e.clientX, e.clientY, name);
       if (/^grp:/.test(uid)) grpDissolve(w.getAttribute('data-hb-bar') || 'bot', uid, HB.node);
       else commitDomBarsOrder(HB.el, HB.node, uid);
       hbForgetIfGone(uid);
       hbPaint();
-      setStatus('ok', /^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Removed "' + name + '" · Reset (edit mode) restores the defaults');
+      setStatus('ok', (/^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Took "' + name + '" off the bar') + ' · Ctrl+Z puts it back');
+    } else if (lp.outside) {
+      /* let go away from the bars: nothing is removed, it goes back where it was */
+      hbDragHome(lp);
+      hbPaint();
+      setStatus('ok', '"' + name + '" is back where it was · ' + (HB.editMode ? 'its ×, or the Remove strip in the edit bar, takes it off' : 'hold it to edit, then its × takes it off the bar'));
     } else if (lp.tray && lp.tray.isConnected && !w.contains(lp.tray)) {
-      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      hbUndoPush('moving "' + name + '"');
       lp.tray.appendChild(w);
       var tGrp = lp.tray.closest('.shb-grp'), tLbl = tGrp && tGrp.querySelector(':scope > .shb-btn .shb-lbl');
       commitDomBarsOrder(HB.el, HB.node);
       hbPaint();
       setStatus('ok', 'Put "' + name + '" in "' + (tLbl ? tLbl.textContent : 'the group') + '"');
     } else if (lp.merge && lp.merge.isConnected && !w.contains(lp.merge)) {
-      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      hbUndoPush('grouping "' + name + '"');
       var mLbl = lp.merge.querySelector('.shb-lbl');
       var mGid = hbMergeDom(lp.merge, w);
       commitDomBarsOrder(HB.el, HB.node);
       hbPaint();
       hbGrpPop(mGid);
-      setStatus('ok', 'Grouped "' + (mLbl ? mLbl.textContent : '') + '" + "' + name + '" · drop more on it · tap it in edit mode to rename');
+      setStatus('ok', 'Grouped "' + (mLbl ? mLbl.textContent : '') + '" + "' + name + '" · drop more on it · click it in edit mode to rename');
     } else {
-      w.classList.remove('shb-drag-src', 'shb-collapsed');
+      hbUndoPush('moving "' + name + '"');
       var toBar = w.parentNode && w.parentNode.getAttribute && w.parentNode.getAttribute('data-hb-bar');
       if (toBar && toBar !== w.getAttribute('data-hb-bar')) hbKeepUid(uid, toBar);
       commitDomBarsOrder(HB.el, HB.node);
@@ -9409,6 +9881,16 @@
       };
     });
 
+    /* Right-click on a bar button: its Edit Button box (name, color, key), the one a click opens in edit mode */
+    el.addEventListener('contextmenu', function (e) {
+      var w = e.target && e.target.closest ? e.target.closest('.shb-item-wrap[data-hb-uid]') : null;
+      if (!w || !w.closest('[data-hb-bar]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      clearLpDrag();
+      promptRenameBarItem(w.getAttribute('data-hb-uid'), HB.node, w.querySelector(':scope > .shb-btn'));
+    });
+
     /* Double-click on Pro Slider label/track to reset to default value */
     el.addEventListener('dblclick', function (e) {
       var t = e.target;
@@ -9506,6 +9988,8 @@
         if (rmWrap) rmWrap.classList.add('shb-removing');
         /* Collapse first (max-width -> 0, scale .3, fade), then drop it from the list */
         var rmGrp = rmBtn.getAttribute('data-hb-rmgrp');
+        var rmLbl = rmWrap && rmWrap.querySelector('.shb-lbl');
+        hbUndoPush('removing "' + (rmLbl ? rmLbl.textContent : 'a button') + '"');
         setTimeout(function () {
           var inGrp = rmGrp && grpById(rmGrp);
           if (inGrp) {
@@ -9712,7 +10196,13 @@
           hbPaint();
           return;
         }
+        if (a === 'editundo') {
+          hbUndo();
+          return;
+        }
         if (a === 'editreset') {
+          hbUndoPush('Reset');
+          S.customKeys = {};
           S.hbGroups = {};
           S.customAddBar = null;
           S.customAddBySig = {};
@@ -11273,17 +11763,22 @@
     if (!t) return;
     var uid = 'tpl:' + id;
     function strip(list) { return Array.isArray(list) ? list.filter(function (u) { return u !== uid; }) : list; }
+    var undo = null;
     if (t.lib) {
       var l = libByKey(t.lib);
       if (!l || !t.canDelete) {
         setStatus('error', '"' + t.name + '" is in a read-only library');
         return;
       }
+      /* Undo writes it back into its folder */
+      undo = hbUndoPush('deleting "' + t.name + '"');
+      undo.libs.push({ lib: t.lib, tpl: { id: t.rawId, name: t.name, count: t.count, at: t.at, data: t.data } });
       l.buttons = l.buttons.filter(function (b) { return b !== t; });
       libDeleteButton(l, t.rawId).then(function (ok) {
         if (!ok) { setStatus('error', 'Could not delete "' + t.name + '" from ' + l.label); libRefresh(true); }
       });
     }
+    if (!undo) hbUndoPush('deleting "' + t.name + '"');
     S.templates = S.templates.filter(function (x) { return x !== t; });
     S.customBotBar = strip(S.customBotBar);
     Object.keys(S.customToolsBar || {}).forEach(function (k) { S.customToolsBar[k] = strip(S.customToolsBar[k]); });
@@ -11296,8 +11791,979 @@
     if (S.customLabels) delete S.customLabels[uid];
     if (S.customColors) delete S.customColors[uid];
     if (S.customFill) delete S.customFill[uid];
+    if (S.customKeys) delete S.customKeys[uid];
     save();
     setStatus('ok', 'Deleted the saved button "' + t.name + '"');
+  }
+
+  /* "Load Image · Crop Image · Preview Image": what a saved button holds, in a line */
+  function tplSummaryOf(tp) {
+    var names = [];
+    ((tp && tp.data && tp.data.nodes) || []).forEach(function (n) {
+      var t = tedNodeName(n);
+      if (t && names.indexOf(t) < 0) names.push(t);
+    });
+    return names.slice(0, 3).join(' · ') + (names.length > 3 ? ' +' + (names.length - 3) : '');
+  }
+
+  /* A saved button takes other nodes and stays the same button: its place in the bars and in its group, its
+     name, its color and its key. What it held before waits behind it (the last five), so an older version can
+     come back. A shared library's button is written back into its folder */
+  function tplSetData(tpl, data, why) {
+    var count = ((data && data.nodes) || []).length;
+    if (!tpl || !count) return Promise.resolve(false);
+    if (tpl.lib) {
+      var l = libByKey(tpl.lib);
+      if (!l || !tpl.canDelete) {
+        setStatus('error', '"' + tpl.name + '" is in a read-only library');
+        return Promise.resolve(false);
+      }
+      return libWriteButton(l, { id: tpl.rawId, name: tpl.name, count: count, at: tpl.at, data: data }).then(function (ok) {
+        if (!ok) {
+          setStatus('error', 'Could not write "' + tpl.name + '" to ' + l.label);
+          return false;
+        }
+        tpl.data = data;
+        tpl.count = count;
+        hbRedrawAll();
+        return true;
+      });
+    }
+    hbUndoPush(why || 'changing the nodes of "' + tpl.name + '"');
+    var hist = Array.isArray(tpl.history) ? tpl.history.slice() : [];
+    hist.unshift({ at: tpl.edited || tpl.at, count: tpl.count, data: tpl.data });
+    tpl.history = hist.slice(0, 5);
+    tpl.data = data;
+    tpl.count = count;
+    tpl.edited = new Date().toISOString();
+    save();
+    hbRedrawAll();
+    return Promise.resolve(true);
+  }
+
+  /* Every list of bar buttons there is: the bottom bar's, and a dock and a context one per kind of node */
+  function hbBarLists() {
+    var out = [];
+    if (Array.isArray(S.customBotBar)) {
+      out.push({ bar: 'bot', get: function () { return S.customBotBar; }, set: function (l) { S.customBotBar = l; } });
+    }
+    [['add', 'customAddBySig'], ['tools', 'customToolsBar']].forEach(function (p) {
+      var m = S[p[1]];
+      Object.keys(m && typeof m === 'object' ? m : {}).forEach(function (k) {
+        if (Array.isArray(m[k])) out.push({ bar: p[0], get: function () { return m[k]; }, set: function (l) { m[k] = l; } });
+      });
+    });
+    return out;
+  }
+
+  /* The bottom bar's own list takes these at its end (a bar never customized gets its list from what it shows) */
+  function hbBotAppend(uids) {
+    var list = Array.isArray(S.customBotBar) ? S.customBotBar.slice() : getBarUids('bot', HB.node || null);
+    uids.forEach(function (u) { if (list.indexOf(u) < 0) list.push(u); });
+    S.customBotBar = list;
+  }
+
+  /* A group gives its buttons back to every bar it sits in, in its place, and is gone */
+  function grpUngroup(gid) {
+    var uid = 'grp:' + gid, grp = grpById(gid);
+    if (!grp) return;
+    var items = (grp.items || []).slice(), found = false;
+    hbBarLists().forEach(function (L) {
+      var list = L.get().slice(), at = list.indexOf(uid);
+      if (at < 0) return;
+      found = true;
+      Array.prototype.splice.apply(list, [at, 1].concat(items.filter(function (k) { return list.indexOf(k) < 0; })));
+      L.set(list);
+    });
+    if (!found && items.length) hbBotAppend(items);
+    delete S.hbGroups[gid];
+    ['customLabels', 'customColors', 'customFill', 'customKeys'].forEach(function (k) { if (S[k]) delete S[k][uid]; });
+    delete HB.grpOpen[gid];
+  }
+
+  /* A button leaves its group and goes back to the bar the group sits in, right after it */
+  function grpTakeOut(gid, uid) {
+    var grp = grpById(gid);
+    if (!grp) return;
+    grp.items = (grp.items || []).filter(function (u) { return u !== uid; });
+    var placed = false;
+    hbBarLists().forEach(function (L) {
+      var list = L.get(), at = list.indexOf('grp:' + gid);
+      if (at < 0) return;
+      placed = true;
+      if (list.indexOf(uid) >= 0) return;
+      list = list.slice();
+      list.splice(at + 1, 0, uid);
+      L.set(list);
+    });
+    if (!placed) hbBotAppend([uid]);
+  }
+
+  /* A button goes into a group (before `before`, else at its end): one group at a time, and no longer beside
+     it in a bar */
+  function grpPutIn(gid, uid, before) {
+    var grp = grpById(gid);
+    if (!grp || /^grp:/.test(uid)) return;
+    Object.keys(S.hbGroups).forEach(function (k) {
+      var g = S.hbGroups[k];
+      if (!g || !Array.isArray(g.items) || g.items.indexOf(uid) < 0) return;
+      g.items = g.items.filter(function (u) { return u !== uid; });
+      /* the group it left stays, even with one button or none: here a group only goes with Ungroup */
+      if (k !== gid && g.items.length < 2) g.keep = true;
+    });
+    var items = (grp.items || []).slice();
+    var at = before ? items.indexOf(before) : -1;
+    if (at < 0) items.push(uid);
+    else items.splice(at, 0, uid);
+    grp.items = items;
+    /* a bottom bar that was never customized lists every saved button by itself: it gets its own list, without this one */
+    if (!Array.isArray(S.customBotBar) && /^tpl:/.test(uid)) S.customBotBar = getBarUids('bot', HB.node || null);
+    hbBarLists().forEach(function (L) {
+      if (L.get().indexOf(uid) >= 0) L.set(L.get().filter(function (u) { return u !== uid; }));
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+   * 14b. THE BUTTON BROWSER (Settings → Saved Buttons → Browse): every saved button and every group on cards,
+   * to rename, color and give a key to, to put into groups and take out of them, to edit the nodes of, and to
+   * delete. Every change saves itself and can be taken back (Undo, Ctrl+Z)
+   * --------------------------------------------------------------------- */
+  var BRW = { el: null, q: '', drag: null, noClick: 0 };
+
+  function brwOpen() {
+    if (BRW.el) { brwRender(); return; }
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg';
+    bg.innerHTML = '<div class="shb-modal shb-brw"></div>';
+    document.body.appendChild(bg);
+    BRW.el = bg;
+    BRW.q = '';
+    BRW.shut = modalOpen(function () { brwClose(); });
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
+    bg.addEventListener('click', brwClick);
+    bg.addEventListener('pointerdown', brwDown);
+    bg.addEventListener('input', function (ev) {
+      if (!ev.target || !ev.target.hasAttribute || !ev.target.hasAttribute('data-brw-q')) return;
+      BRW.q = ev.target.value;
+      brwRenderBody();
+    });
+    bg.addEventListener('keydown', function (ev) {
+      if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName || '')) ev.stopPropagation();
+    });
+    libRefresh(true).then(function () { if (BRW.el) brwRender(); });
+    brwRender();
+  }
+
+  function brwClose() {
+    var bg = BRW.el;
+    if (!bg) return;
+    BRW.el = null;
+    BRW.drag = null;
+    modalShut(BRW.shut);
+    tipHide();
+    if (bg.parentNode) bg.parentNode.removeChild(bg);
+  }
+
+  /* where a group sits: "in the bottom bar" */
+  function brwWhere(uid) {
+    var names = { bot: 'bottom bar', add: 'dock', tools: 'context bar' }, seen = [];
+    hbBarLists().forEach(function (L) {
+      if (L.get().indexOf(uid) >= 0 && seen.indexOf(names[L.bar]) < 0) seen.push(names[L.bar]);
+    });
+    return seen.length ? 'in the ' + seen.join(' and the ') : 'not on a bar';
+  }
+
+  function brwRender() {
+    if (!BRW.el) return;
+    var box = BRW.el.querySelector('.shb-brw');
+    var nOwn = (S.templates || []).length, nGrp = Object.keys(S.hbGroups || {}).length, nSh = libSharedButtons().length;
+    tipHide();
+    box.innerHTML =
+      '<div class="shb-modal-t shb-brw-hd">' +
+        '<span class="shb-brw-title">' + hbLogoChip(20) + '<span>Buttons</span>' +
+          '<small>' + nOwn + ' saved · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '') + '</small></span>' +
+        '<span class="shb-brw-tools">' +
+          '<span class="shb-brw-find">' + ico('search', 13) + '<input type="text" class="shb-input" data-brw-q spellcheck="false" placeholder="Find a button…" value="' + esc(BRW.q) + '"></span>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-brw-act="newgrp" data-tip="A new, empty group in the bottom bar: drag buttons onto it">' + ico('folder', 13) + '<span>New Group</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-brw-act="undo"' + (hbUndoLeft() ? '' : ' disabled') + ' data-tip="Take back the last change (Ctrl+Z)">' + ico('history', 13) + '<span>Undo</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-on" data-brw-act="close">Done</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="shb-brw-body" data-brw-body></div>' +
+      '<div class="shb-brw-foot">Click a card for its name, color and key · drag a button onto a group to put it in, and out of it to take it out · the pencil opens its nodes · every change saves itself</div>';
+    brwRenderBody();
+  }
+
+  function brwRenderBody() {
+    var body = BRW.el && BRW.el.querySelector('[data-brw-body]');
+    if (!body) return;
+    var q = String(BRW.q || '').toLowerCase().trim();
+    var gids = Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {});
+    var inGrp = {};
+    gids.forEach(function (gid) { ((S.hbGroups[gid] || {}).items || []).forEach(function (u) { inGrp[u] = gid; }); });
+    function hit(text) { return !q || String(text || '').toLowerCase().indexOf(q) >= 0; }
+    function tintStyle(uid) { var t = barTint(uid); return t ? ' style="--shb-tint:' + esc(t) + '"' : ''; }
+    function keyChip(uid) { var k = hbKeyName(hbKeyFor(uid)); return k ? '<span class="shb-key" title="Its key in the hotbox">' + esc(k) + '</span>' : ''; }
+
+    function tplCard(tp) {
+      var uid = 'tpl:' + tp.id, name = hbBtnName(uid, tp.name), sum = tplSummaryOf(tp), gid = inGrp[uid];
+      if (!hit(name + ' ' + sum + ' ' + (gid ? S.hbGroups[gid].name : ''))) return '';
+      var canEdit = !tp.lib || tp.canDelete;
+      return '<div class="shb-brw-card' + (S.customFill && S.customFill[uid] && barTint(uid) ? ' shb-brw-fill' : '') + '" data-brw-uid="' + esc(uid) + '" data-brw-drag' + tintStyle(uid) + '>' +
+        '<div class="shb-brw-c1"><span class="shb-brw-ico">' + ico('sparkles', 16) + '</span><b>' + esc(name) + '</b>' + keyChip(uid) +
+          '<span class="shb-tpl-n" title="Nodes it holds">' + esc(tp.count) + '</span></div>' +
+        '<div class="shb-brw-c2">' + esc(sum) + '</div>' +
+        '<div class="shb-brw-c3">' +
+          (gid ? '<span class="shb-brw-chip">' + ico('folder', 11) + '<span>' + esc(hbBtnName('grp:' + gid, S.hbGroups[gid].name)) + '</span></span>'
+            : '<span class="shb-brw-chip shb-brw-chip-no">not in a group</span>') +
+          (tp.lib ? '<span class="shb-brw-chip">' + esc(tp.libLabel || 'shared') + '</span>' : '') +
+          '<span class="shb-brw-acts">' +
+            (canEdit ? '<button type="button" class="shb-btn shb-btn-ico" data-brw-act="nodes" data-tip="Edit its nodes: change a value or a title, take a node out, or edit the JSON. It stays the same button">' + ico('edit', 13) + '</button>' +
+              '<button type="button" class="shb-btn shb-btn-ico" data-brw-act="del" data-tip="Delete this saved button (Undo brings it back)">' + ico('trash', 13) + '</button>' : '') +
+          '</span>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function grpBox(gid) {
+      var g = S.hbGroups[gid] || {}, uid = 'grp:' + gid, name = hbBtnName(uid, g.name), items = g.items || [];
+      if (q && !hit(name) && !items.some(function (u) { return hit(hbUidLabel(u)); })) return '';
+      return '<div class="shb-brw-grp" data-brw-grp="' + esc(gid) + '"' + tintStyle(uid) + '>' +
+        '<div class="shb-brw-ghd" data-brw-uid="' + esc(uid) + '">' +
+          '<span class="shb-brw-ico">' + ico('folder', 16) + '</span><b>' + esc(name) + '</b>' + keyChip(uid) +
+          '<small>' + items.length + (items.length === 1 ? ' button' : ' buttons') + ' · ' + esc(brwWhere(uid)) + '</small>' +
+          '<span class="shb-brw-acts"><button type="button" class="shb-btn" data-brw-act="ungroup" data-tip="The group goes, and its buttons go back to the bar it sits in">Ungroup</button></span>' +
+        '</div>' +
+        '<div class="shb-brw-mems">' +
+          (items.length ? items.map(function (u) {
+            return '<span class="shb-brw-mem" data-brw-uid="' + esc(u) + '" data-brw-in="' + esc(gid) + '" data-brw-drag' + tintStyle(u) + '>' +
+              '<span class="shb-brw-ico">' + ico(/^tpl:/.test(u) ? 'sparkles' : (/^tool:/.test(u) ? 'tools' : 'plus'), 13) + '</span><span>' + esc(hbUidLabel(u)) + '</span>' + keyChip(u) +
+              '<i class="shb-brw-out" data-brw-act="out" data-tip="Take it out of the group">×</i>' +
+            '</span>';
+          }).join('') : '<span class="shb-brw-none">Empty · drag a button here</span>') +
+        '</div>' +
+      '</div>';
+    }
+
+    var groupsHTML = gids.map(grpBox).join('');
+    var ownHTML = (Array.isArray(S.templates) ? S.templates : []).map(tplCard).join('');
+    var sharedHTML = LIB.list.map(function (l) {
+      var cards = (l.buttons || []).map(tplCard).join('');
+      return cards ? '<div class="shb-brw-sec">' + esc(l.label) + '<small>shared library' + (libWritable(l) ? '' : ' · read-only') + '</small></div><div class="shb-brw-grid">' + cards + '</div>' : '';
+    }).join('');
+    body.innerHTML =
+      '<div class="shb-brw-sec">Groups<small>drop a button on a group to put it in</small></div>' +
+      (groupsHTML ? '<div class="shb-brw-grps">' + groupsHTML + '</div>'
+        : '<div class="shb-sb-empty">' + (q ? 'No group matches.' : 'No groups yet. New Group makes one; in edit mode, resting one bar button on another makes one too.') + '</div>') +
+      '<div class="shb-brw-sec">Saved buttons<small>the sets of nodes you saved with X (Save as Button)</small></div>' +
+      (ownHTML ? '<div class="shb-brw-grid">' + ownHTML + '</div>'
+        : '<div class="shb-sb-empty">' + (q ? 'No saved button matches.' : 'Nothing saved yet. Select some nodes and press X (Save as Button) in the hotbox.') + '</div>') +
+      sharedHTML;
+  }
+
+  function brwClick(ev) {
+    if (Date.now() < BRW.noClick) return;
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var actEl = t.closest('[data-brw-act]');
+    var act = actEl ? actEl.getAttribute('data-brw-act') : '';
+    var holder = t.closest('[data-brw-uid]');
+    var uid = holder ? holder.getAttribute('data-brw-uid') : '';
+    var gBox = t.closest('[data-brw-grp]');
+    var gid = gBox ? gBox.getAttribute('data-brw-grp') : '';
+    if (act === 'close') { brwClose(); return; }
+    if (act === 'undo') { hbUndo(); return; }
+    if (act === 'newgrp') {
+      hbUndoPush('a new group');
+      var nid = grpNew();
+      S.hbGroups[nid].keep = true;
+      hbBotAppend(['grp:' + nid]);
+      save();
+      hbRedrawAll();
+      setStatus('ok', 'New group "' + S.hbGroups[nid].name + '" in the bottom bar · drag buttons onto it · click it to name it');
+      return;
+    }
+    if (act === 'ungroup' && gid) {
+      var gName = hbBtnName('grp:' + gid, (grpById(gid) || {}).name);
+      hbUndoPush('ungrouping "' + gName + '"');
+      grpUngroup(gid);
+      save();
+      hbRedrawAll();
+      setStatus('ok', 'Ungrouped "' + gName + '" · its buttons are back in the bar');
+      return;
+    }
+    if (act === 'out' && uid && holder.getAttribute('data-brw-in')) {
+      brwTakeOut(holder.getAttribute('data-brw-in'), uid);
+      return;
+    }
+    if (act === 'nodes' && uid) { tplEditOpen(uid.slice(4)); return; }
+    if (act === 'del' && uid) {
+      var dName = hbUidLabel(uid);
+      tplDelete(uid.slice(4));
+      hbRedrawAll();
+      setStatus('ok', 'Deleted the saved button "' + dName + '" · Undo (Ctrl+Z) brings it back');
+      return;
+    }
+    if (uid) promptRenameBarItem(uid, HB.node, null);
+  }
+
+  function brwTakeOut(gid, uid) {
+    var g = grpById(gid);
+    if (!g) return;
+    var name = hbUidLabel(uid), gName = hbBtnName('grp:' + gid, g.name);
+    hbUndoPush('taking "' + name + '" out of "' + gName + '"');
+    grpTakeOut(gid, uid);
+    /* here a group only goes with Ungroup, so one left with a button or none stays */
+    if ((g.items || []).length < 2) g.keep = true;
+    save();
+    hbRedrawAll();
+    setStatus('ok', 'Took "' + name + '" out of "' + gName + '" · it is back in the bar');
+  }
+
+  /* Dragging in the browser: a card or a group's button onto a group puts it in (at the place it is dropped);
+     a group's button dropped anywhere else comes out of its group */
+  function brwDown(ev) {
+    if (ev.button !== 0) return;
+    var t = ev.target;
+    var d = t && t.closest ? t.closest('[data-brw-drag]') : null;
+    if (!d || t.closest('[data-brw-act]')) return;
+    BRW.drag = { uid: d.getAttribute('data-brw-uid'), from: d.getAttribute('data-brw-in') || '', el: d, x0: ev.clientX, y0: ev.clientY, active: false, over: '', before: '' };
+  }
+
+  listen(document, 'pointermove', function (e) {
+    var d = BRW.drag;
+    if (!d || !BRW.el) return;
+    if (!d.active) {
+      if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return;
+      d.active = true;
+      d.el.classList.add('shb-brw-dragging');
+      tipHide();
+      ghostShow(hbUidLabel(d.uid), e.clientX, e.clientY);
+    }
+    e.preventDefault();
+    var under = null;
+    try { under = document.elementFromPoint(e.clientX, e.clientY); } catch (err) { under = null; }
+    var g = under && under.closest ? under.closest('[data-brw-grp]') : null;
+    var mem = under && under.closest ? under.closest('.shb-brw-mem') : null;
+    Array.prototype.forEach.call(BRW.el.querySelectorAll('.shb-brw-hot'), function (x) { if (x !== g) x.classList.remove('shb-brw-hot'); });
+    if (g) g.classList.add('shb-brw-hot');
+    d.over = g ? g.getAttribute('data-brw-grp') : '';
+    d.before = '';
+    if (g && mem && mem !== d.el) {
+      var r = mem.getBoundingClientRect();
+      var ref = e.clientX < r.left + r.width / 2 ? mem : mem.nextElementSibling;
+      d.before = (ref && ref !== d.el && ref.getAttribute) ? (ref.getAttribute('data-brw-uid') || '') : '';
+    }
+    var gName = d.over ? hbBtnName('grp:' + d.over, (grpById(d.over) || {}).name) : '';
+    ghostMove(e.clientX, e.clientY, d.over ? (d.over === d.from ? 'Release to move it here' : 'Release to put it in ' + gName)
+      : (d.from ? 'Release to take it out of the group' : 'Drag it onto a group'), d.over ? 'over' : '');
+  }, true);
+
+  listen(document, 'pointerup', function () {
+    var d = BRW.drag;
+    if (!d) return;
+    BRW.drag = null;
+    if (!d.active) return;
+    ghostHide();
+    BRW.noClick = Date.now() + 250;
+    if (!BRW.el) return;
+    if (d.over && grpById(d.over)) {
+      var name = hbUidLabel(d.uid), gName = hbBtnName('grp:' + d.over, grpById(d.over).name);
+      hbUndoPush((d.over === d.from ? 'moving "' : 'putting "') + name + '" in "' + gName + '"');
+      grpPutIn(d.over, d.uid, d.before);
+      save();
+      hbRedrawAll();
+      setStatus('ok', d.over === d.from ? 'Moved "' + name + '" in "' + gName + '"' : 'Put "' + name + '" in "' + gName + '"');
+    } else if (d.from) brwTakeOut(d.from, d.uid);
+    else brwRender();
+  }, true);
+
+  listen(document, 'pointercancel', function () {
+    if (!BRW.drag) return;
+    if (BRW.drag.active) ghostHide();
+    BRW.drag = null;
+    if (BRW.el) brwRender();
+  }, true);
+
+  /* ---------------------------------------------------------------------
+   * 14c. THE NODES OF A SAVED BUTTON (the pencil on its card in the browser, or Edit Button → Edit its nodes):
+   * change a node's values, title or run mode, take a node out, edit the JSON itself, bring back an older
+   * version, or have the button take the nodes selected on the canvas. Saving keeps it the same button
+   * --------------------------------------------------------------------- */
+  var TED = { el: null };
+
+  function tedNodeName(n) {
+    var def = SRV.types && n && SRV.types[n.type];
+    return String((n && n.title) || (def && def.display_name) || (n && n.type) || 'Node');
+  }
+
+  function tedWhen(iso) {
+    var t = Date.parse(iso);
+    return t ? new Date(t).toLocaleString() : 'earlier';
+  }
+
+  /* The names (and the choices) of a saved node's values. They are kept as a plain list, in the order of the
+     node's widgets: a node of that type on the canvas knows them by name; otherwise the server's description
+     of the type does, when its count matches. With neither, they are "value 1", "value 2"… */
+  function tedWidgetMeta(n, len) {
+    var live = null;
+    try {
+      allNodes(getGraph()).some(function (x) {
+        if (String(x.type) === String(n.type) && Array.isArray(x.widgets) && x.widgets.length === len) { live = x; return true; }
+        return false;
+      });
+    } catch (e) { live = null; }
+    if (live) {
+      return live.widgets.map(function (w) {
+        var vals = w && w.options && w.options.values;
+        return { name: String((w && (w.label || w.name)) || ''), values: Array.isArray(vals) ? vals : null, skip: !!(w && w.type === 'button') };
+      });
+    }
+    var def = SRV.types && SRV.types[n.type], list = [];
+    if (!def || !def.input) return null;
+    ['required', 'optional'].forEach(function (sec) {
+      var m = def.input[sec] || {};
+      var order = (def.input_order && Array.isArray(def.input_order[sec])) ? def.input_order[sec] : Object.keys(m);
+      order.forEach(function (k) {
+        var spec = m[k];
+        if (!Array.isArray(spec)) return;
+        var t = spec[0], o = (spec[1] && typeof spec[1] === 'object') ? spec[1] : {};
+        var combo = Array.isArray(t) || t === 'COMBO';
+        if (!(combo || /^(INT|FLOAT|STRING|BOOLEAN)$/.test(String(t))) || o.forceInput) return;
+        list.push({ name: k, values: Array.isArray(t) ? t : (Array.isArray(o.options) ? o.options : null) });
+        if (o.control_after_generate || (t === 'INT' && /^(seed|noise_seed)$/.test(k))) {
+          list.push({ name: 'control after generate', values: ['fixed', 'increment', 'decrement', 'randomize'] });
+        }
+        if (o.image_upload || o.video_upload || o.audio_upload) list.push({ name: 'upload', skip: true });
+      });
+    });
+    return list.length === len ? list : null;
+  }
+
+  function tedFields(n) {
+    var wv = n && n.widgets_values, out = [];
+    if (wv && typeof wv === 'object' && !Array.isArray(wv)) {
+      Object.keys(wv).forEach(function (k) { out.push({ k: k, name: k, val: wv[k], opts: null }); });
+      return out;
+    }
+    if (!Array.isArray(wv)) return out;
+    var meta = tedWidgetMeta(n, wv.length);
+    /* else the node's own inputs name the values that have a socket, when there is one for each */
+    if (!meta) {
+      var named = (n.inputs || []).filter(function (i) { return i && i.widget && i.widget.name; });
+      if (named.length === wv.length) meta = named.map(function (i) { return { name: String(i.widget.name), skip: /UPLOAD$/.test(String(i.type || '')) }; });
+      else if (named.length === 1 && wv[0] && typeof wv[0] === 'object') meta = [{ name: String(named[0].widget.name) }];
+    }
+    wv.forEach(function (v, i) {
+      var m = meta && meta[i];
+      out.push({ k: i, name: (m && m.name) || '', val: v, opts: (m && m.values) || null, skip: !!(m && m.skip) || v === null || v === undefined });
+    });
+    /* a box (a crop's region) is kept whole and then once more number by number: those numbers take the names
+       they have in the box, and the two stay the same when either is changed */
+    out.forEach(function (f, i) {
+      if (!f.val || typeof f.val !== 'object' || Array.isArray(f.val)) return;
+      Object.keys(f.val).forEach(function (key, j) {
+        var g = out[i + 1 + j];
+        if (!g || g.name || g.val !== f.val[key]) return;
+        g.name = key;
+        g.box = { k: f.k, key: key };
+      });
+    });
+    out.forEach(function (f, i) { if (!f.name) f.name = 'value ' + (i + 1); });
+    return out;
+  }
+
+  function tedFieldRow(f, i) {
+    if (f.skip) return '';
+    var v = f.val, at = 'data-ted-f="' + i + '"', ctl = '';
+    if (typeof v === 'boolean') {
+      ctl = '<label class="shb-ted-chk"><input type="checkbox" ' + at + (v ? ' checked' : '') + '><span>' + (v ? 'on' : 'off') + '</span></label>';
+    } else if (typeof v === 'number') {
+      ctl = '<input type="number" step="any" class="shb-input" ' + at + ' value="' + esc(v) + '">';
+    } else if (typeof v === 'string' && f.opts && f.opts.length && f.opts.length <= 600 && f.opts.every(function (o) { return typeof o === 'string'; })) {
+      var opts = f.opts.indexOf(v) < 0 ? [v].concat(f.opts) : f.opts;
+      ctl = '<select class="shb-select" ' + at + '>' + opts.map(function (o) { return '<option value="' + esc(o) + '"' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+    } else if (typeof v === 'string') {
+      ctl = (v.length > 60 || v.indexOf('\n') >= 0)
+        ? '<textarea class="shb-input shb-ted-ta" spellcheck="false" ' + at + '>' + esc(v) + '</textarea>'
+        : '<input type="text" class="shb-input" spellcheck="false" ' + at + ' value="' + esc(v) + '">';
+    } else {
+      ctl = '<textarea class="shb-input shb-ted-ta shb-ted-mono" spellcheck="false" data-ted-json ' + at + '>' + esc(JSON.stringify(v, null, 2)) + '</textarea>';
+    }
+    return '<div class="shb-ted-row"><label title="' + esc(f.name) + '">' + esc(f.name) + '</label>' + ctl + '</div>';
+  }
+
+  function tedFieldsHTML(n, many) {
+    if (!n) return '<div class="shb-sb-empty">This button holds no nodes.</div>';
+    var rows = tedFields(n).map(tedFieldRow).join('');
+    var mode = +n.mode || 0;
+    return '<div class="shb-ted-row"><label>Title</label><input type="text" class="shb-input" spellcheck="false" data-ted-title value="' + esc(n.title || '') + '" placeholder="' + esc(tedNodeName({ type: n.type })) + '"></div>' +
+      '<div class="shb-ted-row"><label>Runs</label><select class="shb-select" data-ted-mode>' +
+        [[0, 'Normally'], [2, 'Muted'], [4, 'Bypassed']].map(function (m) { return '<option value="' + m[0] + '"' + (mode === m[0] ? ' selected' : '') + '>' + m[1] + '</option>'; }).join('') +
+      '</select></div>' +
+      (rows ? '<div class="shb-ted-sec">Values</div>' + rows : '<div class="shb-ted-sec">Values</div><div class="shb-sb-empty">This node keeps no values of its own, only wires.</div>') +
+      (many ? '<div class="shb-ted-rm"><button type="button" class="shb-btn" data-ted-act="rmnode" data-tip="The node leaves the button, and so do the wires that reached it">' + ico('trash', 13) + '<span>Take this node out of the button</span></button></div>' : '');
+  }
+
+  function tedJsonHTML(n) {
+    var T = TED;
+    if (!T.rawDirty) T.rawText = JSON.stringify(T.whole ? T.work : n, null, 2);
+    return '<div class="shb-ted-jbar"><span class="shb-seg">' +
+        '<button type="button" data-ted-whole="0"' + (T.whole ? '' : ' class="shb-on"') + '>This node</button>' +
+        '<button type="button" data-ted-whole="1"' + (T.whole ? ' class="shb-on"' : '') + '>The whole button</button>' +
+      '</span><small>What the button keeps, as ComfyUI copies it. It is checked before it is kept.</small></div>' +
+      '<textarea class="shb-input shb-ted-raw shb-ted-mono" spellcheck="false" data-ted-raw>' + esc(T.rawText) + '</textarea>';
+  }
+
+  function tplEditOpen(id) {
+    var tpl = tplById(id);
+    if (!tpl || !tpl.data) return;
+    if (tpl.lib && !tpl.canDelete) { setStatus('error', '"' + tpl.name + '" is in a read-only library'); return; }
+    tedClose();
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg';
+    bg.innerHTML = '<div class="shb-modal shb-ted"></div>';
+    document.body.appendChild(bg);
+    TED = { el: bg, tpl: tpl, work: JSON.parse(JSON.stringify(tpl.data)), sel: 0, tab: 'fields', whole: false, dirty: false, rawDirty: false, rawText: '', err: '', armed: 0 };
+    TED.shut = modalOpen(function () { tedAskClose(); });
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) tedAskClose(); });
+    bg.addEventListener('click', tedClick);
+    bg.addEventListener('input', tedInput);
+    bg.addEventListener('change', tedInput);
+    bg.addEventListener('keydown', function (ev) {
+      if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName || '')) ev.stopPropagation();
+    });
+    tedRender();
+  }
+
+  function tedClose() {
+    var bg = TED.el;
+    if (!bg) return;
+    modalShut(TED.shut);
+    TED = { el: null };
+    tipHide();
+    if (bg.parentNode) bg.parentNode.removeChild(bg);
+  }
+
+  /* closing with changes that were not saved takes a second go */
+  function tedAskClose() {
+    if (!TED.el) return;
+    if (TED.dirty && Date.now() - TED.armed > 4000) {
+      TED.armed = Date.now();
+      tedErr('Not saved yet · close again to leave it as it was');
+      return;
+    }
+    tedClose();
+  }
+
+  function tedErr(text) {
+    TED.err = text || '';
+    var e = TED.el && TED.el.querySelector('[data-ted-err]');
+    if (e) e.textContent = TED.err;
+  }
+
+  function tedMark() {
+    var T = TED;
+    T.dirty = true;
+    T.armed = 0;
+    if (!T.el) return;
+    var sv = T.el.querySelector('[data-ted-act="save"]'), note = T.el.querySelector('[data-ted-note]');
+    if (sv) sv.disabled = false;
+    if (note) note.textContent = tedNote();
+  }
+
+  function tedNote() {
+    var n = ((TED.work && TED.work.nodes) || []).length;
+    return n + (n === 1 ? ' node' : ' nodes') + (TED.dirty ? ' · changed, not saved yet' : '');
+  }
+
+  function tedRender() {
+    var T = TED, box = T.el && T.el.querySelector('.shb-ted');
+    if (!box) return;
+    var nodes = (T.work && Array.isArray(T.work.nodes)) ? T.work.nodes : [];
+    if (T.sel >= nodes.length) T.sel = Math.max(0, nodes.length - 1);
+    var n = nodes[T.sel];
+    var nSel = mgItems(null).filter(isGraphNode).length;
+    var hist = (!T.tpl.lib && Array.isArray(T.tpl.history)) ? T.tpl.history : [];
+    tipHide();
+    box.innerHTML =
+      '<div class="shb-modal-t">' +
+        '<span class="shb-brw-title"><span class="shb-tpl-ico">' + ico('sparkles', 16) + '</span><span>' + esc(hbBtnName('tpl:' + T.tpl.id, T.tpl.name)) + '</span>' +
+          '<small data-ted-note>' + esc(tedNote()) + '</small></span>' +
+        '<span class="shb-brw-tools">' +
+          (hist.length ? '<select class="shb-select shb-ted-hist" data-ted-hist data-tip="What this button held before. Pick one and it comes into the editor; it is kept once you save">' +
+            '<option value="">Versions…</option>' + hist.map(function (h, i) {
+              return '<option value="' + i + '">' + esc(tedWhen(h.at) + ' · ' + h.count + (h.count === 1 ? ' node' : ' nodes')) + '</option>';
+            }).join('') + '</select>' : '') +
+          '<button type="button" class="shb-btn shb-btn-pri' + (nSel ? '' : ' shb-na') + '" data-ted-act="take" data-tip="' + (nSel ? 'The ' + nSel + ' selected ' + (nSel === 1 ? 'node comes' : 'nodes come') + ' into the editor instead of these. Save keeps them in this button'
+            : 'Select nodes on the canvas first: they come into the editor instead of these') + '">' + ico('sync', 13) + '<span>Use selection' + (nSel ? ' (' + nSel + ')' : '') + '</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-ted-act="canvas" data-tip="Adds these nodes to the canvas, to change them there with ComfyUI itself. Then select them, right-click the button and choose Use selection">' + ico('plus', 13) + '<span>Put on canvas</span></button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="shb-ted-main">' +
+        '<div class="shb-ted-list">' + nodes.map(function (m, i) {
+          return '<button type="button" class="shb-ted-n' + (i === T.sel ? ' shb-on' : '') + '" data-ted-sel="' + i + '"><b>' + esc(tedNodeName(m)) + '</b><small>' + esc(m.type) + '</small></button>';
+        }).join('') + '</div>' +
+        '<div class="shb-ted-pane">' + (T.tab === 'json' ? tedJsonHTML(n) : tedFieldsHTML(n, nodes.length > 1)) + '</div>' +
+      '</div>' +
+      '<div class="shb-ted-foot">' +
+        '<span class="shb-seg">' +
+          '<button type="button" data-ted-tab="fields"' + (T.tab === 'fields' ? ' class="shb-on"' : '') + '>Values</button>' +
+          '<button type="button" data-ted-tab="json"' + (T.tab === 'json' ? ' class="shb-on"' : '') + '>JSON</button>' +
+        '</span>' +
+        '<span class="shb-ted-err" data-ted-err>' + esc(T.err) + '</span>' +
+        '<span style="flex:1"></span>' +
+        '<button type="button" class="shb-btn" data-ted-act="cancel">Cancel</button>' +
+        '<button type="button" class="shb-btn shb-btn-on" data-ted-act="save"' + (T.dirty ? '' : ' disabled') + '>' + ico('save', 13) + '<span>Save to this button</span></button>' +
+      '</div>';
+  }
+
+  /* The JSON as typed goes into the work copy: checked first, and refused (with the reason) when it cannot be a
+     button. One node keeps its id, since the wires hang on it */
+  function tedApplyRaw() {
+    var T = TED;
+    if (!T.rawDirty) return true;
+    var obj = null;
+    try { obj = JSON.parse(T.rawText); } catch (e) { tedErr('That JSON does not read: ' + msgOf(e)); return false; }
+    if (T.whole) {
+      if (!obj || typeof obj !== 'object' || !Array.isArray(obj.nodes) || !obj.nodes.length) { tedErr('A button needs "nodes": a list with at least one node'); return false; }
+      if (!obj.nodes.every(function (m) { return m && typeof m === 'object' && m.type; })) { tedErr('Every node needs its "type"'); return false; }
+      T.work = obj;
+    } else {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj) || !obj.type) { tedErr('A node needs its "type"'); return false; }
+      obj.id = T.work.nodes[T.sel].id;
+      T.work.nodes[T.sel] = obj;
+    }
+    T.rawDirty = false;
+    tedErr('');
+    return true;
+  }
+
+  /* A node leaves the button, and with it the wires that reached it */
+  function tedDropNode(data, idx) {
+    var n = data.nodes[idx], gone = {};
+    if (!n) return;
+    data.links = (data.links || []).filter(function (l) {
+      var arr = Array.isArray(l);
+      var id = arr ? l[0] : l.id, a = arr ? l[1] : l.origin_id, b = arr ? l[3] : l.target_id;
+      if (a !== n.id && b !== n.id) return true;
+      gone[id] = 1;
+      return false;
+    });
+    data.nodes.splice(idx, 1);
+    data.nodes.forEach(function (m) {
+      (m.inputs || []).forEach(function (i) { if (i && i.link != null && gone[i.link]) i.link = null; });
+      (m.outputs || []).forEach(function (o) {
+        if (o && Array.isArray(o.links)) o.links = o.links.filter(function (id) { return !gone[id]; });
+      });
+    });
+  }
+
+  function tedInput(ev) {
+    var T = TED, t = ev.target;
+    if (!T.el || !t || !t.hasAttribute) return;
+    if (t.hasAttribute('data-ted-hist')) {
+      var h = (T.tpl.history || [])[t.value === '' ? -1 : +t.value];
+      if (ev.type !== 'change' || !h) return;
+      T.work = JSON.parse(JSON.stringify(h.data));
+      T.sel = 0;
+      T.rawDirty = false;
+      tedMark();
+      tedErr('');
+      tedRender();
+      setStatus('ok', 'The version of ' + tedWhen(h.at) + ' is in the editor · Save to this button brings it back');
+      return;
+    }
+    if (t.hasAttribute('data-ted-raw')) {
+      T.rawText = t.value;
+      T.rawDirty = true;
+      tedMark();
+      return;
+    }
+    var n = T.work && T.work.nodes && T.work.nodes[T.sel];
+    if (!n) return;
+    if (t.hasAttribute('data-ted-title')) {
+      if (String(t.value).trim()) n.title = t.value;
+      else delete n.title;
+      var row = T.el.querySelector('[data-ted-sel="' + T.sel + '"] b');
+      if (row) row.textContent = tedNodeName(n);
+      tedMark();
+      return;
+    }
+    if (t.hasAttribute('data-ted-mode')) {
+      n.mode = +t.value || 0;
+      tedMark();
+      return;
+    }
+    if (!t.hasAttribute('data-ted-f')) return;
+    var all = tedFields(n), f = all[+t.getAttribute('data-ted-f')];
+    if (!f) return;
+    function show(k, text) {
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i].k === k ? T.el.querySelector('[data-ted-f="' + i + '"]') : null;
+        if (el && el !== t) el.value = text;
+      }
+    }
+    var v;
+    if (typeof f.val === 'boolean') {
+      v = !!t.checked;
+      if (t.nextElementSibling) t.nextElementSibling.textContent = v ? 'on' : 'off';
+    } else if (typeof f.val === 'number') {
+      v = parseFloat(t.value);
+      if (isNaN(v)) return;
+    } else if (t.hasAttribute('data-ted-json')) {
+      try { v = JSON.parse(t.value); } catch (e) { tedErr(f.name + ': that JSON does not read yet'); return; }
+      tedErr('');
+    } else v = t.value;
+    n.widgets_values[f.k] = v;
+    /* a number that is also kept inside a box goes into the box too; a box typed whole hands its numbers on */
+    var box = f.box ? n.widgets_values[f.box.k] : null;
+    if (box && typeof box === 'object') {
+      box[f.box.key] = v;
+      show(f.box.k, JSON.stringify(box, null, 2));
+    }
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      all.forEach(function (g) {
+        if (!g.box || g.box.k !== f.k || v[g.box.key] === undefined) return;
+        n.widgets_values[g.k] = v[g.box.key];
+        show(g.k, String(v[g.box.key]));
+      });
+    }
+    tedMark();
+  }
+
+  function tedClick(ev) {
+    var T = TED, t = ev.target;
+    if (!T.el || !t || !t.closest) return;
+    var selB = t.closest('[data-ted-sel]'), tabB = t.closest('[data-ted-tab]'), whB = t.closest('[data-ted-whole]'), actB = t.closest('[data-ted-act]');
+    if (selB || tabB || whB) {
+      if (!tedApplyRaw()) return;
+      if (selB) T.sel = +selB.getAttribute('data-ted-sel') || 0;
+      if (tabB) T.tab = tabB.getAttribute('data-ted-tab') === 'json' ? 'json' : 'fields';
+      if (whB) T.whole = whB.getAttribute('data-ted-whole') === '1';
+      tedRender();
+      return;
+    }
+    if (!actB) return;
+    var a = actB.getAttribute('data-ted-act');
+    if (a === 'cancel') { tedClose(); return; }
+    if (a === 'rmnode') {
+      if (!tedApplyRaw() || T.work.nodes.length < 2) return;
+      tedDropNode(T.work, T.sel);
+      tedMark();
+      tedRender();
+      return;
+    }
+    if (a === 'take') {
+      var items = mgItems(null), data = null;
+      if (!items.filter(isGraphNode).length) { setStatus('error', 'Select the nodes on the canvas first'); return; }
+      try { data = mgSerialize(items); } catch (e) { data = null; }
+      if (!data || !data.nodes || !data.nodes.length) { setStatus('error', 'Could not read those nodes'); return; }
+      T.work = data;
+      T.sel = 0;
+      T.rawDirty = false;
+      tedMark();
+      tedErr('');
+      tedRender();
+      setStatus('ok', 'The ' + data.nodes.length + ' selected ' + (data.nodes.length === 1 ? 'node is' : 'nodes are') + ' in the editor · Save to this button keeps them');
+      return;
+    }
+    if (a === 'canvas') {
+      if (!tedApplyRaw()) return;
+      var like = { name: T.tpl.name, data: T.work };
+      tedClose();
+      brwClose();
+      var st = document.getElementById(PANEL_ID + '-settings');
+      if (st && st.parentNode) st.parentNode.removeChild(st);
+      if (HB.el) hbClose();
+      var cv = getCanvas(), cr = cv && cv.canvas ? cv.canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth || 1600, height: window.innerHeight || 900 };
+      var at = { x: Math.round(cr.left + cr.width * 0.38), y: Math.round(cr.top + cr.height * 0.3) };
+      tplRun(like, at, at);
+      setTimeout(function () {
+        setStatus('ok', 'The nodes of "' + like.name + '" are on the canvas · change them, select them, then right-click the button → Use selection');
+      }, 1200);
+      return;
+    }
+    if (a === 'save') {
+      if (!tedApplyRaw()) return;
+      if (!T.work || !Array.isArray(T.work.nodes) || !T.work.nodes.length) { tedErr('A button needs at least one node'); return; }
+      var tpl = T.tpl, work = T.work;
+      tplSetData(tpl, work, 'changing the nodes of "' + tpl.name + '"').then(function (ok) {
+        if (!ok) return;
+        tedClose();
+        setStatus('ok', '✓ Saved into "' + tpl.name + '" · the same button, in the same place' + (tpl.lib ? '' : ' · what it held before is in its Versions'));
+      });
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+   * 14d. SHARING BUTTONS FROM A PAGE (window.__hotbox.shareable / pack / addPack, see docs/REFERENCE.md): a
+   * page picks groups and saved buttons, packs them as plain JSON, and another Hotbox adds the pack to what it
+   * has, as its next version. Hotbox knows nothing of who carries the pack, or how
+   * --------------------------------------------------------------------- */
+  var HB_VERSION = '1.2.9';
+
+  function hbShareable() {
+    function colorOf(uid) { return (S.customColors && S.customColors[uid]) || ''; }
+    function btn(t) {
+      var uid = 'tpl:' + t.id;
+      return { id: t.id, name: hbBtnName(uid, t.name), count: t.count, at: t.at, lib: t.lib ? (t.libLabel || t.lib) : '', color: colorOf(uid) };
+    }
+    return {
+      groups: Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).map(function (id) {
+        var g = S.hbGroups[id] || {}, uid = 'grp:' + id;
+        return { id: id, name: hbBtnName(uid, g.name), count: (g.items || []).length, color: colorOf(uid),
+          items: (g.items || []).map(function (u) { return { uid: u, label: hbUidLabel(u) }; }) };
+      }),
+      buttons: (Array.isArray(S.templates) ? S.templates : []).map(btn).concat(libSharedButtons().map(btn))
+    };
+  }
+
+  function hbPack(uids) {
+    var pack = { hotbox_pack: 1, hotbox: HB_VERSION, groups: [], templates: [], labels: {}, colors: {}, fill: {}, keys: {} };
+    var done = {};
+    function meta(from, to, named) {
+      if (!named && S.customLabels && S.customLabels[from]) pack.labels[to] = S.customLabels[from];
+      if (S.customColors && S.customColors[from]) pack.colors[to] = S.customColors[from];
+      if (S.customFill && S.customFill[from]) pack.fill[to] = true;
+      if (S.customKeys && S.customKeys[from]) pack.keys[to] = S.customKeys[from];
+    }
+    /* a saved button travels with its nodes; one from a shared library becomes a button of one's own, since
+       whoever gets it may not have that library */
+    function tpl(uid) {
+      var t = tplById(String(uid).slice(4));
+      if (!t || !t.data) return '';
+      var id = t.lib ? t.rawId : t.id, to = 'tpl:' + id;
+      if (!done[to]) {
+        done[to] = 1;
+        pack.templates.push({ id: id, name: hbBtnName(uid, t.name), count: t.count, at: t.at, data: JSON.parse(JSON.stringify(t.data)) });
+        meta(uid, to, true);
+      }
+      return to;
+    }
+    (Array.isArray(uids) ? uids : [uids]).forEach(function (u) {
+      u = String(u || '');
+      if (/^tpl:/.test(u)) { tpl(u); return; }
+      var g = /^grp:/.test(u) ? grpById(u.slice(4)) : null;
+      if (!g || done[u]) return;
+      done[u] = 1;
+      var items = [];
+      (g.items || []).forEach(function (k) {
+        if (/^grp:/.test(k)) return;
+        var to = /^tpl:/.test(k) ? tpl(k) : k;
+        if (!to || items.indexOf(to) >= 0) return;
+        /* tools, nodes and models travel by name: every Hotbox has them */
+        if (!/^tpl:/.test(k)) meta(k, k, false);
+        items.push(to);
+      });
+      pack.groups.push({ id: u.slice(4), name: hbBtnName(u, g.name), items: items });
+      meta(u, u, true);
+    });
+    return pack;
+  }
+
+  function hbAddPack(pack, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      if (!pack || typeof pack !== 'object' || !pack.hotbox_pack) { reject(new Error('this is not a Hotbox pack')); return; }
+      var tpls = (Array.isArray(pack.templates) ? pack.templates : []).filter(function (t) {
+        return t && t.id && t.data && Array.isArray(t.data.nodes) && t.data.nodes.length;
+      });
+      var grps = (Array.isArray(pack.groups) ? pack.groups : []).filter(function (g) { return g && g.id && Array.isArray(g.items); });
+      if (!tpls.length && !grps.length) { reject(new Error('the pack holds no buttons and no groups')); return; }
+      if (!CFG.ready || CFG.hostWait) {
+        reject(new Error(CFG.hostWait || 'the Hotbox files cannot be reached yet'));
+        return;
+      }
+      var before = JSON.stringify(S), prevFile = CFG.file, prevOrigin = CFG.origin;
+      var next = '', added = { groups: 0, buttons: 0 }, replaced = { groups: 0, buttons: 0 }, label = '';
+      /* whatever is pending goes to the file in use first: that file stays as it was before the pack */
+      var flush = (CFG.timer || CFG.state === 'error') ? cfgWrite() : Promise.resolve();
+      flush.then(function () {
+        if (CFG.state === 'error') throw new Error('could not write ' + prevFile + ' (' + CFG.err + ')');
+        var inGroup = {}, toBar = [];
+        grps.forEach(function (g) { g.items.forEach(function (u) { inGroup[String(u)] = 1; }); });
+        if (!Array.isArray(S.templates)) S.templates = [];
+        tpls.forEach(function (t) {
+          var fresh = { id: String(t.id), name: String(t.name || 'Button'), count: t.data.nodes.length, at: t.at || new Date().toISOString(),
+            data: JSON.parse(JSON.stringify(t.data)) };
+          var uid = 'tpl:' + fresh.id, at = -1;
+          S.templates.forEach(function (x, i) { if (x && x.id === fresh.id) at = i; });
+          if (at >= 0) {
+            /* the same button sent again, changed: it takes the place of the one that was there, which stays
+               behind it as a version */
+            var old = S.templates[at];
+            fresh.history = [{ at: old.edited || old.at, count: old.count, data: old.data }].concat(Array.isArray(old.history) ? old.history : []).slice(0, 5);
+            fresh.edited = new Date().toISOString();
+            S.templates[at] = fresh;
+            replaced.buttons++;
+          } else {
+            S.templates.push(fresh);
+            added.buttons++;
+            if (!inGroup[uid]) toBar.push(uid);
+          }
+        });
+        if (!S.hbGroups || typeof S.hbGroups !== 'object') S.hbGroups = {};
+        grps.forEach(function (g) {
+          var gid = String(g.id);
+          var items = g.items.map(String).filter(function (u, i, all) {
+            return all.indexOf(u) === i && !/^grp:/.test(u) && (!/^tpl:/.test(u) || tplById(u.slice(4)));
+          });
+          if (S.hbGroups[gid]) {
+            S.hbGroups[gid].name = String(g.name || S.hbGroups[gid].name);
+            S.hbGroups[gid].items = items;
+            replaced.groups++;
+          } else {
+            S.hbGroups[gid] = { name: String(g.name || 'Group'), items: items, keep: true };
+            added.groups++;
+            toBar.push('grp:' + gid);
+          }
+        });
+        /* new ones go to the end of the bottom bar. A bar that was never customized lists every saved button by
+           itself, but not a group: it gets its own list now, so the group shows */
+        if (toBar.length && !Array.isArray(S.customBotBar) && toBar.some(function (u) { return /^grp:/.test(u); })) {
+          S.customBotBar = defaultBarUids('bot', null);
+        }
+        if (Array.isArray(S.customBotBar)) toBar.forEach(function (u) { if (S.customBotBar.indexOf(u) < 0) S.customBotBar.push(u); });
+        /* names, colors and keys: a saved button's and a group's come with it; for a tool or a node, the ones
+           you gave it yourself stay */
+        [['labels', 'customLabels'], ['colors', 'customColors'], ['fill', 'customFill'], ['keys', 'customKeys']].forEach(function (p) {
+          var src = pack[p[0]];
+          if (!src || typeof src !== 'object') return;
+          if (!S[p[1]] || typeof S[p[1]] !== 'object') S[p[1]] = {};
+          Object.keys(src).forEach(function (uid) {
+            var own = /^(tpl|grp):/.test(uid);
+            if (own && p[0] === 'labels') return;
+            if (!own && S[p[1]][uid] !== undefined) return;
+            if (p[0] === 'keys' && Object.keys(S.customKeys).some(function (u) { return u !== uid && S.customKeys[u] === src[uid]; })) return;
+            S[p[1]][uid] = src[uid];
+          });
+        });
+        var loose = tpls.filter(function (t) { return !inGroup['tpl:' + t.id]; });
+        var count = grps.length + loose.length;
+        label = String((grps[0] && grps[0].name) || (loose[0] && loose[0].name) || tpls[0].name || 'Buttons') + (count > 1 ? ' +' + (count - 1) : '');
+        next = cfgNewVersionName();
+        CFG.origin = 'browser';
+        CFG.file = next;
+        cfgApplied();
+        return cfgWrite();
+      }).then(function () {
+        if (CFG.state === 'error') throw new Error('could not write ' + next + ' (' + CFG.err + ')');
+        return cfgPut('active.json', { file: next });
+      }).then(function () {
+        return cfgListVersions();
+      }).then(function () {
+        setStatus('ok', '✓ ' + label + (opts.from ? ' from ' + opts.from : '') + ' · now ' + cfgVerLabel(next));
+        resolve({ file: next, version: cfgVerLabel(next), added: added, replaced: replaced });
+      }).catch(function (err) {
+        /* nothing stays half done: back to the preferences, and the file, that were in use */
+        try { applyConfig(JSON.parse(before)); } catch (e) {}
+        CFG.file = prevFile;
+        CFG.origin = prevOrigin;
+        cfgApplied();
+        reject(err instanceof Error ? err : new Error(msgOf(err)));
+      });
+    });
   }
 
   /* ---------------------------------------------------------------------
@@ -11835,8 +13301,8 @@
         tip: 'Toggle: press the hotkey to open, press again to close. Hold & Release: open while the key is held.' },
       hbStyle: { opts: ['pro', 'classic', 'quiet'], names: ['Fluid', 'Compact', 'Quiet'],
         tip: 'Fluid: frosted glass cards. Compact: the same look, bars only. Quiet: native ComfyUI panels, smaller and plainer. Tab also switches it.' },
-      hbEditAnim: { opts: ['jiggle', 'tilt', 'float', 'outline'], names: ['Jiggle', 'Tilt', 'Float', 'Outline'],
-        tip: 'How the bar buttons move in edit mode (long-press any button). Clicking here previews it.' }
+      hbEditAnim: { opts: ['none', 'outline', 'tilt', 'float', 'jiggle'], names: ['Still', 'Outline', 'Tilt', 'Float', 'Jiggle'],
+        tip: 'What the bar buttons do in edit mode (long-press any button). Still: nothing moves; a fine line around the bars and "Editing" in the edit bar say it. Clicking here previews it.' }
     };
     var ptOpen = false, sbOpen = false, dirEdit = false, libAdd = false;
     libRefresh(true).then(function () { if (wrap.parentNode) render(); });
@@ -11913,10 +13379,14 @@
       var shared = libSharedButtons();
       function sbRow(tp) {
         var when = Date.parse(tp.at);
-        return '<div class="shb-pt-row" data-st-ptuid="tpl:' + esc(tp.id) + '" data-tip="' + esc(tp.count + (tp.count === 1 ? ' node' : ' nodes') + ': ' + tplSummary(tp) + (when ? ' · saved ' + new Date(when).toLocaleString() : '')) + '">' +
+        /* the name, the color and the key it has on the bars */
+        var sbUid = 'tpl:' + tp.id, sbTint = barTint(sbUid), sbKey = hbKeyName(hbKeyFor(sbUid));
+        return '<div class="shb-pt-row" data-st-ptuid="' + esc(sbUid) + '"' + (sbTint ? ' style="--shb-tint:' + esc(sbTint) + '"' : '') +
+          ' data-tip="' + esc(tp.count + (tp.count === 1 ? ' node' : ' nodes') + ': ' + tplSummary(tp) + (when ? ' · saved ' + new Date(when).toLocaleString() : '')) + '">' +
           '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
           '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' +
-          '<span class="shb-pt-name">' + esc(tp.name) + '<small>' + esc(tplSummary(tp)) + '</small></span>' +
+          '<span class="shb-pt-name">' + esc(hbBtnName(sbUid, tp.name)) + '<small>' + esc(tplSummary(tp)) + '</small></span>' +
+          (sbKey ? '<span class="shb-pt-key">' + esc(sbKey) + '</span>' : '') +
           '<span class="shb-tpl-n">' + esc(tp.count) + '</span>' +
           (!tp.lib || tp.canDelete ? '<span class="shb-tpl-del" data-st-tpldel="' + esc(tp.id) + '" title="Delete this saved button for good">' + ico('trash', 13) + '</span>' : '') +
         '</div>';
@@ -11924,12 +13394,29 @@
       var sharedHTML = LIB.list.map(function (l) {
         return (l.buttons || []).length ? '<div class="shb-sb-lib">' + esc(l.label) + '</div>' + l.buttons.map(sbRow).join('') : '';
       }).join('');
-      return '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-sbmenu data-tip="Every set of nodes saved with Save as Button (X). Drag one onto a hotbox bar to pin it, or onto the canvas to add its nodes there.">' +
-          '<span class="shb-ptmenu-v">' + list.length + ' saved' + (shared.length ? ' · ' + shared.length + ' shared' : '') + ' · drag into the hotbox</span>' +
+      /* the groups, each with what it holds: dragged into the hotbox like a button */
+      var gids = Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {});
+      var groupsHTML = gids.length ? '<div class="shb-sb-lib">Groups</div>' + gids.map(function (gid) {
+        var g = S.hbGroups[gid] || {}, gUid = 'grp:' + gid, gTint = barTint(gUid), gKey = hbKeyName(hbKeyFor(gUid));
+        var names = (g.items || []).map(hbUidLabel);
+        return '<div class="shb-pt-row shb-sb-grp" data-st-ptuid="' + esc(gUid) + '"' + (gTint ? ' style="--shb-tint:' + esc(gTint) + '"' : '') +
+          ' data-tip="' + esc('A group of ' + names.length + (names.length === 1 ? ' button' : ' buttons') + (names.length ? ': ' + names.join(', ') : '') + ' · Browse opens it') + '">' +
+          '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
+          ico('folder', 15) +
+          '<span class="shb-pt-name">' + esc(hbBtnName(gUid, g.name)) + '<small>' + esc(names.slice(0, 3).join(' · ') + (names.length > 3 ? ' +' + (names.length - 3) : '') || 'empty') + '</small></span>' +
+          (gKey ? '<span class="shb-pt-key">' + esc(gKey) + '</span>' : '') +
+          '<span class="shb-tpl-n">' + names.length + '</span>' +
+        '</div>';
+      }).join('') : '';
+      return '<div class="shb-sb-top">' +
+        '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-sbmenu data-tip="Every set of nodes saved with Save as Button (X), and every group of buttons. Drag one onto a hotbox bar to pin it, or a saved button onto the canvas to add its nodes there.">' +
+          '<span class="shb-ptmenu-v">' + list.length + ' saved' + (gids.length ? ' · ' + gids.length + (gids.length === 1 ? ' group' : ' groups') : '') + (shared.length ? ' · ' + shared.length + ' shared' : '') + '</span>' +
           ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
         '</button>' +
+        '<button type="button" class="shb-btn shb-btn-on" data-st-browse data-tip="Every saved button and group on big cards: rename, color, key, put into groups, edit the nodes a button holds, delete (with Undo)">' + ico('search', 13) + '<span>Browse…</span></button>' +
+        '</div>' +
         (sbOpen ? '<div class="shb-pt">' +
-          (list.length || shared.length ? '<div class="shb-sb-list">' + list.map(sbRow).join('') + sharedHTML + '</div>'
+          (list.length || shared.length || gids.length ? '<div class="shb-sb-list">' + list.map(sbRow).join('') + groupsHTML + sharedHTML + '</div>'
           : '<div class="shb-sb-empty">Nothing saved yet. Select some nodes and press X (Save as Button) in the hotbox.</div>') +
           '<div class="shb-sb-foot"><span title="' + esc(cfgPath()) + '">Kept inside ' + esc(CFG.file) + ' · ' + esc(cfgFolder()) + '</span>' +
             '<button type="button" class="shb-btn shb-btn-pri" data-st-copydir data-tip="Copy the path of the folder these files live in">' + ico('folder', 13) + '<span>Copy Folder Path</span></button>' +
@@ -11961,7 +13448,8 @@
             '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
               (hbTheme() === 'quiet'
                 ? '<button class="shb-btn ' + (S.hbLeaders !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbLeaders" data-tip="Quiet only: thin lines from the cursor to the top and bottom bars and the side cards (off by default: they cross the node)">' + ico('leaders', 13) + '<span>Leader Lines</span></button>'
-                : '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" data-tip="Fluid & Compact: a soft dim behind the hotbox (never blurred)">' + ico('moon', 13) + '<span>Canvas Dim</span></button>') +
+                : '<button class="shb-btn ' + (S.hbScrim !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbScrim" data-tip="Fluid & Compact: a soft dim behind the hotbox (never blurred)">' + ico('moon', 13) + '<span>Canvas Dim</span></button>' +
+                  '<button class="shb-btn ' + (S.hbBlur !== false ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbBlur" data-tip="Fluid & Compact: frosted glass behind the bars and cards. It asks a lot of a browser without a graphics card (a remote desktop, some Linux machines): off, the bars are plain panels and the hotbox opens and moves faster there">' + ico('sparkles', 13) + '<span>Glass Blur</span></button>') +
             '</div>' +
             setLabel('resize', 'UI Scale') +
             '<div style="display:flex;align-items:center;gap:8px">' +
@@ -12091,6 +13579,8 @@
           render();
         };
       }
+      var brwBtn = wrap.querySelector('[data-st-browse]');
+      if (brwBtn) brwBtn.onclick = function () { brwOpen(); };
       var dirB = wrap.querySelector('[data-st-dir]');
       if (dirB) {
         dirB.onclick = function () {
@@ -12224,6 +13714,8 @@
       var rstBarsBtn = wrap.querySelector('[data-st-resetbars]');
       if (rstBarsBtn) {
         rstBarsBtn.onclick = function () {
+          hbUndoPush('Reset Bars');
+          S.customKeys = {};
           S.customAddBar = null;
           S.customAddBySig = {};
           S.customToolsBar = {};
@@ -12309,10 +13801,41 @@
   listen(window, 'keydown', function (e) {
     if (HB.binding) return;
 
+    /* Edit Button is waiting for the key a button should answer to */
+    if (HB.keyGrab) {
+      hbEat(e);
+      if (!e.repeat) HB.keyGrab(e);
+      return;
+    }
+
     /* "Keep the group?" is on screen: Enter and Esc keep it, and no other key reaches the hotbox behind it */
     if (GRP_ASK) {
       hbEat(e);
       if (!e.repeat && (e.key === 'Enter' || e.key === 'Escape')) GRP_ASK.answer(true);
+      return;
+    }
+
+    var undoKey = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && String(e.key || '').toLowerCase() === 'z';
+
+    /* A Hotbox window is on top (the button browser, the node editor, Edit Button): Esc closes the top one,
+       Ctrl+Z takes back the last change, and nothing else reaches the hotbox or the canvas behind it */
+    if (HB_MODALS.length) {
+      if (e.key === 'Escape') {
+        hbEat(e);
+        if (!e.repeat) HB_MODALS[HB_MODALS.length - 1]();
+        return;
+      }
+      /* a field in that window takes its own keys (each one keeps them from the canvas itself) */
+      if (hbTyping()) return;
+      hbEat(e);
+      if (undoKey && !e.repeat) hbUndo();
+      return;
+    }
+
+    /* Edit mode: Ctrl+Z takes back the last change to the bars (never the canvas's own undo) */
+    if (undoKey && HB.el && HB.editMode && !hbTyping()) {
+      hbEat(e);
+      if (!e.repeat) hbUndo();
       return;
     }
 
@@ -12333,6 +13856,12 @@
       var kl = String(e.key || '').toLowerCase();
       /* Shift + a letter is someone else's shortcut (Shift+R renders), never a hotbox quick key */
       if (!e.ctrlKey && !e.altKey && !e.metaKey && !(e.shiftKey && /^[a-z]$/.test(kl))) {
+        /* a button's own key comes first: it took the key over from whatever had it */
+        if (!HB.editMode && HB.custKeys && HB.custKeys[kl]) {
+          hbEat(e);
+          HB.custKeys[kl]();
+          return;
+        }
         var cardDrawer = { f: 'search', n: 'tools', a: 'models', u: 'subs' }[kl];
         if (cardDrawer) {
           hbEat(e);
@@ -12501,6 +14030,14 @@
     removeLibrary: function (path) {
       return libSet({ remove: [path] }).then(function () { if (HB.el) hbPaint(); });
     },
+    /* Sharing buttons from a page (see docs/REFERENCE.md): what there is to share, a pack of the chosen
+       groups and saved buttons as plain JSON, and a pack added to what is here, as the next version */
+    shareable: hbShareable,
+    pack: hbPack,
+    addPack: hbAddPack,
+    /* the button browser, and the nodes of one saved button (its id) */
+    browseButtons: brwOpen,
+    editButton: tplEditOpen,
     isOpen: function () { return !!HB.el; },
     /* Extension bars (see BAR WIDGETS and CUSTOM_BAR.md): addBar(id, { name, where, items(ctx) }) or addBar(id, items) */
     addBar: function (id, provider) {
