@@ -755,6 +755,24 @@
       '.shb-toast-ok{border-color:#4b4b4b}',
       '.shb-toast-error{border-color:#a94442;color:#f2b8b5}',
       '.shb-toast-busy{border-color:#8a6d3b;color:#f5d69b}',
+      /* the bar that stays afloat while a saved button is changed on a canvas of its own (see cedStart): the
+         look of the edit bar, above the canvas and under ComfyUI's own windows */
+      '.shb-cbar{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:10px;padding:5px 5px 5px 14px;border-radius:16px;background:rgba(38,38,42,.9);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);font:500 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#f2f2f5;white-space:nowrap;max-width:94vw;user-select:none;animation:shbCbarIn .2s cubic-bezier(.2,.9,.2,1)}',
+      '@keyframes shbCbarIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}',
+      '.shb-cbar-tag{flex:none;display:inline-flex;align-items:center;gap:6px;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#9cc2f5}',
+      '.shb-cbar-tag i{width:6px;height:6px;border-radius:50%;background:#64a8f0}',
+      '.shb-cbar-name{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:280px}',
+      '.shb-cbar-name b{font-weight:600;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-cbar-note{min-width:0;overflow:hidden;text-overflow:ellipsis;color:rgba(235,235,245,.6);margin-right:4px}',
+      '.shb-cbar-note.shb-cbar-warn{color:#f5d69b}',
+      '.shb-cbar-note.shb-cbar-bad{color:#f2b8b5}',
+      '.shb-cbar-b{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:#f2f2f5}',
+      '.shb-cbar-b:hover{background:rgba(255,255,255,.1)}',
+      '.shb-cbar-b:disabled{opacity:.45;cursor:default;pointer-events:none}',
+      '.shb-cbar-save{background:#2f86e0;color:#fff;padding:8px 14px}',
+      '.shb-cbar-save:hover{background:#4294ea}',
+      '.shb-cbar.shb-quiet{border-radius:7px;padding:3px 3px 3px 10px;background:#1f1f1f;border-color:#303030;box-shadow:0 10px 26px rgba(0,0,0,.45);-webkit-backdrop-filter:none;backdrop-filter:none}',
+      '.shb-cbar.shb-quiet .shb-cbar-b{border-radius:5px;padding:6px 10px}',
 
       /* Fullscreen Hotbox Overlay (pointer-events:none on backdrop so canvas/nodes are never blocked) */
       '.shb-wrap{position:fixed;inset:0;z-index:2147482500;pointer-events:none;user-select:none;font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg)}',
@@ -13038,7 +13056,8 @@
         '</div></div>' : '') +
       '</div>' +
       '<div class="shb-bed-iact">' +
-        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON, bring back an older version, or put the nodes on the canvas. It stays the same button">✎ Edit its nodes…</button>' : '') +
+        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON or bring back an older version. It stays the same button">✎ Edit its nodes…</button>' : '') +
+        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="canvas" title="Opens a new tab with only this button\'s nodes, to change them with ComfyUI itself. A bar stays there: Save button keeps them in this same button and closes the tab">↗ Edit on a clean canvas</button>' : '') +
         (tp ? brwShareHTML() : '') +
         '<div class="shb-bed-two">' +
           (tp ? '<button type="button" class="shb-bed-tb" data-bed-act="dup" title="A copy of your own, with the same nodes">Duplicate</button>' : '') +
@@ -13334,6 +13353,11 @@
     if (sel) {
       if (act === 'key') { brwGrabKey(); return; }
       if (act === 'nodes' && brwCanEdit(uid)) { tplEditOpen(uid.slice(4)); return; }
+      if (act === 'canvas' && brwCanEdit(uid)) {
+        /* a ComfyUI with no workflow tabs has no canvas of its own to give: the node editor it is */
+        if (!cedStart(uid.slice(4))) tplEditOpen(uid.slice(4));
+        return;
+      }
       if (act === 'dup') { brwDuplicate(uid); return; }
       if (act === 'del') { brwDeleteSel(); return; }
       if (act === 'left' || act === 'right') { brwBarStep(uid, act === 'left' ? -1 : 1); return; }
@@ -14051,7 +14075,7 @@
             }).join('') + '</select>' : '') +
           '<button type="button" class="shb-btn shb-btn-pri' + (nSel ? '' : ' shb-na') + '" data-ted-act="take" data-tip="' + (nSel ? 'The ' + nSel + ' selected ' + (nSel === 1 ? 'node comes' : 'nodes come') + ' into the editor instead of these. Save keeps them in this button'
             : 'Select nodes on the canvas first: they come into the editor instead of these') + '">' + ico('sync', 13) + '<span>Use selection' + (nSel ? ' (' + nSel + ')' : '') + '</span></button>' +
-          '<button type="button" class="shb-btn shb-btn-pri" data-ted-act="canvas" data-tip="Adds these nodes to the canvas, to change them there with ComfyUI itself. Then select them, right-click the button and choose Use selection">' + ico('plus', 13) + '<span>Put on canvas</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-ted-act="canvas" data-tip="Opens a new tab with only these nodes, to change them there with ComfyUI itself. A bar stays there: Save button keeps them in this button and closes the tab">' + ico('expand', 13) + '<span>Edit on canvas</span></button>' +
         '</span>' +
       '</div>' +
       '<div class="shb-ted-main">' +
@@ -14224,6 +14248,9 @@
     }
     if (a === 'canvas') {
       if (!tedApplyRaw()) return;
+      /* a tab of its own, with a bar that saves into this button; only a ComfyUI with no tabs still gets the
+         nodes on the canvas in use, to be taken back with Use selection */
+      if (cedStart(T.tpl.id, T.work)) return;
       var like = { name: T.tpl.name, data: T.work };
       tedClose();
       brwClose();
@@ -14248,6 +14275,276 @@
         setStatus('ok', '✓ Saved into "' + tpl.name + '" · the same button, in the same place' + (tpl.lib ? '' : ' · what it held before is in its Versions'));
       });
     }
+  }
+
+  /* ---------------------------------------------------------------------
+   * 14c-2. A SAVED BUTTON ON A CANVAS OF ITS OWN ("Edit on a clean canvas" in the button editor, "Edit on
+   * canvas" in the node editor). A new workflow tab opens with only the button's nodes, every Hotbox window
+   * gets out of the way, and a small bar stays afloat over that tab. The nodes are changed there with ComfyUI
+   * itself, and with the hotbox. Save button keeps what is in the tab in the same button and closes the tab;
+   * Cancel closes it and leaves the button as it was. Either way the tab you were on comes back, and the
+   * button editor with it when that is where this started.
+   * The tab is a temporary workflow: nothing of it is written anywhere, and ComfyUI is never asked to save it
+   * --------------------------------------------------------------------- */
+  var CED = null;
+
+  /* ComfyUI's open workflows (its tabs). Without them there is no canvas of its own to open */
+  function cedStore() {
+    var app = getApp(), wf = app && app.extensionManager && app.extensionManager.workflow;
+    return (wf && typeof wf.closeWorkflow === 'function' && Array.isArray(wf.openWorkflows) && typeof app.loadGraphData === 'function') ? wf : null;
+  }
+
+  function cedSame(a, b) {
+    return !!(a && b && (a === b || (a.path && a.path === b.path)));
+  }
+
+  /* the open tab that is this workflow, or null once it was closed */
+  function cedFind(w) {
+    var wf = cedStore(), list = (wf && wf.openWorkflows) || [];
+    for (var i = 0; i < list.length; i++) if (cedSame(list[i], w)) return list[i];
+    return null;
+  }
+
+  function cedRoot() {
+    var app = getApp();
+    return (app && (app.rootGraph || app.graph)) || getGraph();
+  }
+
+  /* everything in the tab: its nodes, its groups and the reroutes on its wires */
+  function cedItems() {
+    var g = cedRoot(), out = allNodes(g);
+    Array.prototype.forEach.call((g && (g._groups || g.groups)) || [], function (x) { out.push(x); });
+    try { if (g && g.reroutes && typeof g.reroutes.forEach === 'function') g.reroutes.forEach(function (r) { out.push(r); }); } catch (e) {}
+    return out;
+  }
+
+  /* What the tab holds, to tell whether it changed since the button's nodes landed in it: its nodes, wires,
+     reroutes, groups and subgraphs. Left out: the order nodes run in and their sizes (both settle by
+     themselves), and the graph's `extra`, where other extensions keep notes of their own (so ComfyUI's own
+     "modified" mark cannot be the judge here) */
+  function cedSig() {
+    var g = cedRoot(), st = null;
+    try { st = g && typeof g.serialize === 'function' ? g.serialize() : null; } catch (e) { st = null; }
+    if (!st) return '';
+    var nodes = (st.nodes || []).map(function (n) {
+      var c = {};
+      Object.keys(n).forEach(function (k) { if (k !== 'order' && k !== 'size') c[k] = n[k]; });
+      return c;
+    }).sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
+    try {
+      return JSON.stringify([nodes, st.links || [], st.floatingLinks || [], st.reroutes || [], st.groups || [], st.definitions || null]);
+    } catch (e) { return ''; }
+  }
+
+  /* Not knowing counts as changed: Cancel then asks twice */
+  function cedChanged() {
+    var s = CED;
+    return !s || !s.sig || cedSig() !== s.sig;
+  }
+
+  /* ComfyUI's change tracker takes note of the canvas as it is now (its name for that changed along the way) */
+  function cedCapture(ct) {
+    try {
+      if (ct && typeof ct.captureCanvasState === 'function') ct.captureCanvasState();
+      else if (ct && typeof ct.checkState === 'function') ct.checkState();
+    } catch (e) {}
+  }
+
+  function cedNote(text, bad) {
+    var s = CED, e = s && s.el && s.el.querySelector('[data-cbar-note]');
+    if (!e) return;
+    e.textContent = text;
+    e.className = 'shb-cbar-note ' + (bad ? 'shb-cbar-bad' : 'shb-cbar-warn');
+    s.noteUntil = Date.now() + 4000;
+  }
+
+  function cedCount() {
+    var s = CED, e = s && s.el && s.el.querySelector('[data-cbar-note]');
+    if (!e || Date.now() < s.noteUntil) return;
+    var n = allNodes(cedRoot()).length, text = n + (n === 1 ? ' node' : ' nodes');
+    if (e.textContent !== text || e.className !== 'shb-cbar-note') { e.textContent = text; e.className = 'shb-cbar-note'; }
+  }
+
+  function cedBar() {
+    var s = CED;
+    if (!s) return;
+    var el = owns(document.createElement('div'));
+    el.className = 'shb-cbar ' + hbThemeCls();
+    el.innerHTML =
+      '<span class="shb-cbar-tag"><i></i>Editing button</span>' +
+      '<span class="shb-cbar-name">' + tplIcoHTML('tpl:' + s.id, 14) + '<b>' + esc(s.name) + '</b></span>' +
+      '<span class="shb-cbar-note" data-cbar-note></span>' +
+      '<button type="button" class="shb-cbar-b" data-cbar="cancel" title="Close this tab and leave the button as it was">Cancel</button>' +
+      '<button type="button" class="shb-cbar-b shb-cbar-save" data-cbar="save" title="Keep the nodes of this tab in the button, which stays where it is, and close the tab">' + ico('save', 13) + '<span>Save button</span></button>';
+    el.addEventListener('click', function (ev) {
+      var b = ev.target && ev.target.closest ? ev.target.closest('[data-cbar]') : null;
+      if (!b) return;
+      if (b.getAttribute('data-cbar') === 'save') cedSave();
+      else cedCancel();
+    });
+    /* it floats over the canvas: nothing done on it reaches the canvas under it */
+    ['pointerdown', 'mousedown', 'dblclick', 'wheel', 'contextmenu'].forEach(function (type) {
+      el.addEventListener(type, function (ev) { ev.stopPropagation(); });
+    });
+    document.body.appendChild(el);
+    s.el = el;
+    cedCount();
+  }
+
+  /* the nodes in the middle of the view, whole, at their own size when they fit */
+  function cedFit(nodes) {
+    var c = getCanvas(), ds = c && c.ds, b = nodesBounds(nodes);
+    if (!ds || !ds.offset || !b) return;
+    var el = c.canvas;
+    var W = (el && el.clientWidth) || window.innerWidth, H = (el && el.clientHeight) || window.innerHeight;
+    var mL = 90, mR = 50, mT = 110, mB = 140;
+    var sc = Math.max(0.15, Math.min(1, (W - mL - mR) / Math.max(1, b[2]), (H - mT - mB) / Math.max(1, b[3])));
+    ds.scale = sc;
+    ds.offset[0] = (mL + (W - mL - mR) / 2) / sc - (b[0] + b[2] / 2);
+    ds.offset[1] = (mT + (H - mT - mB) / 2) / sc - (b[1] + b[3] / 2);
+    try { c.setDirty(true, true); } catch (e) {}
+  }
+
+  /* Opens the button on a canvas of its own. `data` are the nodes to start from (the node editor's work copy);
+     without it, the ones the button holds. false: this ComfyUI has no tabs, so nothing was done */
+  function cedStart(id, data) {
+    var tpl = tplById(id), app = getApp(), wf = cedStore();
+    if (!tpl || !(data || tpl.data)) return true;
+    if (tpl.lib && !tpl.canDelete) { setStatus('error', '"' + tpl.name + '" is in a read-only library'); return true; }
+    if (CED) { setStatus('error', 'Finish with "' + CED.name + '" first: Save button or Cancel, in the bar of its tab'); return true; }
+    if (!wf) return false;
+    var work = JSON.parse(JSON.stringify(data || tpl.data));
+    var name = hbBtnName('tpl:' + id, tpl.name);
+    var s = CED = { id: id, name: name, prev: wf.activeWorkflow || null, temp: null, back: BRW.el ? 'brw' : '', el: null, timer: 0, busy: true, sig: '', armed: 0, noteUntil: 0 };
+    tedClose();
+    brwClose();
+    var st = document.getElementById(PANEL_ID + '-settings');
+    if (st && st.parentNode) st.parentNode.removeChild(st);
+    if (HB.el) hbClose();
+    /* the tab's name says what it is; a name is a file name to ComfyUI, so the signs a file cannot have go */
+    var tab = 'Button - ' + (String(name).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'saved');
+    var blank = { last_node_id: 0, last_link_id: 0, nodes: [], links: [], groups: [], config: {}, extra: {}, version: 0.4 };
+    Promise.resolve().then(function () {
+      return app.loadGraphData(blank, true, true, tab);
+    }).then(function () {
+      var temp = wf.activeWorkflow;
+      if (CED !== s) return;
+      if (!temp || cedSame(temp, s.prev) || temp.isTemporary === false) throw new Error('ComfyUI did not open a new tab');
+      s.temp = temp;
+      var made = mgPaste(work, [120, 160]);
+      var c = getCanvas();
+      try { if (c && typeof c.deselectAll === 'function') c.deselectAll(); else if (c && typeof c.deselectAllNodes === 'function') c.deselectAllNodes(); } catch (e) {}
+      cedFit(made);
+      s.busy = false;
+      cedBar();
+      s.timer = every(400, cedTick);
+      /* once the nodes have settled (some grow an input a moment after they land), this is the tab's starting
+         point: it shows as changed only after something is changed in it */
+      setTimeout(function () {
+        if (CED !== s) return;
+        cedFit(allNodes(cedRoot()));
+        s.sig = cedSig();
+        /* and ComfyUI's own "modified" mark on the tab starts from here too */
+        try {
+          var ct = s.temp.changeTracker;
+          if (ct && typeof ct.reset === 'function') {
+            cedCapture(ct);
+            ct.reset();
+            if (typeof ct.updateModified === 'function') ct.updateModified();
+          }
+        } catch (e) {}
+      }, 700);
+    }).catch(function (err) {
+      if (CED === s) CED = null;
+      setStatus('error', 'Could not open "' + name + '" on a canvas of its own: ' + msgOf(err));
+    });
+    return true;
+  }
+
+  /* every little while: the bar shows only over the button's tab, and a tab closed by hand ends it */
+  function cedTick() {
+    var s = CED;
+    if (!s || s.busy || !s.temp) return;
+    var wf = cedStore();
+    if (!wf || !cedFind(s.temp)) {
+      cedEnd('gone');
+      setStatus('ok', 'The tab of "' + s.name + '" was closed · the button is as it was');
+      return;
+    }
+    var on = cedSame(wf.activeWorkflow, s.temp);
+    if (s.el) s.el.style.display = on ? '' : 'none';
+    if (on) cedCount();
+  }
+
+  function cedSave() {
+    var s = CED;
+    if (!s || s.busy || !s.temp) return;
+    var tpl = tplById(s.id);
+    if (!tpl) { cedNote('This button is gone · Cancel closes the tab', true); return; }
+    var items = cedItems(), data = null;
+    if (!items.filter(isGraphNode).length) { cedNote('A button needs at least one node', true); return; }
+    try { data = mgSerialize(items); } catch (e) { data = null; }
+    if (!data || !data.nodes || !data.nodes.length) { cedNote('Could not read these nodes', true); return; }
+    s.busy = true;
+    tplSetData(tpl, data, 'changing the nodes of "' + tpl.name + '"').then(function (ok) {
+      s.busy = false;
+      if (CED !== s) return;
+      if (!ok) { cedNote('Could not save into "' + tpl.name + '"', true); return; }
+      cedEnd('saved');
+    });
+  }
+
+  /* leaving with changes that were not saved takes a second go */
+  function cedCancel() {
+    var s = CED;
+    if (!s || s.busy) return;
+    if (cedChanged() && Date.now() - s.armed > 4000) {
+      s.armed = Date.now();
+      cedNote('Not saved · Cancel again to leave the button as it was');
+      return;
+    }
+    cedEnd('cancel');
+  }
+
+  /* The end of it: the tab you came from is shown again (the way ComfyUI itself changes tabs), the button's
+     tab is closed without a question, and the button editor comes back if that is where this started */
+  function cedEnd(how) {
+    var s = CED;
+    if (!s) return;
+    CED = null;
+    clearInterval(s.timer);
+    if (s.el && s.el.parentNode) s.el.parentNode.removeChild(s.el);
+    var app = getApp(), wf = cedStore(), uid = 'tpl:' + s.id;
+    function done(err) {
+      if (err) setStatus('error', 'Could not close the tab of "' + s.name + '": ' + msgOf(err));
+      else if (how === 'saved') setStatus('ok', '✓ Saved into "' + s.name + '" · the same button, in the same place');
+      else if (how === 'cancel') setStatus('ok', '"' + s.name + '" is as it was');
+      if (s.back === 'brw' && how !== 'gone') {
+        brwOpen();
+        if (tplById(s.id)) brwSelect('button', uid);
+      }
+    }
+    var temp = wf && s.temp ? cedFind(s.temp) : null;
+    if (!temp) { done(); return; }
+    var go = Promise.resolve();
+    if (cedSame(wf.activeWorkflow, temp)) {
+      var to = (s.prev && cedFind(s.prev)) || wf.openWorkflows.filter(function (w) { return !cedSame(w, temp); })[0] || null;
+      go = go.then(function () {
+        if (!to) {
+          /* no other tab is left: ComfyUI opens an empty one */
+          var cmd = app.extensionManager && app.extensionManager.command;
+          return cmd && typeof cmd.execute === 'function' ? cmd.execute('Comfy.NewBlankWorkflow') : null;
+        }
+        return Promise.resolve(to.isLoaded === false && typeof to.load === 'function' ? to.load() : null).then(function () {
+          return app.loadGraphData(JSON.parse(JSON.stringify(to.activeState)), true, true, to,
+            { showMissingModelsDialog: false, showMissingNodesDialog: false, checkForRerouteMigration: false });
+        });
+      });
+    }
+    go.then(function () {
+      var t = cedFind(temp);
+      return t ? wf.closeWorkflow(t) : null;
+    }).then(function () { done(); }, done);
   }
 
   /* ---------------------------------------------------------------------

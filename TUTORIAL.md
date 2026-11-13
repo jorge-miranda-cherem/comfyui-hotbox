@@ -150,7 +150,8 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 1. **Right-click a button → Key**, and press the key that runs it while the hotbox is open. Here <kbd>Q</kbd> adds the button's nodes.
 2. **Right-click → Edit its nodes…**: pick a node, change a value, a title or how it runs, and **Save to this button**. It stays where it is, with its name, color and key.
 3. Or change the nodes on the canvas, select them, and choose **Use selection** in the same box.
-4. What the button held before is kept behind it (the last five): **Versions…** in that editor brings one back.
+4. Or give the button a canvas of its own: **Edit on a clean canvas** in the button editor opens a new tab with only its nodes, and a small bar stays there. Change them with ComfyUI itself, then **Save button**: the same button keeps them, the tab closes and you are back where you were.
+5. What the button held before is kept behind it (the last five): **Versions…** in that editor brings one back.
 
 ---
 
