@@ -63,7 +63,7 @@
     customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
     customKeys: {},         /* a key of its own for a bar button (uid: 'q'), set in its Edit Button box; it works while the button shows */
     customIcons: {},        /* the sign picked for a saved button in the button editor (uid: '◆'), where its sparkles were */
-    hbShare: false,         /* the button editor shows Copy to share / Paste: a button or a group travels as text (off: not shown) */
+    hbShare: true,          /* Copy to share / Paste: a saved button or a group travels as text, through any chat (false: not shown) */
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
@@ -713,6 +713,7 @@
     history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
     wand: '<path d="M21.6 3.6 20.4 2.4a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.3 1.3a1.2 1.2 0 0 0 1.7 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/>'
   };
 
@@ -6838,6 +6839,9 @@
           '<button type="button" class="shb-btn shb-btn-pri' + (nSel ? '' : ' shb-na') + '" data-rbi-take title="' + (nSel ? 'The button takes the ' + nSel + ' selected ' + (nSel === 1 ? 'node' : 'nodes') + ' instead of the ones it holds, and stays the same button: same place, name, color and key'
             : 'Select nodes on the canvas first: the button takes them instead of the ones it holds') + '">' + ico('sync', 13) + '<span>Use selection' + (nSel ? ' (' + nSel + ')' : '') + '</span></button>' +
         '</div>' : '') +
+        ((ownTpl || /^grp:/.test(uid)) && S.hbShare !== false ? '<div class="shb-ebtn-row"><span>Share</span>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-rbi-share title="Copies it as text, nodes and all: paste it into a chat or a mail. Whoever gets it copies the message and presses Ctrl+V in their ComfyUI">' + ico('copy', 13) + '<span>Copy to share</span></button>' +
+        '</div>' : '') +
         '<div style="display:flex;justify-content:space-between;gap:8px">' +
           '<button class="shb-btn" data-rbi-reset title="Back to its own name and color, and no key of its own">Reset</button>' +
           '<div style="display:flex;gap:6px">' +
@@ -6966,6 +6970,15 @@
       tplSetData(ownTpl, data, 'replacing the nodes of "' + ownTpl.name + '"').then(function (ok) {
         if (ok) setStatus('ok', '✓ "' + ownTpl.name + '" now holds the ' + data.nodes.length + ' selected ' + (data.nodes.length === 1 ? 'node' : 'nodes') + ' · same button, same place · what it held before is kept in its versions');
       });
+    };
+    var shareB = bg.querySelector('[data-rbi-share]');
+    if (shareB) shareB.onclick = function () {
+      var pack = hbPack([uid]);
+      if (!pack.templates.length && !pack.groups.length) { setStatus('error', 'Nothing to share in "' + item.label + '"'); return; }
+      hbPackToText(pack).then(function (text) { return hbClipText(text); }).then(function () {
+        shareB.querySelector('span').textContent = 'Copied · paste it into a chat';
+        setStatus('ok', '⧉ Copied "' + item.label + '" to share · whoever gets the message presses Ctrl+V in their ComfyUI');
+      }, function (err) { setStatus('error', 'Could not copy: ' + msgOf(err)); });
     };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
     bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false, ''); };
@@ -12783,7 +12796,7 @@
   function brwShareHTML() {
     var out = '';
     if (HB_SENDER) out += '<button type="button" class="shb-bed-ab shb-pri" data-bed-act="send">➤ ' + esc(HB_SENDER.label || 'Send…') + '</button>';
-    if (S.hbShare) out += '<button type="button" class="shb-bed-ab" data-bed-act="copy" title="Copies it as text: paste it into a chat or a mail, and whoever gets it pastes it into their Hotbox (Buttons → Paste…)">⧉ Copy to share</button>';
+    if (S.hbShare !== false) out += '<button type="button" class="shb-bed-ab" data-bed-act="copy" title="Copies it as text: paste it into a chat or a mail. Whoever gets it copies the message and presses Ctrl+V in their ComfyUI">⧉ Copy to share</button>';
     return out;
   }
 
@@ -12805,7 +12818,7 @@
     if (P && P.kind === 'paste') {
       return '<div class="shb-bed-ibody">' +
         '<div class="shb-bed-f"><div class="shb-bed-cap">Paste shared buttons</div>' +
-          '<div class="shb-bed-note">Paste here the text a teammate copied with <b>Copy to share</b> (Ctrl+V).</div></div>' +
+          '<div class="shb-bed-note">Paste here the message someone copied with <b>Copy to share</b> (Ctrl+V). Pasting it anywhere in ComfyUI, outside a text field, does the same.</div></div>' +
         '<div class="shb-bed-f"><textarea class="shb-bed-ta" data-bed-paste spellcheck="false" placeholder="HOTBOX1…"></textarea></div>' +
         '<div class="shb-bed-f" data-bed-pasteinfo></div>' +
       '</div>' +
@@ -12899,8 +12912,8 @@
     bg.querySelector('[data-bed-sum]').textContent = nOwn + (nOwn === 1 ? ' button' : ' buttons') + ' · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '');
     bg.querySelector('[data-bed-act="undo"]').disabled = !hbUndoLeft();
     bg.querySelector('[data-bed-act="redo"]').disabled = !HB_REDO.length;
-    bg.querySelector('[data-bed-extra]').innerHTML = S.hbShare
-      ? '<button type="button" class="shb-bed-hb" data-bed-act="paste" title="Add the buttons a teammate copied for you with Copy to share">⇩ Paste…</button>' : '';
+    bg.querySelector('[data-bed-extra]').innerHTML = S.hbShare !== false
+      ? '<button type="button" class="shb-bed-hb" data-bed-act="paste" title="Add the buttons someone copied for you with Copy to share (Ctrl+V anywhere in ComfyUI does the same)">⇩ Paste…</button>' : '';
     bg.querySelector('[data-bed-saved]').textContent = CFG.state === 'error' ? 'Could not save (' + (CFG.err || 'error') + ')'
       : (BRW.saved ? 'Saved · ' + (Date.now() - BRW.saved < 60000 ? 'just now' : new Date(BRW.saved).toLocaleTimeString()) : 'All changes saved');
     bg.querySelector('[data-bed-bar]').innerHTML = brwBarHTML();
@@ -13159,7 +13172,7 @@
     if (act === 'undo') { if (hbUndo()) brwToast('Undone', false); return; }
     if (act === 'redo') { if (hbRedo()) brwToast('Redone', false); return; }
     if (act === 'newgrp') { brwNewGroup(''); return; }
-    if (act === 'paste') { BRW.panel = { kind: 'paste', pack: null }; BRW.inspFor = ''; brwRender(); var ta = BRW.el.querySelector('[data-bed-paste]'); if (ta) { try { ta.focus(); } catch (e) {} } return; }
+    if (act === 'paste') { brwPasteOpen(); return; }
     if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
     if (act === 'pasteadd') { brwPasteAdd(); return; }
     var tg = t.closest('[data-bed-target]');
@@ -13406,14 +13419,15 @@
   }, true);
 
   /* ---------------------------------------------------------------------
-   * 14e. SENDING A BUTTON OR A GROUP TO SOMEONE. Off unless something turns it on, since who gets it, and how,
-   * is not Hotbox's to know:
-   *  - a page that has people to send to (a studio's panel) gives Hotbox a sender: window.__hotbox.sendVia({
+   * 14e. SENDING A BUTTON OR A GROUP TO SOMEONE. Two ways, since who gets it, and how, is not Hotbox's to know:
+   *  - (off until a page asks for it) a page that has people to send to (a studio's panel) gives Hotbox a sender: window.__hotbox.sendVia({
    *    label, targets(), send(pack, target, info) }). The button editor then shows "Send…" on a button and on
    *    a group, lists the targets and hands the pack over. On the other side that page calls
    *    window.__hotbox.offer(pack, { from }): a card asks before anything is added.
-   *  - with no pipeline at all, the preference hbShare (window.__hotbox.share(true)) shows "Copy to share" and
-   *    "Paste…": the pack travels as a line of text through any chat or mail (hbPackToText / hbPackFromText).
+   *  - with no pipeline at all, "Copy to share" puts the pack on the clipboard as text (hbPackToText): it travels
+   *    through any chat or mail, and whoever gets it copies the message and presses Ctrl+V in ComfyUI (the paste
+   *    listener below), or pastes it in the Paste… box of the button editor. On unless the preference hbShare
+   *    is false (window.__hotbox.share(false)).
    * Either way what arrives is added with hbAddPack: as the next version, the one before left as it was.
    * --------------------------------------------------------------------- */
   var HB_SENDER = null;
@@ -13425,12 +13439,12 @@
   }
 
   function hbShareOn(on) {
-    if (on !== undefined && !!on !== !!S.hbShare) {
+    if (on !== undefined && !!on !== (S.hbShare !== false)) {
       S.hbShare = !!on;
       save();
       if (BRW.el) { BRW.inspFor = ''; brwRender(); }
     }
-    return !!S.hbShare;
+    return S.hbShare !== false;
   }
 
   /* what a pack holds, in a line: "LoRA Stack · 4 nodes", "Group 1 · 3 buttons" */
@@ -13467,7 +13481,7 @@
      (HOTBOX1Z.….) or, in a browser that cannot squeeze, as it is (HOTBOX1J.….) */
   function hbPackToText(pack) {
     var raw = new TextEncoder().encode(JSON.stringify(pack));
-    var head = 'Hotbox buttons: ' + hbPackLabel(pack) + ' — copy this whole message and paste it in Hotbox → Settings → Saved Buttons → Browse → Paste\n';
+    var head = 'Hotbox buttons: ' + hbPackLabel(pack) + ' — copy this whole message, then press Ctrl+V in ComfyUI (Hotbox 1.2.9 or newer)\n';
     function plain() { return head + 'HOTBOX1J.' + hbB64(raw) + '.'; }
     if (typeof CompressionStream !== 'function') return Promise.resolve(plain());
     try {
@@ -13550,6 +13564,16 @@
     });
   }
 
+  function brwPasteOpen() {
+    if (!BRW.el) return;
+    if (BRW.grab) brwGrabEnd();
+    BRW.panel = { kind: 'paste', pack: null };
+    BRW.inspFor = '';
+    brwRender();
+    var ta = BRW.el.querySelector('[data-bed-paste]');
+    if (ta) { try { ta.focus(); } catch (e) {} }
+  }
+
   function brwPasteRead(text) {
     var P = BRW.panel;
     if (!P || P.kind !== 'paste' || !BRW.el) return;
@@ -13583,6 +13607,39 @@
       if (info) info.innerHTML = '<div class="shb-bed-warn">⚠ Could not add it: ' + esc(msgOf(err)) + '</div>';
     });
   }
+
+  /* a small card that only says something (a pasted message that could not be read) */
+  function hbNotice(title, text) {
+    var card = owns(document.createElement('div'));
+    card.className = 'shb-offer';
+    card.innerHTML = '<div class="shb-offer-t"><span class="shb-bed-mark"></span><b>' + esc(title) + '</b></div>' +
+      '<div class="shb-offer-b"><span class="shb-bed-warn">⚠ ' + esc(text) + '</span></div>' +
+      '<div class="shb-offer-a"><button type="button">Close</button></div>';
+    document.body.appendChild(card);
+    var shut = function () { if (card.parentNode) card.parentNode.removeChild(card); };
+    card.querySelector('button').onclick = shut;
+    setTimeout(shut, 9000);
+  }
+
+  /* Where the one who gets the message pastes it: anywhere in ComfyUI. A paste that carries Hotbox buttons is
+     Hotbox's (the canvas would make nothing of it) and a card asks before anything is added. A paste into a
+     text field stays a paste, and so does any other text */
+  listen(document, 'paste', function (e) {
+    if (S.hbShare === false) return;
+    var text = '';
+    try { text = (e.clipboardData && e.clipboardData.getData('text/plain')) || ''; } catch (err) { text = ''; }
+    if (!/HOTBOX1[JZ]\./.test(text)) return;
+    var t = e.target;
+    if (t && t.closest && t.closest('input,textarea,select,[contenteditable=""],[contenteditable="true"]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    hbPackFromText(text).then(function (pack) {
+      return hbOffer(pack, { from: '' });
+    }).catch(function (err) {
+      hbNotice('Hotbox buttons', msgOf(err));
+    });
+  }, true);
 
   /* Someone sent buttons: a card asks before anything is added. Resolves with { accepted, result } */
   function hbOffer(pack, opts) {
@@ -14854,6 +14911,7 @@
           ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
         '</button>' +
         '<button type="button" class="shb-btn shb-btn-on" data-st-browse data-tip="The button editor: your bottom bar as it is, a lane for every group, and the name, color, icon, key and nodes of each button. Drag to move; every change saves itself, with Undo and Redo">' + ico('search', 13) + '<span>Browse…</span></button>' +
+        (S.hbShare !== false ? '<button type="button" class="shb-btn shb-btn-pri" data-st-paste data-tip="Add the buttons someone copied for you with Copy to share. Ctrl+V anywhere in ComfyUI does the same">' + ico('download', 13) + '<span>Paste…</span></button>' : '') +
         '</div>' +
         (sbOpen ? '<div class="shb-pt">' +
           (list.length || shared.length || gids.length ? '<div class="shb-sb-list">' + list.map(sbRow).join('') + groupsHTML + sharedHTML + '</div>'
@@ -15021,6 +15079,8 @@
       }
       var brwBtn = wrap.querySelector('[data-st-browse]');
       if (brwBtn) brwBtn.onclick = function () { brwOpen(); };
+      var pasteBtn = wrap.querySelector('[data-st-paste]');
+      if (pasteBtn) pasteBtn.onclick = function () { brwOpen(); brwPasteOpen(); };
       var dirB = wrap.querySelector('[data-st-dir]');
       if (dirB) {
         dirB.onclick = function () {

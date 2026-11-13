@@ -25,6 +25,7 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
   - **Edit its nodes…** (or a double-click) opens what a saved button holds; **Duplicate** makes a copy of your own; **Delete** asks nothing, since **Undo** brings it back. Deleting a group keeps its buttons: they go back to the bar.
   - Every change saves itself. **Undo** and **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) go back and forth, and each move, delete or new group shows a note with **Undo** on it.
   - Keys: <kbd>/</kbd> finds a button by its name or by a node it holds (the others dim, nothing moves), <kbd>G</kbd> makes a group (with the picked button in it), <kbd>Del</kbd> deletes what is picked, <kbd>Esc</kbd> lets go of it.
+- **Share a button or a group.** In the button editor, or in Edit Button (right-click a button), **Copy to share** puts a saved button or a group on the clipboard as text, nodes and all: paste it into any chat or mail. Whoever gets it copies the whole message and presses <kbd>Ctrl</kbd>+<kbd>V</kbd> anywhere in ComfyUI (outside a text field): a card shows what it holds and asks before adding it. **Paste…**, in the button editor and in **Settings → Saved Buttons**, does the same from a box. What arrives is added as the next version of the preferences, so nothing is overwritten, and a button that is sent again after a change takes the place of the one that was there. It needs nothing but Hotbox on both sides.
 - **Button groups.** Drag a button over the middle of another and rest there a moment: a line comes up around the other one, then it lights up, and letting go makes the two a group, with a little pop. Nothing moves away while you aim: the middle of a button is where a button rests to be grouped, its two ends are places beside it, and a button let go on the middle too soon simply lands beside it. Drop more buttons on the middle of the group to fill it. Hover a group and its buttons drop down in a list under it, one after another (a soft spring in Fluid, little balloons in Compact, a quiet slide in Quiet); its arrow keeps it open until the hotbox closes, and a second click closes it. Rest on a group with a button in the hand and its list opens at once, its buttons in their places; there the button goes to any place in it, the first one too: a line between two of them shows where. A list a button was just put in stays open while the pointer is on it. Click the group in edit mode (or right-click it any time) to rename it. Drag a button from the list onto the bar to take it out; × on the group ungroups it and its buttons stay in the bar. A group left with one button, or none, asks before it goes: **Keep group** leaves it in the bar with its name and color, empty too, ready to be filled again (its × removes it); **Remove group** unfolds it, and its last button goes back to the bar. <kbd>Enter</kbd>, <kbd>Esc</kbd> or a click outside keep it, so a group is never lost by accident.
 - **Group with `G`.** Press <kbd>G</kbd> in the hotbox to group the selection (or the node under the cursor). It uses ComfyUI's own Group Selected Nodes, so the title editor opens right away, already holding a name read from the nodes, like a saved button's.
 - **Swap Nodes.** Select two nodes and press **Swap Nodes** (<kbd>W</kbd>): they trade places and wires.
@@ -209,7 +210,7 @@ window.__hotbox.addPack(pack, { from: 'ana' })
 `window.__hotbox.browseButtons()` opens the button editor, and `window.__hotbox.editButton(id)` the nodes of one saved button.
 
 ### Sending a button or a group to someone
-Off by default: Hotbox shows no way to send anything until a page, or a preference, turns one on. Who gets it, and how it travels, is not Hotbox's to know.
+Two ways, since who gets it, and how it travels, is not Hotbox's to know. **Copy to share** and **Paste…** are there for everyone: the pack travels as text, by hand. A **sender** is for a page that has people to send to (a studio panel): nothing of it shows until that page asks for it.
 
 ```js
 // A page that has people to send to (a studio panel) gives Hotbox a sender. The button editor then shows
@@ -225,14 +226,14 @@ window.__hotbox.sendVia(null);        // takes it away again
 window.__hotbox.offer(pack, { from: 'Ana', note: 'the one with the crop' })
 // → Promise { accepted: true, result: <what addPack gives> } | { accepted: false }
 
-// With no pipeline at all, a pack travels as text through any chat or mail:
-window.__hotbox.share(true)           // the preference hbShare: the button editor shows Copy to share and Paste…
+// With no pipeline at all, a pack travels as text through any chat or mail (on by default):
+window.__hotbox.share(false)          // the preference hbShare: hides Copy to share and Paste…, and leaves Ctrl+V alone
 window.__hotbox.packToText(pack)      // → Promise<string>: a line that says what it is, then HOTBOX1Z.….
 window.__hotbox.packFromText(text)    // → Promise<pack>; finds the pack in the middle of a message, folded lines too
 ```
 
 - Without `targets`, **Send** calls `send(pack, null, info)` right away: the page shows its own list, or has only one place to send to.
-- `share(true)` is kept in the preferences (`"hbShare": true` in `hotbox.json`), so a studio can turn it on for everyone in the file it hands out. **Copy to share** puts the button or the group on the clipboard as text; whoever gets the message opens **Browse… → Paste…**, pastes it, sees what it holds and adds it.
+- `share(false)` is kept in the preferences (`"hbShare": false` in `hotbox.json`), so a studio that only wants its own sender can turn the text way off for everyone in the file it hands out. A paste is Hotbox's only when its text carries a pack (`HOTBOX1…`) and the pointer is not in a text field: any other paste reaches ComfyUI as always.
 - Whatever the way, what arrives is added with `addPack`: as the next version, the one before left as it was.
 
 > Upgrading from *Super Hotbox*? Your settings are picked up automatically. Remove the old `super_hotbox` folder from `custom_nodes` so the two don't load side by side.

@@ -69,7 +69,8 @@ was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
 
 A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
 nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: your bottom bar,
-a lane for every group, and each button's name, color, icon, key and nodes.
+a lane for every group, and each button's name, color, icon, key and nodes. **Copy to share** sends a button or a
+group to anyone as text: they press <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI and it is theirs.
 
 **Put any tool anywhere**
 

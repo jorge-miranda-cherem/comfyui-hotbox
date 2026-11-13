@@ -111,6 +111,7 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 - **Change a button, keep the button**: change its nodes on the canvas, select them, right-click the button and choose **Use selection**. Or **Edit its nodes…** to change a value, a title or the JSON right there. It stays where it is, with its name, color and key, and what it held before is kept as a version.
 - **Give it a key**: right-click a button → **Key**, and press the key that runs it while the hotbox is open.
 - **Manage them** in **Settings → Saved Buttons → Browse…**: your bottom bar as it is, a lane for every group, and for the button you pick its name, color, icon, key and nodes. Drag to move, <kbd>G</kbd> makes a group, and every change saves itself, with **Undo** and **Redo**.
+- **Send one to someone**: pick a button or a group in that editor (or right-click it in the hotbox) and press **Copy to share**, then paste the text into any chat. Whoever gets it copies the whole message and presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI: a card asks before adding it.
 - **Share them**: **Settings → Shared Libraries → Add Folder** adds a team folder (a studio drive, one per show). Its
   buttons show up in the drawer beside yours; make it **Writable** and **Save Here** and the buttons you save go there
   for everyone. See [shared libraries](docs/REFERENCE.md#%EF%B8%8F-shared-libraries).
