@@ -69,8 +69,16 @@ was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
 
 A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
 nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: your bottom bar,
-a lane for every group, and each button's name, color, icon, key and nodes. **Copy to share** sends a button or a
-group to anyone as text: they press <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI and it is theirs.
+a lane for every group, and each button's name, color, icon, key and nodes.
+
+<img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, and a new group moves along the bar" width="100%">
+
+**Send a button to anyone**
+
+<img src="docs/tutorial/12-share-a-button.gif" alt="Copy to share in the button editor, then Ctrl+V on the canvas: a card asks, and the button is in the bar" width="100%">
+
+**Copy to share** puts a saved button or a group on the clipboard as text. Paste it into any chat; whoever gets it
+presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI, and a card asks before adding it.
 
 **Put any tool anywhere**
 

@@ -10056,8 +10056,9 @@
     var res = hbDragPlace(lp, mx, my);
     if (res === 'tray') {
       var tg = lp.tray.closest('.shb-grp');
-      ghostMove(mx, my, 'Release to put it in ' + (((tg && tg.querySelector(':scope > .shb-btn .shb-lbl')) || {}).textContent || 'the group') +
-        (tg && !tg.classList.contains('shb-grp-show') ? ' · wait, and pick its place' : ''), 'over');
+      /* once its list is open, the list says it (and the hint would sit on its first button) */
+      ghostMove(mx, my, tg && tg.classList.contains('shb-grp-show') ? ''
+        : 'Release to put it in ' + (((tg && tg.querySelector(':scope > .shb-btn .shb-lbl')) || {}).textContent || 'the group') + ' · wait, and pick its place', 'over');
     } else if (res === 'merge') {
       ghostMove(mx, my, 'Release to group them', 'over');
     } else {
@@ -15296,6 +15297,27 @@
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
+    if (e.type === 'keydown' && (e.ctrlKey || e.metaKey) && !e.altKey && /^[zy]$/i.test(String(e.key || ''))) hbHoldCanvasUndo();
+  }
+
+  /* ComfyUI's own undo listens on the window before Hotbox does (nothing stops a listener that was there
+     first) and acts a frame later. So a Ctrl+Z that is Hotbox's (edit mode, the button editor) also took back
+     the last change on the canvas. For that one frame, its undo and redo answer "done" and do nothing */
+  function hbHoldCanvasUndo() {
+    try {
+      var app = getApp(), wf = app && app.extensionManager && app.extensionManager.workflow;
+      var ct = wf && wf.activeWorkflow && wf.activeWorkflow.changeTracker;
+      if (!ct || typeof ct.undoRedo !== 'function' || ct._shbHeld) return;
+      var own = Object.prototype.hasOwnProperty.call(ct, 'undoRedo'), was = ct.undoRedo;
+      ct._shbHeld = true;
+      ct.undoRedo = function () { return Promise.resolve(true); };
+      /* its frame comes before this one (it asked first), so by now it has had its answer */
+      requestAnimationFrame(function () {
+        if (own) ct.undoRedo = was;
+        else delete ct.undoRedo;
+        ct._shbHeld = false;
+      });
+    } catch (err) {}
   }
 
   /* Main Hotbox Trigger & In-Hotbox Quick Keys (window capture runs before every document-level listener) */

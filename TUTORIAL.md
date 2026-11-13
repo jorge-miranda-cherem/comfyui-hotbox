@@ -104,19 +104,52 @@ Needs [KJNodes](https://github.com/kijai/ComfyUI-KJNodes) or Easy-Use (their Set
 
 ![Group two buttons, find one in the drawer, drag it onto the canvas](docs/tutorial/09-saved-buttons-library.gif)
 
-- **Move a button**: drag it (no need to hold it first). Nothing moves while it is in your hand; a bright line marks where it will land, and <kbd>Esc</kbd> calls the drag off.
-- **Group buttons**: drag a button over the middle of another and rest there until it lights up, then let go. Drop a button on the middle of a group to put it in; rest there and its list opens, to pick the place. Hover the group to see its list; its arrow keeps it open until the hotbox closes. A group left with one button, or none, asks whether to keep it.
+- **Group buttons**: drag a button over the middle of another and rest there until it lights up, then let go. Hover the group to see its list; its arrow keeps it open until the hotbox closes. More in [section 10](#10-move-and-group-your-buttons).
 - **Find any button**: press <kbd>N</kbd> and type — saved buttons have their own section in the drawer.
 - **Drag a button onto the canvas** to add its nodes there, or **onto a bar** to pin it to that bar.
-- **Change a button, keep the button**: change its nodes on the canvas, select them, right-click the button and choose **Use selection**. Or **Edit its nodes…** to change a value, a title or the JSON right there. It stays where it is, with its name, color and key, and what it held before is kept as a version.
-- **Give it a key**: right-click a button → **Key**, and press the key that runs it while the hotbox is open.
-- **Manage them** in **Settings → Saved Buttons → Browse…**: your bottom bar as it is, a lane for every group, and for the button you pick its name, color, icon, key and nodes. Drag to move, <kbd>G</kbd> makes a group, and every change saves itself, with **Undo** and **Redo**.
-- **Send one to someone**: pick a button or a group in that editor (or right-click it in the hotbox) and press **Copy to share**, then paste the text into any chat. Whoever gets it copies the whole message and presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI: a card asks before adding it.
 - **Share them**: **Settings → Shared Libraries → Add Folder** adds a team folder (a studio drive, one per show). Its
   buttons show up in the drawer beside yours; make it **Writable** and **Save Here** and the buttons you save go there
   for everyone. See [shared libraries](docs/REFERENCE.md#%EF%B8%8F-shared-libraries).
 
 Saved buttons live in your preferences file (`hotbox.json`), so they survive restarts and can be shared.
+
+## 10. Move and group your buttons
+
+![Drag a button to a new place, into a group, onto another button; remove one and take it back](docs/tutorial/10-move-and-group-buttons.gif)
+
+1. **Drag any button**, with no need to hold it first. It lifts from the point you took it by; nothing in the bars moves while it is in your hand, and a bright line marks where it will land.
+2. **Into a group**: take it to the middle of the group, which lights up. Rest there and its list opens: pick the place in it, the first one too.
+3. **Two buttons, one group**: rest a button on the middle of another until it lights up, and let go.
+4. **Take one off the bar**: hold a button (or click the ✎) for edit mode, then drag it to the red **Remove** strip. <kbd>Ctrl</kbd>+<kbd>Z</kbd> puts it back, and only that: the canvas keeps its own undo.
+5. Let go away from the bars, or press <kbd>Esc</kbd>, and the button goes back where it was.
+
+## 11. The button editor
+
+![Name, color, icon and key for a button; drag it into a group; a new group; its place in the bar; Undo and Redo](docs/tutorial/11-button-editor.gif)
+
+1. **Settings → Saved Buttons → Browse…** (the **H** in ComfyUI's top bar opens Settings).
+2. On top, **your bottom bar** as the hotbox shows it. Under it, a lane for every group and one for the buttons in no group.
+3. **Click a button**: its name, color, icon and hotkey are on the right, with the group it is in and the nodes it adds. The hotkey warns when the key already does something.
+4. **Drag** a card to any place in a lane, onto a group in the bar, or onto **New group** (<kbd>G</kbd> makes one too). Drag a group or a button along the bar to move it there.
+5. Every change saves itself. <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes it back, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again, <kbd>/</kbd> finds a button by its name or by a node in it, <kbd>Del</kbd> deletes what is picked.
+
+## 12. Send a button to someone
+
+![Copy to share in the button editor, then Ctrl+V on the canvas: a card asks, and the button is in the bar](docs/tutorial/12-share-a-button.gif)
+
+1. Pick a saved button or a group in the button editor (or right-click it in the hotbox) and press **Copy to share**. It is on your clipboard as text, nodes and all.
+2. Paste it into any chat or mail.
+3. Whoever gets it copies the whole message and presses <kbd>Ctrl</kbd>+<kbd>V</kbd> anywhere in ComfyUI. A card shows what it holds; **Add to my buttons** puts it at the end of their bottom bar.
+4. Nothing they have is overwritten: what arrives is kept as the next version of their preferences. (In the recording one ComfyUI plays both sides: the button is deleted in between.)
+
+## 13. A key of its own, and new nodes for the same button
+
+![Right-click a button, give it the key Q, press Q; then change a value in its nodes and save it into the same button](docs/tutorial/13-button-key-and-nodes.gif)
+
+1. **Right-click a button → Key**, and press the key that runs it while the hotbox is open. Here <kbd>Q</kbd> adds the button's nodes.
+2. **Right-click → Edit its nodes…**: pick a node, change a value, a title or how it runs, and **Save to this button**. It stays where it is, with its name, color and key.
+3. Or change the nodes on the canvas, select them, and choose **Use selection** in the same box.
+4. What the button held before is kept behind it (the last five): **Versions…** in that editor brings one back.
 
 ---
 
