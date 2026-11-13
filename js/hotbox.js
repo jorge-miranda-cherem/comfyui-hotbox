@@ -838,6 +838,12 @@
       '.shb-fold-on > .shb-grp-chev,.shb-grp-show > .shb-btn .shb-grp-chev{transform:rotate(180deg);opacity:.9}',
       '.shb-grp-pin > .shb-btn .shb-grp-chev{color:#5aa2f0;opacity:1}',
       '.shb-grp-drop > .shb-btn{box-shadow:inset 0 0 0 1.5px #5aa2f0 !important;background:rgba(90,162,240,.18) !important}',
+      /* a button rested on, about to be grouped with the one in the hand: its line comes up while the rest lasts */
+      '.shb-grp-arm > .shb-btn{box-shadow:inset 0 0 0 1.5px rgba(90,162,240,.6) !important;transition:box-shadow 340ms linear !important}',
+      /* the line that marks where the button in the hand would land: it glides from one place to the next */
+      '.shb-drop-mark{position:fixed;left:0;top:0;z-index:2147483600;border-radius:2px;background:#7ab4ff;box-shadow:0 0 0 1px rgba(8,16,32,.55),0 0 10px rgba(110,170,255,.75);pointer-events:none;opacity:0;transition:transform 90ms cubic-bezier(.2,.8,.2,1),width 90ms cubic-bezier(.2,.8,.2,1),height 90ms cubic-bezier(.2,.8,.2,1),opacity 70ms linear;will-change:transform}',
+      '.shb-drop-mark.shb-on{opacity:1}',
+      'html.shb-grabbing,html.shb-grabbing *{cursor:grabbing !important}',
       '.shb-item-wrap > .shb-btn{position:relative}',
       '.shb-item-wrap.shb-removing{max-width:0;opacity:0;transform:scale(.3);overflow:hidden;transition:max-width 120ms cubic-bezier(.2,.9,.1,1),opacity 90ms ease,transform 120ms cubic-bezier(.2,.9,.1,1)}',
       '.shb-item-wrap.shb-drag-src{pointer-events:none}',
@@ -864,11 +870,15 @@
       '.shb-item-wrap.shb-drag-src > .shb-btn{background:rgba(92,148,240,.16) !important;box-shadow:inset 0 0 0 1.5px rgba(110,165,245,.95) !important;border-color:transparent !important;outline:none !important}',
       '.shb-item-wrap.shb-drag-src > .shb-btn > *{visibility:hidden}',
       '.shb-item-wrap.shb-drag-gone > .shb-btn{background:rgba(224,112,95,.12) !important;box-shadow:inset 0 0 0 1.5px rgba(224,112,95,.75) !important}',
-      /* ...and the button itself, lifted: a little bigger, with a shadow, under the pointer */
-      '.shb-ghost.shb-lift,.shb-ghost.shb-lift.shb-fluid,.shb-ghost.shb-lift.shb-quiet,.shb-ghost.shb-lift.shb-fluid.shb-ghost-over,.shb-ghost.shb-lift.shb-fluid.shb-ghost-rm,.shb-ghost.shb-lift.shb-quiet.shb-ghost-rm{padding:0;border:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;flex-direction:column;gap:9px;transform:translate(-50%,-50%);transition:none}',
-      '.shb-lift > .shb-btn{transform:scale(1.12);box-shadow:0 16px 36px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.22) !important;cursor:grabbing}',
-      '.shb-lift.shb-ghost-rm > .shb-btn{box-shadow:0 16px 36px rgba(0,0,0,.6),0 0 0 2px #e0705f !important;opacity:.85}',
-      '.shb-lift .shb-ghost-hint,.shb-ghost.shb-lift.shb-fluid .shb-ghost-hint,.shb-ghost.shb-lift.shb-quiet .shb-ghost-hint{padding:4px 8px;border-radius:8px;background:rgba(20,20,22,.9);color:#d8d8dc;font:500 11px/1 Inter,system-ui,sans-serif}',
+      /* ...and the button itself, lifted: it stays under the pointer by the very point it was taken by, grows a
+         little from there and gets a shadow. Its hint hangs under it and never pushes it */
+      '.shb-ghost.shb-lift,.shb-ghost.shb-lift.shb-fluid,.shb-ghost.shb-lift.shb-quiet,.shb-ghost.shb-lift.shb-fluid.shb-ghost-over,.shb-ghost.shb-lift.shb-fluid.shb-ghost-rm,.shb-ghost.shb-lift.shb-quiet.shb-ghost-rm,.shb-ghost.shb-lift.shb-fluid.shb-noblur{left:0;top:0;display:block;padding:0;border:0;border-radius:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;transition:none;will-change:transform}',
+      '.shb-lift-in{display:block;transition:transform 120ms cubic-bezier(.2,.9,.2,1)}',
+      '.shb-lift-up > .shb-lift-in{transform:scale(1.07)}',
+      '.shb-lift-in > .shb-btn{margin:0 !important;cursor:grabbing;transition:box-shadow 120ms ease-out !important}',
+      '.shb-lift-up > .shb-lift-in > .shb-btn{box-shadow:0 14px 32px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.22) !important}',
+      '.shb-lift-up.shb-ghost-rm > .shb-lift-in > .shb-btn{box-shadow:0 14px 32px rgba(0,0,0,.55),0 0 0 2px #e0705f !important;opacity:.85}',
+      '.shb-lift .shb-ghost-hint,.shb-ghost.shb-lift.shb-fluid .shb-ghost-hint,.shb-ghost.shb-lift.shb-quiet .shb-ghost-hint{position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);padding:4px 8px;border-radius:8px;background:rgba(20,20,22,.92);color:#d8d8dc;font:500 11px/1 Inter,system-ui,sans-serif;white-space:nowrap}',
       '.shb-lift .shb-ghost-hint:empty{display:none}',
       /* Glass Blur off (Settings → Effects): plain panels, for a browser without a GPU */
       '.shb-fluid.shb-noblur .shb-bar,.shb-fluid.shb-noblur .shb-card,.shb-fluid.shb-noblur .shb-drawer,.shb-fluid.shb-noblur .shb-editbar,.shb-fluid.shb-noblur .shb-dial-in,.shb-fluid.shb-noblur .shb-catmenu,.shb-fluid.shb-noblur .shb-wmenu,.shb-ghost.shb-fluid.shb-noblur{-webkit-backdrop-filter:none;backdrop-filter:none;background:#29292d}',
@@ -6992,9 +7002,11 @@
       if (!w || (e.relatedTarget && w.contains(e.relatedTarget))) return;
       clearTimeout(w._hideT);
       if (w._mute) return;
-      var dragging = !!((LP_DRAG && LP_DRAG.active) || (DRAWER_DRAG && DRAWER_DRAG.active));
+      var drag = (LP_DRAG && LP_DRAG.active && LP_DRAG) || (DRAWER_DRAG && DRAWER_DRAG.active && DRAWER_DRAG) || null;
       clearTimeout(w._showT);
-      w._showT = setTimeout(function () { hbDropShow(w); }, dragging ? 280 : 70);
+      /* a group in the hand goes into no other group: the lists it passes stay shut */
+      if (drag && (drag.isGrp || drag.wrap === w)) return;
+      w._showT = setTimeout(function () { hbDropShow(w, hbDragLive(drag)); }, drag ? 260 : 70);
     });
     el.addEventListener('mouseout', function (e) {
       var w = e.target && e.target.closest ? e.target.closest('.shb-grp[data-hb-gkey]') : null;
@@ -7031,7 +7043,7 @@
 
   /* Opening: the list unfolds from its button and its buttons fall in one after another — a soft spring in
      Fluid, little balloons in Compact, a quiet slide in Quiet */
-  function hbDropShow(wrap) {
+  function hbDropShow(wrap, quick) {
     if (!HB.el || !wrap || !wrap.isConnected || wrap.classList.contains('shb-grp-show') && !wrap._closing) return;
     var drop = wrap.querySelector(':scope > .shb-gdrop');
     if (!drop || !drop.children.length) return;
@@ -7040,6 +7052,12 @@
     hbDropFit(drop);
     var up = drop.classList.contains('shb-gdrop-up'), sg = up ? 1 : -1;
     var st = hbStyleName(), run = hbDropAnims(drop);
+    if (quick) {
+      /* a button is in the hand, waiting to be put in: the list is simply there, with its buttons in their
+         places at once (they are what the pointer aims at) */
+      run(drop, [{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: 'linear' });
+      return;
+    }
     var D = { fluid: [190, 300, 24], compact: [150, 210, 15], quiet: [110, 130, 8] }[st];
     run(drop, [{ opacity: 0, transform: 'translateY(' + (sg * 6) + 'px) scale(' + (st === 'quiet' ? 1 : 0.96) + ')' }, { opacity: 1, transform: 'none' }],
       { duration: D[0], easing: 'cubic-bezier(.2,.9,.1,1)' });
@@ -7097,14 +7115,6 @@
   }
 
   /* Dropping one button on the middle of another: a new group takes the second one's place and holds both */
-  function hbMergeTarget(overWrap, dragWrap, x, y) {
-    if (!overWrap || overWrap === dragWrap || overWrap.classList.contains('shb-grp')) return null;
-    if (!overWrap.parentNode || !overWrap.parentNode.hasAttribute('data-hb-bar')) return null;
-    var r = overWrap.getBoundingClientRect();
-    if (x < r.left + r.width * 0.25 || x > r.right - r.width * 0.25 || y < r.top || y > r.bottom) return null;
-    return overWrap;
-  }
-
   function hbMergeDom(targetWrap, dragWrap) {
     var gid = grpNew();
     var holder = document.createElement('span');
@@ -7471,8 +7481,16 @@
 
   function ghostMove(x, y, hint, state) {
     if (!GHOST) return;
-    GHOST.style.left = x + 'px';
-    GHOST.style.top = y + 'px';
+    GHOST._x = x;
+    GHOST._y = y;
+    var g = GHOST._grab;
+    if (g) {
+      /* a lifted button: moved by transform alone (no layout), from the point it was taken by */
+      GHOST.style.transform = 'translate3d(' + ((x - g.x - g.bx) / g.ax) + 'px,' + ((y - g.y - g.by) / g.ay) + 'px,0)';
+    } else {
+      GHOST.style.left = x + 'px';
+      GHOST.style.top = y + 'px';
+    }
     GHOST.classList.toggle('shb-ghost-over', state === 'over');
     GHOST.classList.toggle('shb-ghost-rm', state === 'rm');
     var h = GHOST.lastElementChild;
@@ -7490,10 +7508,15 @@
   var LIFT_PROPS = ['display', 'alignItems', 'justifyContent', 'gap', 'padding', 'margin', 'border', 'borderRadius', 'backgroundColor',
     'backgroundImage', 'color', 'font', 'letterSpacing', 'textTransform', 'opacity', 'width', 'height', 'minWidth', 'boxSizing', 'whiteSpace',
     'flexShrink', 'placeItems'];
-  function ghostLift(wrap, x, y) {
+  function ghostLift(wrap, x, y, x0, y0) {
     ghostHide();
     var src = wrap && wrap.querySelector(':scope > .shb-btn');
     if (!src) { ghostShow('', x, y); return; }
+    var sr = src.getBoundingClientRect();
+    var z = parseFloat(S.hbScale) || 1;
+    /* the point of the button the pointer took it by (where the press began) */
+    var gx = Math.max(0, Math.min(sr.width, (x0 == null ? x : x0) - sr.left));
+    var gy = Math.max(0, Math.min(sr.height, (y0 == null ? y : y0) - sr.top));
     var copy = src.cloneNode(true);
     var a = [src].concat(Array.prototype.slice.call(src.querySelectorAll('*')));
     var b = [copy].concat(Array.prototype.slice.call(copy.querySelectorAll('*')));
@@ -7506,15 +7529,57 @@
     copy.removeAttribute('data-hb-run');
     copy.removeAttribute('title');
     copy.style.animation = 'none';
+    copy.style.transform = 'none';
+    /* a button with no fill of its own (or a see-through tint) is only its label once it is off its bar, lost
+       among the labels it is carried over: in the hand it is a solid button, its tint laid over the panel color */
+    try {
+      var sc = getComputedStyle(src), bg = sc.backgroundColor || '';
+      var bm = bg.match(/rgba?\(([^)]+)\)/), bp = bm ? bm[1].split(',') : [];
+      var alpha = !bm ? 0 : (bp.length > 3 ? parseFloat(bp[3]) : 1);
+      if (alpha < 0.95 && (sc.backgroundImage || 'none') === 'none') {
+        if (alpha > 0) copy.style.backgroundImage = 'linear-gradient(' + bg + ',' + bg + ')';
+        copy.style.backgroundColor = hbIsFluid() ? '#35353b' : '#2b2b2b';
+      }
+    } catch (e) {}
     GHOST = owns(document.createElement('div'));
     GHOST.className = 'shb-ghost shb-lift ' + hbThemeCls();
-    GHOST.style.zoom = String(parseFloat(S.hbScale) || 1);
-    GHOST.appendChild(copy);
+    /* the hotbox's scale goes on the copy, never on the box that is placed: a scaled box lands that much farther
+       from the corner of the window than it was told (5% of the way, at a scale of 1.05), which left the button
+       beside the pointer, and farther off the bigger the screen */
+    var inner = document.createElement('div');
+    inner.className = 'shb-lift-in';
+    inner.style.zoom = String(z);
+    inner.style.transformOrigin = (gx / z) + 'px ' + (gy / z) + 'px';
+    inner.appendChild(copy);
+    GHOST.appendChild(inner);
     var hint = document.createElement('span');
     hint.className = 'shb-ghost-hint';
     GHOST.appendChild(hint);
     document.body.appendChild(GHOST);
+    /* where the page really puts a box told to be at a place: found out once per lift, so a page that scales or
+       shifts everything in it (a panel that hosts Hotbox) cannot leave the button beside the pointer either */
+    var g = { x: gx, y: gy, ax: 1, ay: 1, bx: 0, by: 0 };
+    try {
+      GHOST.style.transform = 'translate3d(0px,0px,0)';
+      var r0 = GHOST.getBoundingClientRect();
+      GHOST.style.transform = 'translate3d(400px,400px,0)';
+      var r1 = GHOST.getBoundingClientRect();
+      var ax = (r1.left - r0.left) / 400, ay = (r1.top - r0.top) / 400;
+      if (ax > 0.2 && ax < 5 && ay > 0.2 && ay < 5) { g.ax = ax; g.ay = ay; g.bx = r0.left; g.by = r0.top; }
+    } catch (e) {}
+    GHOST._grab = g;
     ghostMove(x, y, '', '');
+    /* it starts as the button it is, where it is, and rises from there */
+    void GHOST.offsetWidth;
+    GHOST.classList.add('shb-lift-up');
+  }
+
+  /* where the lifted button is on screen right now (for the little flight to the place it lands in) */
+  function ghostRect() {
+    var c = GHOST && GHOST._grab && GHOST.querySelector('.shb-lift-in > .shb-btn');
+    if (!c) return null;
+    var r = c.getBoundingClientRect();
+    return r.width ? r : null;
   }
 
   /* While a button is dragged in edit mode, the edit bar is the place to drop it to take it off its bar */
@@ -7529,13 +7594,349 @@
     if (t) t.classList.toggle('shb-hot', !!on);
   }
 
-  /* a dragged button that leaves the bars waits where it was picked up */
-  function hbDragHome(lp) {
-    var w = lp.wrap, h = lp.home;
-    if (!w || !h || !h.parent || !h.parent.isConnected) return;
-    var next = (h.next && h.next.parentNode === h.parent) ? h.next : null;
-    if (w.parentNode === h.parent && w.nextSibling === next) return;
-    h.parent.insertBefore(w, next);
+  /* ---------------------------------------------------------------------
+   * A BUTTON IN THE HAND: where it would land.
+   * One set of rules for a button dragged along the bars and for one dragged in from the drawer or Settings.
+   * While it is in the hand NOTHING in the bars moves: the button's own place stays where it is (an empty
+   * outline), and a line marks the place it would take. The bars used to make room as it passed, and a bar
+   * that folds into rows, or that centers what it holds, slid the very button being aimed at (a group, most
+   * of all) from under the pointer. On release everything glides to where it now belongs (hbGlide).
+   *  - the two ends of a button, and the gaps of a bar, are places to put it: the line shows which;
+   *  - the middle of a button is where it rests to be grouped with that one;
+   *  - the middle of a group is where it goes into the group (its list opens there, to pick a place in it).
+   * --------------------------------------------------------------------- */
+  var HB_WRAPS = '.shb-bar-items[data-hb-bar] > .shb-item-wrap[data-hb-uid], [data-hb-gtray] > .shb-item-wrap[data-hb-uid]';
+
+  function hbWrapKey(el) {
+    var p = el.parentNode;
+    return (p.getAttribute('data-hb-gtray') ? 'g:' + p.getAttribute('data-hb-gtray') : 'b:' + p.getAttribute('data-hb-bar')) + '|' + el.getAttribute('data-hb-uid');
+  }
+
+  /* The bars are drawn anew by `change` (a button was dropped): every button that is still in its bar or list
+     glides from where it was to where it is now, instead of jumping there. `skip` is the one that was dropped,
+     which flies in from the hand (hbSettle) */
+  function hbGlide(change, skip) {
+    var was = {}, z = parseFloat(S.hbScale) || 1;
+    if (HB.el) {
+      Array.prototype.forEach.call(HB.el.querySelectorAll(HB_WRAPS), function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.width) was[hbWrapKey(el)] = r;
+      });
+    }
+    change();
+    if (!HB.el) return;
+    var els = Array.prototype.slice.call(HB.el.querySelectorAll(HB_WRAPS));
+    var d = els.map(function (el) {
+      var a = was[hbWrapKey(el)], b = a && el.getBoundingClientRect();
+      return (a && b.width) ? { x: a.left - b.left, y: a.top - b.top } : null;
+    });
+    els.forEach(function (el, i) {
+      var v = d[i];
+      if (!v || el.getAttribute('data-hb-uid') === skip) return;
+      var x = v.x, y = v.y;
+      /* a button in a group's list rides with its group: only what it moved by itself is its own */
+      var up = el.parentNode.hasAttribute('data-hb-gtray') ? el.parentNode.closest('.shb-item-wrap') : null;
+      var ui = up ? els.indexOf(up) : -1;
+      if (ui >= 0 && d[ui]) { x -= d[ui].x; y -= d[ui].y; }
+      if (Math.abs(x) < 0.5 && Math.abs(y) < 0.5) return;
+      try {
+        el.animate([{ transform: 'translate(' + (x / z) + 'px,' + (y / z) + 'px)' }, { transform: 'none' }],
+          { duration: 170, easing: 'cubic-bezier(.2,.85,.25,1)' });
+      } catch (e) {}
+    });
+  }
+
+  /* In the bottom bar the actions come first and what was pinned after them: a place among the others is not a
+     place the button would keep, so the line is never drawn there */
+  function hbBotClamp(slot, box, before) {
+    if (!box || box.getAttribute('data-hb-bar') !== 'bot' || !box.classList.contains('shb-bar-items')) return before;
+    var isTool = (slot.getAttribute('data-hb-uid') || '').indexOf('tool:') === 0;
+    var kids = Array.prototype.filter.call(box.children, function (k) { return k !== slot; });
+    var bi = before ? kids.indexOf(before) : kids.length;
+    if (bi < 0) bi = kids.length;
+    var lastTool = -1, firstPin = kids.length, sep = -1;
+    kids.forEach(function (k, i) {
+      if (k.classList.contains('shb-vsep')) { sep = i; return; }
+      var u = k.getAttribute && k.getAttribute('data-hb-uid');
+      if (!u) return;
+      if (u.indexOf('tool:') === 0) lastTool = i;
+      else if (i < firstPin) firstPin = i;
+    });
+    if (isTool) {
+      var max = sep >= 0 ? sep : firstPin;
+      if (bi > max) bi = max;
+    } else {
+      var min = sep >= 0 ? sep + 1 : lastTool + 1;
+      if (bi < min) bi = min;
+    }
+    return kids[bi] || null;
+  }
+
+  /* The line that marks where the button in the hand would land. It glides from one place to the next, and it
+     is drawn over everything, the lifted button too (which is right on top of the place it is aimed at) */
+  var HB_MARK = null;
+  function hbMark(rect, flat) {
+    var m = HB_MARK;
+    if (!rect) {
+      if (m) m.classList.remove('shb-on');
+      return;
+    }
+    if (!m || !m.isConnected) {
+      m = HB_MARK = owns(document.createElement('div'));
+      m.className = 'shb-drop-mark';
+      document.body.appendChild(m);
+    }
+    /* just shown: it appears in its place, it does not fly in from where it was last */
+    var fresh = !m.classList.contains('shb-on');
+    if (fresh) m.style.transition = 'none';
+    /* it sticks out a little past the buttons it stands between */
+    var out = 5;
+    m.style.width = (flat ? rect.w + out * 2 : 3) + 'px';
+    m.style.height = (flat ? 3 : rect.h + out * 2) + 'px';
+    m.style.transform = 'translate3d(' + (flat ? rect.x - out : rect.x) + 'px,' + (flat ? rect.y : rect.y - out) + 'px,0)';
+    if (fresh) {
+      void m.offsetWidth;
+      m.style.transition = '';
+      m.classList.add('shb-on');
+    }
+  }
+
+  function hbDestClear(d) {
+    if (d) d.dest = null;
+    hbMark(null);
+  }
+
+  /* The button would land in `box`, beside `ref` ('a': before it, 'b': after it; no ref: the box is empty, or
+     it goes last). The place it is in already is no place to go: no line then */
+  function hbDestSet(d, box, ref, side) {
+    var slot = d.wrap;
+    if (!slot || !box) { hbDestClear(d); return false; }
+    var before = ref ? (side === 'a' ? ref : ref.nextSibling) : null;
+    if (before === slot) before = slot.nextSibling;
+    var asked = before;
+    before = hbBotClamp(slot, box, before);
+    if (before === slot) before = slot.nextSibling;
+    if (slot.parentNode === box && slot.nextSibling === (before || null)) { hbDestClear(d); return false; }
+    if ((before || null) !== (asked || null) || !ref) {
+      /* the place was moved to one the button can keep, or none was named: the line goes beside what is there */
+      ref = null;
+      if (before && before.classList.contains('shb-item-wrap')) { ref = before; side = 'a'; }
+      else {
+        var k = before ? before.previousElementSibling : box.lastElementChild;
+        while (k && (k === slot || !k.classList.contains('shb-item-wrap'))) k = k.previousElementSibling;
+        if (k) { ref = k; side = 'b'; }
+      }
+    }
+    d.dest = { box: box, before: before || null };
+    var col = box.hasAttribute('data-hb-gtray');
+    var r = (ref || box).getBoundingClientRect();
+    if (!ref && !r.width) {
+      /* a bar with nothing in it has no size of its own: the line goes in the bar's box */
+      var shell = box.closest('.shb-bar');
+      if (shell) r = shell.getBoundingClientRect();
+    }
+    if (!r.width && !r.height) { hbMark(null); return true; }
+    if (!ref) hbMark({ x: r.left + r.width / 2 - 1.5, y: r.top + 9, w: 3, h: Math.max(6, r.height - 18) }, false);
+    else if (col) hbMark({ x: r.left, y: (side === 'a' ? r.top - 1 : r.bottom + 1) - 1.5, w: r.width, h: 3 }, true);
+    else hbMark({ x: (side === 'a' ? r.left - 1 : r.right + 1) - 1.5, y: r.top, w: 3, h: r.height }, false);
+    return true;
+  }
+
+  /* Let go: the button takes the place the line marked. false: there was none (it stays where it is) */
+  function hbDestApply(d) {
+    var t = d && d.dest, w = d && d.wrap;
+    hbMark(null);
+    if (!t || !w || !t.box || !t.box.isConnected) return false;
+    t.box.insertBefore(w, (t.before && t.before.parentNode === t.box) ? t.before : null);
+    return true;
+  }
+
+  /* Which part of a button the pointer is on: 'a' and 'b' are its two ends (before it, after it), 'mid' its
+     middle, which only a button in a bar has (in a group's list the buttons stack, and there is no grouping) */
+  function hbZoneOf(over, x, y, mid) {
+    var r = over.getBoundingClientRect();
+    var col = over.parentNode && over.parentNode.hasAttribute('data-hb-gtray');
+    var t = col ? (y - r.top) / (r.height || 1) : (x - r.left) / (r.width || 1);
+    if (mid && t > mid && t < 1 - mid) return 'mid';
+    return t < 0.5 ? 'a' : 'b';
+  }
+
+  /* how much of each end of a button is a place to insert: the rest, its middle, is where a button rests to be
+     grouped with it (0.3) or goes into the group (0.2). 0: it has no middle (in a list, or a group in the hand) */
+  function hbMidOf(over, isGrp) {
+    if (isGrp || !over.parentNode || !over.parentNode.classList.contains('shb-bar-items')) return 0;
+    return over.classList.contains('shb-grp') ? 0.2 : 0.3;
+  }
+
+  /* The place nearest to the pointer in a bar or a list, when it is on none of its buttons (a gap, the edge).
+     `hold`: the pointer is level with the middle of a button, just above or below it: that is still its
+     middle (where a button rests to be grouped, or goes into a group), not a place beside it */
+  function hbNearIn(box, slot, x, y, isGrp) {
+    var col = box.hasAttribute('data-hb-gtray');
+    var best = null, bestD = 1e9, bestR = null, bestIn = false;
+    Array.prototype.forEach.call(box.children, function (k) {
+      if (k === slot || !k.classList.contains('shb-item-wrap')) return;
+      var r = k.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+      var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+      /* a bar that folds into rows: the row the pointer is on counts first */
+      var dd = col ? Math.hypot(dx, dy) : Math.hypot(dx, dy * 4);
+      if (dd < bestD) { bestD = dd; best = k; bestR = r; bestIn = col ? !dy : !dx; }
+    });
+    if (!best) return {};
+    if (bestIn && hbZoneOf(best, x, y, hbMidOf(best, isGrp)) === 'mid') return { hold: true };
+    var isA = col ? y < bestR.top + bestR.height / 2 : x < bestR.left + bestR.width / 2;
+    return { ref: best, side: isA ? 'a' : 'b' };
+  }
+
+  function hbDragLive(d) {
+    return !!d && (LP_DRAG === d || DRAWER_DRAG === d);
+  }
+
+  /* Grouping two buttons takes a short rest on the middle of the other one: its line comes up while the rest
+     lasts, then it lights up. A button only passing over another on its way somewhere else groups nothing */
+  function hbDragMerge(d, cand) {
+    if (!d || (d.mergeCand || null) === (cand || null)) return;
+    if (d.mergeT) { clearTimeout(d.mergeT); d.mergeT = 0; }
+    if (d.mergeCand) d.mergeCand.classList.remove('shb-grp-arm');
+    d.mergeCand = cand || null;
+    d.merge = null;
+    if (!cand) return;
+    void cand.offsetWidth;
+    cand.classList.add('shb-grp-arm');
+    d.mergeT = setTimeout(function () {
+      d.mergeT = 0;
+      if (!hbDragLive(d) || d.mergeCand !== cand || !cand.isConnected) return;
+      d.merge = cand;
+      cand.classList.remove('shb-grp-arm');
+      hbGrpHot(cand);
+      if (GHOST) ghostMove(GHOST._x || 0, GHOST._y || 0, 'Release to group them', 'over');
+    }, 360);
+  }
+
+  /* What the pointer is on, and the line drawn where the button would land. Returns 'tray' (it goes into
+     that group on release), 'merge' (release groups the two), 'rest' (on the middle of a button, not long
+     enough yet), 'dest' (the line marks the place) or '' (no place here: let go, it stays where it is) */
+  function hbDragPlace(d, x, y) {
+    var slot = d.wrap, isGrp = !!d.isGrp;
+    d.tray = null;
+    var under = null;
+    try { under = document.elementFromPoint(x, y); } catch (err) { under = null; }
+    if (!under || !under.closest || !HB.el || !HB.el.contains(under)) {
+      hbDragMerge(d, null);
+      hbGrpHot(null);
+      hbDestClear(d);
+      return '';
+    }
+    var over = under.closest('.shb-item-wrap[data-hb-uid]');
+    /* on a group's list itself (its edge, a gap between two of its buttons, the empty place of the button in
+       the hand): that is the list, not the group's button up in the bar. Taking it for the group sent a button
+       that was only being moved inside the list out of it, to the group's side */
+    var listHit = under.closest('[data-hb-gtray]');
+    if (over && listHit && over.contains(listHit)) over = null;
+    /* a group moves as a whole, never into another group */
+    if (over && isGrp && over.parentNode && over.parentNode.hasAttribute('data-hb-gtray')) {
+      over = over.parentNode.closest('.shb-item-wrap[data-hb-uid]');
+    }
+    if (over && (over === slot || slot.contains(over))) over = slot;
+    if (!over && slot.parentNode) {
+      /* its own empty place lets the pointer through */
+      var sr = slot.getBoundingClientRect();
+      if (sr.width && x >= sr.left - 1 && x <= sr.right + 1 && y >= sr.top - 1 && y <= sr.bottom + 1) over = slot;
+    }
+    if (over === slot) {
+      /* back on the place it was taken from: let go, and nothing changes */
+      hbDragMerge(d, null);
+      hbGrpHot(null);
+      hbDestClear(d);
+      return '';
+    }
+    var tray = (isGrp || !over) ? null : hbGrpTarget(over, x, y);
+    if (tray && !slot.contains(tray)) {
+      /* it goes in on release. Waiting on the group opens its list, and there the button takes any place in
+         it, the first one too */
+      hbDragMerge(d, null);
+      hbDestClear(d);
+      d.tray = tray;
+      hbGrpHot(over);
+      return 'tray';
+    }
+    if (over && over.parentNode) {
+      /* a group's own middle is hbGrpTarget's, above: here a group only has its two ends */
+      var zone = hbZoneOf(over, x, y, over.classList.contains('shb-grp') ? 0 : hbMidOf(over, isGrp));
+      if (zone === 'mid') {
+        hbDestClear(d);
+        hbDragMerge(d, over);
+        if (d.merge) hbGrpHot(over);
+        return d.merge ? 'merge' : 'rest';
+      }
+      hbDragMerge(d, null);
+      hbGrpHot(null);
+      return hbDestSet(d, over.parentNode, over, zone) ? 'dest' : '';
+    }
+    hbDragMerge(d, null);
+    hbGrpHot(null);
+    var box = isGrp ? null : listHit;
+    if (box && slot.contains(box)) box = null;
+    if (!box) {
+      box = under.closest('.shb-bar-items[data-hb-bar]');
+      if (!box) {
+        var bar = under.closest('.shb-bar');
+        box = bar && bar.querySelector('.shb-bar-items[data-hb-bar]');
+      }
+    }
+    if (!box) { hbDestClear(d); return ''; }
+    var near = hbNearIn(box, slot, x, y, isGrp);
+    if (near.hold) { hbDestClear(d); return ''; }
+    return hbDestSet(d, box, near.ref || null, near.side) ? 'dest' : '';
+  }
+
+  /* Let go on the middle of a button before the rest was long enough to group: it lands beside that button */
+  function hbDragRestDrop(d, x, y) {
+    var c = d && d.mergeCand;
+    if (!c || d.merge || !c.isConnected || !c.parentNode) return;
+    c.classList.remove('shb-grp-arm');
+    hbDestSet(d, c.parentNode, c, hbZoneOf(c, x, y, 0));
+  }
+
+  /* The button lands: it flies the last bit from where the hand left it to the place it took */
+  function hbSettle(uid, from) {
+    if (!HB.el) return;
+    var sel = '.shb-item-wrap[data-hb-uid="' + cssEsc(uid) + '"]';
+    var w = HB.el.querySelector('.shb-bar-items[data-hb-bar] > ' + sel + ', [data-hb-gtray] > ' + sel);
+    var b = w && w.querySelector(':scope > .shb-btn');
+    var r = b && b.getBoundingClientRect();
+    if (!r || !r.width) {
+      /* it went into a group that is closed: the group answers */
+      var g = w && w.parentNode && w.parentNode.closest('.shb-grp');
+      var gb = g && g.querySelector(':scope > .shb-btn');
+      if (gb) hbWiggle(gb, hbAmp() * 2);
+      return;
+    }
+    if (!from) return;
+    var z = parseFloat(S.hbScale) || 1;
+    var dx = from.left - r.left, dy = from.top - r.top;
+    var dist = Math.hypot(dx, dy);
+    if (dist < 1) return;
+    try {
+      w.style.zIndex = '7';
+      var a = w.animate([{ transform: 'translate(' + (dx / z) + 'px,' + (dy / z) + 'px) scale(1.07)' }, { transform: 'none' }],
+        { duration: Math.round(Math.max(110, Math.min(220, 100 + dist * 0.2))), easing: 'cubic-bezier(.2,.85,.25,1)' });
+      var done = function () { w.style.zIndex = ''; };
+      a.finished.then(done, done);
+    } catch (e) { w.style.zIndex = ''; }
+  }
+
+  /* A list a button was just put in stays open while the pointer is still on it */
+  function hbDropKeep(gid) {
+    var w = HB.el && gid && HB.el.querySelector('.shb-grp[data-hb-gkey="' + cssEsc(gid) + '"]');
+    if (!w) return;
+    hbDropShow(w, true);
+    clearTimeout(w._hideT);
+    w._hideT = setTimeout(function () {
+      if (w.isConnected && !HB.grpOpen[gid] && !w.matches(':hover')) hbDropHide(w);
+    }, 700);
   }
 
   /* Removal poof: Fluid expands a ring while the chip shrinks, Quiet just fades */
@@ -7956,6 +8357,10 @@
   function hbPaint() {
     var el = HB.el;
     if (!el) return;
+    /* the bars are drawn anew from what is saved: with a button in the hand that would drop it, and its place
+       with it. Whatever asked (a library that just loaded, the server's answer) is served when the drag ends */
+    if (hbDragging()) { HB.paintLater = true; return; }
+    HB.paintLater = false;
     try {
       var node = HB.node;
       var tools = hbContextTools(node);
@@ -9177,37 +9582,55 @@
     if (wrap) wrap.classList.add('shb-grp-drop');
   }
 
+  /* the pointer is on a group (its button, or the hair of its box above and below it, which used to count as
+     "beside the group" and sent the button there): its middle takes the button in, its two ends are places
+     beside it */
   function hbGrpTarget(overWrap, x, y) {
     if (!overWrap || !overWrap.classList.contains('shb-grp')) return null;
-    var b = overWrap.querySelector(':scope > .shb-btn');
-    var r = b && b.getBoundingClientRect();
-    if (!r || x < r.left + r.width * 0.2 || x > r.right - r.width * 0.2 || y < r.top || y > r.bottom) return null;
+    var r = overWrap.getBoundingClientRect();
+    if (!r.width || x < r.left + r.width * 0.2 || x > r.right - r.width * 0.2) return null;
     return overWrap.querySelector(':scope > [data-hb-gtray]');
   }
 
   /* Long-Press (420ms) Edit Mode, Bar Drags, Drawer Drag-to-Bar, Canvas Node Drag-to-Pin & Pro Slider Scrubbing */
   var LP_DRAG = null;
+  /* Any button of a bar is moved by dragging it, with no need to hold it first (holding still starts edit
+     mode, with its ×, its Remove strip and its Undo). false: only what was pinned and the saved buttons move
+     without edit mode, as before 1.2.9 */
+  var HB_DRAG_ANY = true;
   var DRAWER_DRAG = null;
   var PSLIDER_DRAG = null;
   var NODE_DRAG = null;
 
   function clearLpDrag() {
     if (!LP_DRAG) return;
-    hbGrpHot(null);
-    if (LP_DRAG.timer) clearTimeout(LP_DRAG.timer);
-    if (LP_DRAG.mergeT) clearTimeout(LP_DRAG.mergeT);
-    if (LP_DRAG.wrap) {
-      if (LP_DRAG.active) hbDragHome(LP_DRAG);
-      LP_DRAG.wrap.classList.remove('shb-drag-src', 'shb-drag-gone', 'shb-collapsed');
-    }
-    if (LP_DRAG.active) ghostHide();
-    hbDragEnd();
+    var lp = LP_DRAG;
     LP_DRAG = null;
+    hbGrpHot(null);
+    if (lp.timer) clearTimeout(lp.timer);
+    hbDragMerge(lp, null);
+    hbDestClear(lp);
+    if (lp.wrap) lp.wrap.classList.remove('shb-drag-src', 'shb-drag-gone', 'shb-collapsed');
+    if (lp.active) ghostHide();
+    hbDragEnd();
+    hbPaintLate();
   }
 
+  /* a drag is over, however it ended: the edit bar and the pointer are themselves again */
   function hbDragEnd() {
     hbTrashHot(false);
     if (HB.el) HB.el.classList.remove('shb-dragging');
+    try { document.documentElement.classList.remove('shb-grabbing'); } catch (e) {}
+  }
+
+  /* a repaint asked for while a button was in the hand would have taken the button away: it waits for the
+     drag to end (hbPaint) and happens here */
+  function hbPaintLate() {
+    if (HB.paintLater && HB.el && !hbDragging()) hbPaint();
+  }
+
+  function hbDragging() {
+    return !!((LP_DRAG && LP_DRAG.active) || (DRAWER_DRAG && DRAWER_DRAG.active));
   }
 
   /* A pointerdown on a node's title bar (Vue node header or canvas-drawn title) can become a drag-to-pin */
@@ -9247,13 +9670,17 @@
 
   function clearDrawerDrag() {
     if (!DRAWER_DRAG) return;
-    if (DRAWER_DRAG.st) DRAWER_DRAG.st.classList.remove('shb-st-dragging');
-    if (DRAWER_DRAG.wrap && DRAWER_DRAG.wrap.parentNode) {
-      DRAWER_DRAG.wrap.parentNode.removeChild(DRAWER_DRAG.wrap);
-    }
-    if (DRAWER_DRAG.active) ghostHide();
-    if (HB.el) HB.el.classList.remove('shb-dropping');
+    var dd = DRAWER_DRAG;
     DRAWER_DRAG = null;
+    if (dd.st) dd.st.classList.remove('shb-st-dragging');
+    hbDragMerge(dd, null);
+    hbGrpHot(null);
+    hbDestClear(dd);
+    if (dd.wrap && dd.wrap.parentNode) dd.wrap.parentNode.removeChild(dd.wrap);
+    if (dd.active) ghostHide();
+    if (HB.el) HB.el.classList.remove('shb-dropping');
+    hbDragEnd();
+    hbPaintLate();
   }
 
   function clearPsliderDrag() {
@@ -9343,67 +9770,42 @@
           DRAWER_DRAG.st.classList.add('shb-st-dragging');
         }
         DRAWER_DRAG.item = dItem;
+        DRAWER_DRAG.isGrp = /^grp:/.test(DRAWER_DRAG.uid);
         var tmp = document.createElement('div');
         tmp.innerHTML = renderBarItemHTML(dItem, 'add', 0);
         DRAWER_DRAG.wrap = tmp.firstElementChild;
         DRAWER_DRAG.wrap.classList.add('shb-drag-src');
         HB.el.classList.add('shb-dropping');
+        try { document.documentElement.classList.add('shb-grabbing'); } catch (err) {}
         ghostShow(dItem.label, e.clientX, e.clientY);
       }
       e.preventDefault();
-      var dWrap = DRAWER_DRAG.wrap;
+      var dd = DRAWER_DRAG, dWrap = dd.wrap;
       var px = e.clientX, py = e.clientY;
       var botC = HB.el.querySelector('.shb-bar-items[data-hb-bar="bot"]');
-      var target = null, before = null;
-      DRAWER_DRAG.merge = null;
-      DRAWER_DRAG.tray = null;
+      var dRes = '';
       if (botC && hbOverPlus(px, py, 16)) {
-        target = botC;
+        /* on the "+": it is pinned at the end of the bottom bar */
+        hbDragMerge(dd, null);
+        dd.tray = null;
+        hbGrpHot(null);
+        hbDestSet(dd, botC, null);
+        dRes = 'plus';
       } else if (distToNearestBar(HB.el, px, py) <= 34) {
-        var underEl = null;
-        try { underEl = document.elementFromPoint(px, py); } catch (err) { underEl = null; }
-        if (underEl && underEl.closest) {
-          var overWrapEl = underEl.closest('.shb-item-wrap[data-hb-uid]');
-          var overBarBox = underEl.closest('.shb-bar');
-          var dTray = /^grp:/.test(DRAWER_DRAG.uid) ? null : hbGrpTarget(overWrapEl, px, py);
-          var dMerge = (dTray || /^grp:/.test(DRAWER_DRAG.uid)) ? null : hbMergeTarget(overWrapEl, dWrap, px, py);
-          DRAWER_DRAG.merge = dMerge;
-          if (dMerge) {
-            if (dWrap.parentNode) dWrap.parentNode.removeChild(dWrap);
-            DRAWER_DRAG.inBar = true;
-            hbGrpHot(dMerge);
-            hbSetBotDrop(false);
-            ghostMove(px, py, 'Release to group them', 'over');
-            return;
-          }
-          if (dTray) {
-            /* it goes into the group on release: nothing in the bar moves while it hovers */
-            DRAWER_DRAG.tray = dTray;
-            DRAWER_DRAG.inBar = true;
-            hbGrpHot(overWrapEl);
-            hbSetBotDrop(false);
-            ghostMove(px, py, 'Release to put it in ' + ((overWrapEl.querySelector('.shb-lbl') || {}).textContent || 'the group'), 'over');
-            return;
-          }
-          if (overWrapEl && overWrapEl !== dWrap && overWrapEl.parentNode) {
-            var wr = overWrapEl.getBoundingClientRect();
-            target = overWrapEl.parentNode;
-            before = px < (wr.left + wr.width / 2) ? overWrapEl : overWrapEl.nextSibling;
-          } else {
-            target = underEl.closest('[data-hb-bar]') || (overBarBox && overBarBox.querySelector('[data-hb-bar]'));
-          }
-        }
+        dRes = hbDragPlace(dd, px, py);
+      } else {
+        hbDragMerge(dd, null);
+        dd.tray = null;
+        hbGrpHot(null);
+        hbDestClear(dd);
       }
-      if (target) {
-        if (before && before !== dWrap) target.insertBefore(dWrap, before);
-        else if (!before && dWrap.parentNode !== target) target.appendChild(dWrap);
-      } else if (dWrap.parentNode) {
-        dWrap.parentNode.removeChild(dWrap);
-      }
-      DRAWER_DRAG.inBar = !!target;
-      hbGrpHot(target && target.hasAttribute('data-hb-gtray') ? target.closest('.shb-grp') : null);
-      hbSetBotDrop(!!(target && target === botC), false);
-      ghostMove(px, py, target ? 'Release to pin' : (/^tpl:/.test(DRAWER_DRAG.uid) ? 'Release to add the nodes here' : 'Drag onto a bar or +'), target ? 'over' : '');
+      dd.inBar = dRes === 'tray' || dRes === 'merge' || dRes === 'rest' || !!dd.dest;
+      hbSetBotDrop(dRes === 'plus', false);
+      ghostMove(px, py,
+        dRes === 'tray' ? 'Release to put it in ' + (((dd.tray.closest('.shb-grp') || dWrap).querySelector('.shb-lbl') || {}).textContent || 'the group')
+          : (dRes === 'merge' ? 'Release to group them'
+            : (dd.inBar ? 'Release to pin' : (/^tpl:/.test(dd.uid) ? 'Release to add the nodes here' : 'Drag onto a bar or +'))),
+        dd.inBar ? 'over' : '');
       return;
     }
 
@@ -9429,116 +9831,63 @@
       return;
     }
 
-    /* 2. Bar buttons: moved to any place in a bar or in a group's list (edit mode; pinned ones any time).
-       Letting go away from the bars puts the button back where it was: only its × or the Remove strip (the
-       edit bar, while a button is in the hand) takes it off its bar */
+    /* 2. Bar buttons: any of them is moved by dragging it, to any place in a bar or in a group's list (a press
+       that travels is a drag; one that stays is a click, or, held, starts edit mode). Letting go away from the
+       bars puts the button back where it was: only its × or the Remove strip (the edit bar, while a button is
+       in the hand) takes it off its bar */
     if (!LP_DRAG || !HB.el) return;
     var dist = Math.hypot(e.clientX - LP_DRAG.x0, e.clientY - LP_DRAG.y0);
     if (!LP_DRAG.active) {
       /* a hand holding a press shakes a little: it stays a press until it clearly travels */
       if (dist <= (LP_DRAG.timer ? 14 : 9)) return;
       if (LP_DRAG.timer) { clearTimeout(LP_DRAG.timer); LP_DRAG.timer = 0; }
-      if (!HB.editMode && !LP_DRAG.isPin) { clearLpDrag(); return; }
+      if (!HB.editMode && !LP_DRAG.isPin && !HB_DRAG_ANY) { clearLpDrag(); return; }
+      var lw = LP_DRAG.wrap;
       LP_DRAG.active = true;
-      LP_DRAG.home = { parent: LP_DRAG.wrap.parentNode, next: LP_DRAG.wrap.nextSibling };
-      ghostLift(LP_DRAG.wrap, e.clientX, e.clientY);
-      LP_DRAG.wrap.classList.add('shb-drag-src');
+      LP_DRAG.uid = lw.getAttribute('data-hb-uid') || '';
+      LP_DRAG.isGrp = /^grp:/.test(LP_DRAG.uid);
+      tipHide();
+      /* a list that is still unfolding has its buttons in mid-air: they are put in their places first */
+      Array.prototype.forEach.call(HB.el.querySelectorAll('.shb-gdrop'), function (dp) {
+        (dp._anims || []).forEach(function (an) { try { an.finish(); } catch (err) {} });
+      });
+      ghostLift(lw, e.clientX, e.clientY, LP_DRAG.x0, LP_DRAG.y0);
+      lw.classList.add('shb-drag-src');
+      try { document.documentElement.classList.add('shb-grabbing'); } catch (err) {}
       if (HB.editMode) HB.el.classList.add('shb-dragging');
     }
     e.preventDefault();
 
-    var dragWrap = LP_DRAG.wrap;
+    var lp = LP_DRAG, dragWrap = lp.wrap;
     var mx = e.clientX, my = e.clientY;
     var trash = hbOverTrash(mx, my);
     var out = !trash && distToNearestBar(HB.el, mx, my) > 34 && !hbOverPlus(mx, my, 16);
     /* outside edit mode, a saved button let go over the canvas drops its nodes there */
-    var drop = /^tpl:/.test(dragWrap.getAttribute('data-hb-uid') || '') && !HB.editMode;
-    LP_DRAG.trash = trash;
-    LP_DRAG.outside = out;
+    var drop = /^tpl:/.test(lp.uid) && !HB.editMode;
+    lp.trash = trash;
+    lp.outside = out;
     hbTrashHot(trash);
     dragWrap.classList.toggle('shb-drag-gone', trash);
     if (trash || out) {
-      hbLpMerge(null);
-      LP_DRAG.tray = null;
+      hbDragMerge(lp, null);
+      lp.tray = null;
       hbGrpHot(null);
-      hbDragHome(LP_DRAG);
+      hbDestClear(lp);
       ghostMove(mx, my, trash ? 'Release to take it off the bar' : (drop ? 'Release to drop the nodes here' : 'Release to put it back'),
         trash ? 'rm' : (drop ? 'over' : ''));
       return;
     }
-
-    LP_DRAG.tray = null;
-    var under = null;
-    try { under = document.elementFromPoint(mx, my); } catch (err) { under = null; }
-    if (!under || !under.closest) { ghostMove(mx, my, '', ''); return; }
-
-    var overWrap = under.closest('.shb-item-wrap[data-hb-uid]');
-    if (overWrap && dragWrap.contains(overWrap)) { ghostMove(mx, my, '', ''); return; }
-    var dragIsGrp = /^grp:/.test(dragWrap.getAttribute('data-hb-uid') || '');
-    /* a group moves as a whole, never into another group */
-    if (overWrap && dragIsGrp && overWrap.parentNode && overWrap.parentNode.hasAttribute('data-hb-gtray')) {
-      overWrap = overWrap.parentNode.closest('.shb-item-wrap[data-hb-uid]');
-    }
-    var intoTray = dragIsGrp ? null : hbGrpTarget(overWrap, mx, my);
-    if (intoTray) {
-      /* it goes in on release: moving it into the list now would shift the bar under the pointer (a wide button
-         next to the group pulled the group away, and the button bounced in and out). Waiting on the group opens
-         its list, and there the button goes to any place in it, the first one too */
-      hbLpMerge(null);
-      LP_DRAG.tray = intoTray;
-      hbGrpHot(overWrap);
-      ghostMove(mx, my, 'Release to put it in ' + ((overWrap.querySelector('.shb-lbl') || {}).textContent || 'the group') + ' · wait, and pick its place', 'over');
-      return;
-    }
-    /* resting on the middle of another button groups the two; passing over it only moves the button to that side */
-    hbLpMerge(dragIsGrp ? null : hbMergeTarget(overWrap, dragWrap, mx, my));
-    if (LP_DRAG.merge) {
-      hbGrpHot(LP_DRAG.merge);
+    var res = hbDragPlace(lp, mx, my);
+    if (res === 'tray') {
+      var tg = lp.tray.closest('.shb-grp');
+      ghostMove(mx, my, 'Release to put it in ' + (((tg && tg.querySelector(':scope > .shb-btn .shb-lbl')) || {}).textContent || 'the group') +
+        (tg && !tg.classList.contains('shb-grp-show') ? ' · wait, and pick its place' : ''), 'over');
+    } else if (res === 'merge') {
       ghostMove(mx, my, 'Release to group them', 'over');
-      return;
-    }
-    hbGrpHot(null);
-    ghostMove(mx, my, '', '');
-    var overTray = under.closest('[data-hb-gtray]');
-    if (overWrap && overWrap !== dragWrap && overWrap.parentNode) {
-      var r = overWrap.getBoundingClientRect();
-      /* inside a group's list the buttons stack, so the halves are top and bottom */
-      var isBefore = overWrap.parentNode.hasAttribute('data-hb-gtray') ? my < (r.top + r.height / 2) : mx < (r.left + r.width / 2);
-      var ref = isBefore ? overWrap : overWrap.nextSibling;
-      if (ref !== dragWrap && !(isBefore && overWrap.previousSibling === dragWrap)) overWrap.parentNode.insertBefore(dragWrap, ref);
-      return;
-    }
-    if (overTray && !dragIsGrp && !dragWrap.contains(overTray)) {
-      /* on the list's own edge, or in a gap of it: its first place or its last, whichever end is nearer */
-      var tr = overTray.getBoundingClientRect();
-      if (my < tr.top + tr.height / 2) {
-        if (overTray.firstElementChild !== dragWrap) overTray.insertBefore(dragWrap, overTray.firstElementChild);
-      } else if (overTray.lastElementChild !== dragWrap) overTray.appendChild(dragWrap);
-      return;
-    }
-    var overBar = under.closest('[data-hb-bar]');
-    if (overBar && overBar !== dragWrap.parentNode && !overTray) {
-      overBar.appendChild(dragWrap);
+    } else {
+      ghostMove(mx, my, '', '');
     }
   }, true);
-
-  /* Grouping two buttons takes a short rest on the middle of the other one, which lights up; a button that is
-     only passing over another on its way somewhere else just moves */
-  function hbLpMerge(cand) {
-    var lp = LP_DRAG;
-    if (!lp || (lp.mergeCand || null) === (cand || null)) return;
-    if (lp.mergeT) { clearTimeout(lp.mergeT); lp.mergeT = 0; }
-    lp.mergeCand = cand || null;
-    lp.merge = null;
-    if (!cand) return;
-    lp.mergeT = setTimeout(function () {
-      lp.mergeT = 0;
-      if (LP_DRAG !== lp || lp.mergeCand !== cand || !cand.isConnected) return;
-      lp.merge = cand;
-      hbGrpHot(cand);
-      if (GHOST) ghostMove(parseFloat(GHOST.style.left) || 0, parseFloat(GHOST.style.top) || 0, 'Release to group them', 'over');
-    }, 420);
-  }
 
   listen(document, 'pointerup', function (e) {
     if (PSLIDER_DRAG) {
@@ -9550,6 +9899,8 @@
       var dd = DRAWER_DRAG;
       DRAWER_DRAG = null;
       ghostHide();
+      hbDragEnd();
+      if (dd.mergeT) { clearTimeout(dd.mergeT); dd.mergeT = 0; }
       if (dd.st) dd.st.classList.remove('shb-st-dragging');
       if (dd.active && HB.el) {
         HB.suppressClickUntil = Date.now() + 260;
@@ -9557,44 +9908,60 @@
         hbSetBotDrop(false);
         var dw = dd.wrap;
         hbGrpHot(null);
-        /* the bar it lands in: a group's tray or the button it is grouped with sit in a bar too */
-        var dLand = (dd.tray && dd.tray.isConnected && dd.tray.closest('[data-hb-bar]'))
-          || (dd.merge && dd.merge.isConnected && dd.merge)
-          || (dd.inBar && dw && dw.parentNode && dw.parentNode.closest && dw.parentNode.closest('[data-hb-bar]'));
+        /* let go on the middle of a button before the two were grouped: it is pinned beside that one */
+        if (!dd.tray && !dd.merge && dd.mergeCand && dw) hbDragRestDrop(dd, e.clientX, e.clientY);
+        if (dd.mergeCand) dd.mergeCand.classList.remove('shb-grp-arm');
+        var dToTray = !!(dd.tray && dd.tray.isConnected && dw);
+        var dToMerge = !dToTray && !!(dd.merge && dd.merge.isConnected && dw);
+        var dToDest = !dToTray && !dToMerge && !!(dw && dd.dest && dd.dest.box && dd.dest.box.isConnected);
+        /* the bar it lands in: a group's list or the button it is grouped with sit in a bar too */
+        var dLand = (dToTray && dd.tray.closest('.shb-bar-items[data-hb-bar]'))
+          || (dToMerge && dd.merge.closest('.shb-bar-items[data-hb-bar]'))
+          || (dToDest && dd.dest.box.closest('.shb-bar-items[data-hb-bar]'));
+        var dBar = dLand ? dLand.getAttribute('data-hb-bar') : '';
+        var dName = dd.item ? dd.item.label : 'button';
         if (dLand) {
-          hbUndoPush('adding "' + (dd.item ? dd.item.label : 'a button') + '"');
-          hbKeepUid(dd.uid, dLand.getAttribute('data-hb-bar'));
+          hbUndoPush('adding "' + dName + '"');
+          hbKeepUid(dd.uid, dBar);
         }
-        if (dd.tray && dd.tray.isConnected && dw) {
-          dw.classList.remove('shb-drag-src');
-          dd.tray.appendChild(dw);
+        if (dw) dw.classList.remove('shb-drag-src');
+        if (dToTray) {
           var dtLbl = dd.tray.closest('.shb-grp') && dd.tray.closest('.shb-grp').querySelector(':scope > .shb-btn .shb-lbl');
-          commitDomBarsOrder(HB.el, HB.node);
-          hbPaint();
-          setStatus('ok', 'Put "' + (dd.item ? dd.item.label : 'button') + '" in "' + (dtLbl ? dtLbl.textContent : 'the group') + '"');
-        } else if (dd.merge && dd.merge.isConnected && dw) {
-          dw.classList.remove('shb-drag-src');
-          var dmGid = hbMergeDom(dd.merge, dw);
-          commitDomBarsOrder(HB.el, HB.node);
-          hbPaint();
+          hbMark(null);
+          hbGlide(function () {
+            dd.tray.appendChild(dw);
+            commitDomBarsOrder(HB.el, HB.node);
+            hbPaint();
+          }, dd.uid);
+          hbSettle(dd.uid, null);
+          setStatus('ok', 'Put "' + dName + '" in "' + (dtLbl ? dtLbl.textContent : 'the group') + '"');
+        } else if (dToMerge) {
+          var dmGid = '';
+          hbMark(null);
+          hbGlide(function () {
+            dmGid = hbMergeDom(dd.merge, dw);
+            commitDomBarsOrder(HB.el, HB.node);
+            hbPaint();
+          }, dd.uid);
           hbGrpPop(dmGid);
-          setStatus('ok', 'Grouped with "' + (dd.item ? dd.item.label : 'button') + '" · drop more on it');
-        } else if (dd.inBar && dw && dw.parentNode && (dw.parentNode.hasAttribute('data-hb-bar') || dw.parentNode.hasAttribute('data-hb-gtray'))) {
-          dw.classList.remove('shb-drag-src');
-          /* the bar it landed in (the dragged copy itself carries a bar name of its own) */
-          var dBox = dw.parentNode && dw.parentNode.closest('[data-hb-bar]');
-          var dBar = dBox && dBox.getAttribute('data-hb-bar');
-          commitDomBarsOrder(HB.el, HB.node);
-          hbPaint();
+          setStatus('ok', 'Grouped with "' + dName + '" · drop more on it');
+        } else if (dToDest) {
+          var dInGid = dd.dest.box.getAttribute('data-hb-gtray') || '';
+          hbGlide(function () {
+            hbDestApply(dd);
+            commitDomBarsOrder(HB.el, HB.node);
+            hbPaint();
+            if (dInGid) hbDropKeep(dInGid);
+          }, dd.uid);
           hbFlashUid(dd.uid);
           /* where it went: the bottom bar is the same everywhere, the other two follow the kind of node */
           var dHere = dItem2Off(dd.uid, dBar);
-          setStatus('ok', '📌 Pinned "' + (dd.item ? dd.item.label : 'button') + '"' +
+          setStatus('ok', '📌 Pinned "' + dName + '"' +
             (dBar === 'bot' ? ' to the bottom bar (every node)'
               : ' to the ' + (dBar === 'add' ? 'top bar' : 'context bar') + ' of ' + (HB.node ? 'nodes like "' + (HB.node.title || nodeTypeOf(HB.node)) + '"' : 'the canvas')) +
             (dHere ? ' · dimmed here: ' + dHere : ''));
         } else {
-          if (dw && dw.parentNode) dw.parentNode.removeChild(dw);
+          hbMark(null);
           /* a saved button let go over the canvas adds its nodes right there */
           var dTpl = /^tpl:/.test(dd.uid) && tplById(dd.uid.slice(4));
           if (dTpl) {
@@ -9603,6 +9970,7 @@
           }
         }
       }
+      hbPaintLate();
       return;
     }
     if (NODE_DRAG) {
@@ -9629,16 +9997,23 @@
       if (nd.closeOnUp && HB.el) hbClose();
       return;
     }
+    if (HB.dragCancelled) {
+      /* the drag was called off with Esc: the release that ends it is not a click on what is under it */
+      HB.dragCancelled = false;
+      HB.suppressClickUntil = Date.now() + 250;
+    }
     if (!LP_DRAG) return;
     var lp = LP_DRAG;
     LP_DRAG = null;
     if (lp.timer) clearTimeout(lp.timer);
-    if (lp.mergeT) clearTimeout(lp.mergeT);
+    if (lp.mergeT) { clearTimeout(lp.mergeT); lp.mergeT = 0; }
     if (!lp.active) {
       /* A long-press that only entered edit mode must not also run the button */
       if (lp.fired) HB.suppressClickUntil = Date.now() + 250;
       return;
     }
+    /* where the hand left it: the button flies the last bit from there to the place it took */
+    var from = ghostRect();
     ghostHide();
     hbDragEnd();
     HB.suppressClickUntil = Date.now() + 250;
@@ -9648,50 +10023,81 @@
     var lbl = w.querySelector('.shb-lbl');
     var name = lbl ? lbl.textContent : uid;
     w.classList.remove('shb-drag-src', 'shb-drag-gone', 'shb-collapsed');
+    if (lp.mergeCand) lp.mergeCand.classList.remove('shb-grp-arm');
     if (lp.outside && /^tpl:/.test(uid) && !HB.editMode) {
-      hbDragHome(lp);
+      hbMark(null);
       var dropTpl = tplById(uid.slice(4));
       hbClose();
       tplRun(dropTpl, { x: e.clientX, y: e.clientY }, { x: e.clientX, y: e.clientY });
       return;
     }
     hbGrpHot(null);
+    /* let go on the middle of a button before the two were grouped: it lands beside that one */
+    if (!lp.trash && !lp.outside && !lp.tray && !lp.merge) hbDragRestDrop(lp, e.clientX, e.clientY);
     if (lp.trash) {
       /* dropped on the Remove strip */
+      hbMark(null);
       hbUndoPush('taking "' + name + '" off the bar');
-      if (w.parentNode) w.parentNode.removeChild(w);
       hbPoof(e.clientX, e.clientY, name);
-      if (/^grp:/.test(uid)) grpDissolve(w.getAttribute('data-hb-bar') || 'bot', uid, HB.node);
-      else commitDomBarsOrder(HB.el, HB.node, uid);
-      hbForgetIfGone(uid);
-      hbPaint();
+      hbGlide(function () {
+        if (w.parentNode) w.parentNode.removeChild(w);
+        if (/^grp:/.test(uid)) grpDissolve(w.getAttribute('data-hb-bar') || 'bot', uid, HB.node);
+        else commitDomBarsOrder(HB.el, HB.node, uid);
+        hbForgetIfGone(uid);
+        hbPaint();
+      }, uid);
       setStatus('ok', (/^grp:/.test(uid) ? 'Ungrouped "' + name + '" · its buttons stay in the bar' : 'Took "' + name + '" off the bar') + ' · Ctrl+Z puts it back');
     } else if (lp.outside) {
-      /* let go away from the bars: nothing is removed, it goes back where it was */
-      hbDragHome(lp);
-      hbPaint();
+      /* let go away from the bars: nothing is removed, and it never left its place: it flies back to it */
+      hbMark(null);
+      hbSettle(uid, from);
       setStatus('ok', '"' + name + '" is back where it was · ' + (HB.editMode ? 'its ×, or the Remove strip in the edit bar, takes it off' : 'hold it to edit, then its × takes it off the bar'));
     } else if (lp.tray && lp.tray.isConnected && !w.contains(lp.tray)) {
+      hbMark(null);
       hbUndoPush('moving "' + name + '"');
-      lp.tray.appendChild(w);
       var tGrp = lp.tray.closest('.shb-grp'), tLbl = tGrp && tGrp.querySelector(':scope > .shb-btn .shb-lbl');
-      commitDomBarsOrder(HB.el, HB.node);
-      hbPaint();
+      var tOpen = !!(tGrp && tGrp.classList.contains('shb-grp-show') && !tGrp._closing);
+      var tGid = lp.tray.getAttribute('data-hb-gtray');
+      hbGlide(function () {
+        lp.tray.appendChild(w);
+        commitDomBarsOrder(HB.el, HB.node);
+        hbPaint();
+        if (tOpen) hbDropKeep(tGid);
+      }, uid);
+      hbSettle(uid, from);
       setStatus('ok', 'Put "' + name + '" in "' + (tLbl ? tLbl.textContent : 'the group') + '"');
     } else if (lp.merge && lp.merge.isConnected && !w.contains(lp.merge)) {
+      hbMark(null);
       hbUndoPush('grouping "' + name + '"');
       var mLbl = lp.merge.querySelector('.shb-lbl');
-      var mGid = hbMergeDom(lp.merge, w);
-      commitDomBarsOrder(HB.el, HB.node);
-      hbPaint();
+      var mName = mLbl ? mLbl.textContent : '';
+      var mGid = '';
+      hbGlide(function () {
+        mGid = hbMergeDom(lp.merge, w);
+        commitDomBarsOrder(HB.el, HB.node);
+        hbPaint();
+      }, uid);
       hbGrpPop(mGid);
-      setStatus('ok', 'Grouped "' + (mLbl ? mLbl.textContent : '') + '" + "' + name + '" · drop more on it · click it in edit mode to rename');
-    } else {
+      setStatus('ok', 'Grouped "' + mName + '" + "' + name + '" · drop more on it · click it in edit mode to rename');
+    } else if (lp.dest && lp.dest.box && lp.dest.box.isConnected) {
       hbUndoPush('moving "' + name + '"');
-      var toBar = w.parentNode && w.parentNode.getAttribute && w.parentNode.getAttribute('data-hb-bar');
+      var toBox = lp.dest.box.closest('.shb-bar-items[data-hb-bar]');
+      var toBar = toBox && toBox.getAttribute('data-hb-bar');
       if (toBar && toBar !== w.getAttribute('data-hb-bar')) hbKeepUid(uid, toBar);
-      commitDomBarsOrder(HB.el, HB.node);
-      hbPaint();
+      /* put into a group's open list: the list stays open while the pointer is still on it */
+      var inGid = lp.dest.box.getAttribute('data-hb-gtray') || '';
+      hbGlide(function () {
+        hbDestApply(lp);
+        commitDomBarsOrder(HB.el, HB.node);
+        hbPaint();
+        if (inGid) hbDropKeep(inGid);
+      }, uid);
+      hbSettle(uid, from);
+    } else {
+      /* let go where there is no place for it (its own place, the edge of a bar): nothing changed, and
+         nothing is drawn again */
+      hbMark(null);
+      hbSettle(uid, from);
     }
   }, true);
 
@@ -9709,6 +10115,8 @@
     clearPsliderDrag();
     hbStopEditAnim();
     ghostHide();
+    if (HB_MARK && HB_MARK.parentNode) HB_MARK.parentNode.removeChild(HB_MARK);
+    HB_MARK = null;
     var old = HB.el;
     var cx = HB.anchorX || HB.x, cy = HB.anchorY || HB.y;
     if (HB.psSync) { clearInterval(HB.psSync); HB.psSync = 0; }
@@ -13816,6 +14224,18 @@
     if (GRP_ASK) {
       hbEat(e);
       if (!e.repeat && (e.key === 'Enter' || e.key === 'Escape')) GRP_ASK.answer(true);
+      return;
+    }
+
+    /* A button is in the hand: Esc calls the drag off (the button is back where it was) and no key does
+       anything else until it is let go */
+    if (hbDragging()) {
+      hbEat(e);
+      if (e.key === 'Escape' && !e.repeat) {
+        HB.dragCancelled = true;
+        clearLpDrag();
+        clearDrawerDrag();
+      }
       return;
     }
 
