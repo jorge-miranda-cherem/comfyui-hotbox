@@ -12729,12 +12729,17 @@
     return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0 0)')));
   }
 
-  /* What else could go on this bar: for a swap bar the models to change to, for another dock the nodes that take
-     what the node gives, for a context bar the tools. Only what is not on it already */
+  /* What else could go on this bar. Before anything is typed, what suits it: for a swap bar the models to
+     change to, for another dock the nodes that take what the node gives, for a context bar the Hotbox tools.
+     With a name typed in the search, anything there is: those, every Hotbox tool, and every node this ComfyUI
+     has (found and ranked as the hotbox's own search does), since any button can go on any bar. Only what is
+     not on the bar already */
   function brwMore(q) {
-    var c = brwCtx(), bar = BRW.bar, have = brwBarList(), list = [], title = '';
+    var c = brwCtx(), bar = BRW.bar, have = brwBarList(), list = [], title = '', like = null;
     if (!c) return null;
     try {
+      var types = bar === 'add' && /^out:/.test(c.key) ? c.key.slice(4).split('+') : [];
+      like = c.node || (types.length ? { type: '', inputs: [], outputs: types.map(function (t) { return { type: t }; }) } : null);
       if (bar === 'tools') {
         title = 'Tools';
         list = Object.keys(getMasterTools(null)).filter(hbToolOn).map(function (t) { return 'tool:' + t; });
@@ -12743,18 +12748,20 @@
         list = swapMates(null, c.key.slice(4)).map(function (mo) { return 'model:' + mo.type; });
       } else {
         title = 'Fits here';
-        var types = /^out:/.test(c.key) ? c.key.slice(4).split('+') : [];
-        var like = c.node || (types.length ? { type: '', inputs: [], outputs: types.map(function (t) { return { type: t }; }) } : null);
-        if (c.key === 'canvas') list = suggestNodesFor(null, 14);
-        else if (like) list = suggestNodesFor(like, 14);
+        if (c.key === 'canvas') list = suggestNodesFor(null, 24);
+        else if (like) list = suggestNodesFor(like, 24);
       }
     } catch (e) { list = []; }
     list = list.filter(function (u, i) { return have.indexOf(u) < 0 && list.indexOf(u) === i; });
-    if (!list.length) return null;
-    /* a long list (the models) shows its first ones; what is typed in the search finds any of the rest */
-    var all = list.length;
-    if (q) list = list.filter(function (u) { return brwMatch(u, q); });
-    return { title: title, uids: list.slice(0, 40), total: all, found: list.length };
+    if (!q) return { title: list.length ? title : 'Add to this bar', uids: list.slice(0, 40), total: list.length, found: list.length, typed: false };
+    var seen = {}, out = [];
+    function add(u) { if (!seen[u] && have.indexOf(u) < 0) { seen[u] = 1; out.push(u); } }
+    list.forEach(function (u) { if (brwMatch(u, q)) add(u); });
+    try {
+      Object.keys(getMasterTools(null)).filter(hbToolOn).forEach(function (t) { if (brwMatch('tool:' + t, q)) add('tool:' + t); });
+    } catch (e) {}
+    try { nodeSearch(q, like).slice(0, 80).forEach(function (h) { add('node:' + h.t); }); } catch (e) {}
+    return { title: 'Found', uids: out.slice(0, 40), total: out.length, found: out.length, typed: true };
   }
 
   /* every bar that lists it by itself (a button in a group shows wherever its group does) */
@@ -13237,8 +13244,10 @@
             return '<div class="shb-bed-card shb-bed-addc" data-bed-add="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '" title="Put it on this bar">' +
               '<span class="shb-bed-ct"><b>' + esc(it.label) + '</b><small>' + (word[it.kind] || 'Button') + '</small></span><u>+</u></div>';
           }).join('') +
-          (more.uids.length ? '' : '<div class="shb-bed-empty">Nothing with that name</div>') +
-          (rest > 0 ? '<div class="shb-bed-hint">' + rest + ' more. Press <kbd>/</kbd> and type a name to find one.</div>' : '') +
+          (more.typed && !more.uids.length ? '<div class="shb-bed-empty">Nothing with that name</div>' : '') +
+          '<div class="shb-bed-hint">' + (rest > 0 ? rest + ' more. ' : '') +
+            (more.typed ? (rest > 0 ? 'Type more of the name.' : 'Click one to put it on this bar.')
+              : 'Press <kbd>/</kbd> and type a name: any node in this ComfyUI, and any Hotbox tool, can go on this bar.') + '</div>' +
         '</div>' +
       '</div>' + html;
     }
