@@ -1152,11 +1152,43 @@
       '.shb-bed-done:hover{background:oklch(0.87 0.12 78)}',
       '.shb-bed-mid{flex:1;min-height:0;display:flex}',
       '.shb-bed-main{flex:1;min-width:0;display:flex;flex-direction:column}',
-      '.shb-bed-barbox{flex:none;padding:14px 18px 12px;border-bottom:1px solid oklch(0.27 0 0);background:oklch(0.205 0 0)}',
+      '.shb-bed-barbox{flex:none;display:flex;gap:14px;padding:14px 18px 12px;border-bottom:1px solid oklch(0.27 0 0);background:oklch(0.205 0 0)}',
+      /* the map of the hotbox: its three bars around a node. The one picked is the one the strip beside it
+         edits; the node says which kind of node the dock and the context bar are for */
+      '.shb-bed-mapcol{width:296px;flex:none;display:flex;flex-direction:column;gap:9px}',
+      '.shb-bed-barcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}',
+      '.shb-bed-map{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 10px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0)}',
+      '.shb-bed-mb{border:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;background:oklch(0.26 0 0);box-shadow:inset 0 0 0 1px oklch(0.33 0 0);color:oklch(0.86 0 0);transition:background .12s,box-shadow .12s}',
+      '.shb-bed-mb b{font-size:12.5px;font-weight:600}',
+      '.shb-bed-mb small{font-size:11px;color:oklch(0.62 0 0)}',
+      '.shb-bed-mb:hover{background:oklch(0.3 0 0)}',
+      '.shb-bed-mb.shb-on{background:oklch(0.3 0.045 78);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78);color:oklch(0.92 0.07 85)}',
+      '.shb-bed-mb.shb-on small{color:oklch(0.8 0.08 85)}',
+      '.shb-bed-mb:disabled{opacity:.45;background:oklch(0.22 0 0)}',
+      '.shb-bed-mdock{width:220px;height:40px}',
+      '.shb-bed-mctx{width:160px;height:30px}',
+      '.shb-bed-mbot{width:272px;height:40px}',
+      '.shb-bed-mnode{width:236px;height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px}',
+      '.shb-bed-mnode span{flex:1;min-width:0;text-align:center;font-size:12px;color:oklch(0.92 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0 0);font-size:16px;line-height:1}',
+      '.shb-bed-mnode button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-mnode button:disabled{visibility:hidden}',
+      '.shb-bed-cap b{font-weight:600;color:oklch(0.82 0.13 78)}',
+      '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font-size:11px;letter-spacing:0;text-transform:none}',
+      '.shb-bed-cap button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-barhint{font-size:11.5px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0 0);font-size:13px;line-height:1}',
+      '.shb-bed-prm:hover{background:oklch(0.36 0.07 25);color:oklch(0.92 0.06 25)}',
+      '.shb-bed-lane.shb-bed-extra{background:oklch(0.235 0.018 78);border:1px dashed oklch(0.5 0.08 78)}',
+      '.shb-bed-extra > .shb-bed-lhd{cursor:default;background:transparent}',
+      '.shb-bed-card.shb-bed-addc{cursor:pointer}',
+      '.shb-bed-addc > u{flex:none;text-decoration:none;font-size:15px;line-height:1;color:oklch(0.62 0 0)}',
+      '.shb-bed-addc:hover > u{color:oklch(0.82 0.13 78)}',
+      '.shb-bed-where{display:flex;flex-wrap:wrap;gap:6px}',
       '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
       '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
       /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
-      '.shb-bed-bar{margin-top:9px;min-height:40px;max-height:112px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);overflow-y:auto}',
+      '.shb-bed-bar{flex:1;min-height:40px;max-height:150px;display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:6px;padding:7px 8px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);overflow-y:auto}',
       '.shb-bed-pill{flex:none;height:28px;display:flex;align-items:center;gap:7px;padding:0 11px;border-radius:999px;background:oklch(0.26 0 0);font-size:12px;color:oklch(0.9 0 0);white-space:nowrap;cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s}',
       '.shb-bed-pill:hover{background:oklch(0.3 0 0)}',
       '.shb-bed-pill.shb-mute{background:oklch(0.24 0 0);color:oklch(0.6 0 0)}',
@@ -12582,7 +12614,10 @@
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
    * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
-  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 } };
+  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 },
+    /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
+       the dock and the context bar, the kind of node last picked for each */
+    bar: 'bot', ctxKey: { add: '', tools: '' } };
   var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 }, BRW_WIN_ZS = [1, 1.25, 1.5, 2];
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
@@ -12601,6 +12636,216 @@
   /* the bottom bar's list, as it is (a bar that was never customized makes its own) */
   function brwBotUids() {
     return Array.isArray(S.customBotBar) ? S.customBotBar.slice() : getBarUids('bot', null);
+  }
+
+  /* ---- THE BAR THE EDITOR IS ON (the map of the hotbox picks it). The bottom bar is one list. The dock and
+     the context bar are a list per kind of node: the dock by what the node gives (slotSig), the context bar by
+     what the node is (hbBucket). So the map's node says which kind, and steps through the ones there are: the
+     kinds you already changed, the kinds of the nodes on the canvas right now (one of those nodes stands for
+     its kind, to know what the bar holds before any change) and, for the dock, always the empty canvas and the
+     two swap bars ---- */
+  var BRW_BUCKET_NAMES = { empty: 'Empty canvas', load: 'Loader node', crop: 'Crop node', stitch: 'Stitch node', paint: 'Painter node',
+    set: 'Set node', get: 'Get node', view: 'Preview node', out: 'Output node', api: 'Image API node', 'api-video': 'Video API node',
+    gen: 'Image generator', 'gen-video': 'Video generator', other: 'Other nodes', 'other-video': 'Other video nodes' };
+
+  function brwCtxName(bar, key) {
+    if (bar === 'tools') return BRW_BUCKET_NAMES[key] || key;
+    if (key === 'canvas') return 'Empty canvas';
+    if (key === 'api:image') return 'Image API node';
+    if (key === 'api:video') return 'Video API node';
+    var m = /^(out|in|kind):(.*)$/.exec(String(key));
+    if (!m) return String(key);
+    if (m[1] === 'kind') return BRW_BUCKET_NAMES[m[2]] || m[2];
+    return (m[1] === 'out' ? 'Node giving ' : 'Node taking ') + m[2].split('+').join(' + ');
+  }
+
+  function brwCtxs(bar) {
+    var by = {}, out = [];
+    function push(key, node) {
+      if (!key) return;
+      if (by[key]) { if (node && !by[key].node) by[key].node = node; return; }
+      by[key] = { key: key, name: brwCtxName(bar, key), node: node || null };
+      out.push(by[key]);
+    }
+    var m = bar === 'add' ? S.customAddBySig : S.customToolsBar;
+    if (bar === 'add') ['canvas', 'api:image', 'api:video'].forEach(function (k) { push(k); });
+    Object.keys(m && typeof m === 'object' ? m : {}).sort().forEach(function (k) { if (Array.isArray(m[k])) push(k); });
+    allNodes(getGraph()).slice(0, 400).forEach(function (n) {
+      try { push(bar === 'add' ? slotSig(n) : hbBucket(n), n); } catch (e) {}
+    });
+    return out;
+  }
+
+  /* the kind of node the dock or the context bar is shown for: the one last picked, else the first there is */
+  function brwCtx() {
+    if (BRW.bar !== 'add' && BRW.bar !== 'tools') return null;
+    var list = brwCtxs(BRW.bar), want = BRW.ctxKey[BRW.bar];
+    for (var i = 0; i < list.length; i++) if (list[i].key === want) return list[i];
+    return list[0] || null;
+  }
+
+  function brwDockSub(key) {
+    return /^api:/.test(String(key)) ? 'Swap models' : (key === 'canvas' ? 'Starting nodes' : 'Next nodes');
+  }
+
+  /* what a swap bar holds before any change, with no node to ask: your favorites, then the first models */
+  function brwSwapDefaults(kind) {
+    var favs = favList(kind), chosen = [];
+    swapMates(null, kind, true).forEach(function (mo) { if (favs.indexOf(mo.type) >= 0) chosen.push(mo); });
+    chosen.sort(function (a, b) { return favs.indexOf(a.type) - favs.indexOf(b.type); });
+    swapMates(null, kind).forEach(function (mo) { if (chosen.length < 5 && chosen.indexOf(mo) < 0) chosen.push(mo); });
+    return chosen.slice(0, 5).map(function (mo) { return 'model:' + mo.type; });
+  }
+
+  /* a list of your own, or still what Hotbox proposes for it? */
+  function brwBarOwn() {
+    if (BRW.bar === 'bot') return Array.isArray(S.customBotBar);
+    var c = brwCtx(), m = BRW.bar === 'add' ? S.customAddBySig : S.customToolsBar;
+    return !!(c && m && Array.isArray(m[c.key]));
+  }
+
+  function brwBarList() {
+    if (BRW.bar !== 'add' && BRW.bar !== 'tools') return brwBotUids();
+    var c = brwCtx(), m = BRW.bar === 'add' ? S.customAddBySig : S.customToolsBar;
+    if (!c) return [];
+    if (m && Array.isArray(m[c.key])) return m[c.key].slice();
+    try {
+      if (c.node) return defaultBarUids(BRW.bar, c.node);
+      if (BRW.bar === 'add' && c.key === 'canvas') return suggestNodesFor(null, 5);
+      if (BRW.bar === 'add' && /^api:/.test(c.key)) return brwSwapDefaults(c.key.slice(4));
+    } catch (e) {}
+    return [];
+  }
+
+  function brwBarWrite(list) {
+    if (BRW.bar !== 'add' && BRW.bar !== 'tools') { S.customBotBar = list; return; }
+    var c = brwCtx(), k = BRW.bar === 'add' ? 'customAddBySig' : 'customToolsBar';
+    if (!c) return;
+    if (!S[k] || typeof S[k] !== 'object') S[k] = {};
+    S[k][c.key] = list;
+  }
+
+  function brwPillTint(uid) {
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0 0)')));
+  }
+
+  /* What else could go on this bar: for a swap bar the models to change to, for another dock the nodes that take
+     what the node gives, for a context bar the tools. Only what is not on it already */
+  function brwMore(q) {
+    var c = brwCtx(), bar = BRW.bar, have = brwBarList(), list = [], title = '';
+    if (!c) return null;
+    try {
+      if (bar === 'tools') {
+        title = 'Tools';
+        list = Object.keys(getMasterTools(null)).filter(hbToolOn).map(function (t) { return 'tool:' + t; });
+      } else if (/^api:/.test(c.key)) {
+        title = 'Models';
+        list = swapMates(null, c.key.slice(4)).map(function (mo) { return 'model:' + mo.type; });
+      } else {
+        title = 'Fits here';
+        var types = /^out:/.test(c.key) ? c.key.slice(4).split('+') : [];
+        var like = c.node || (types.length ? { type: '', inputs: [], outputs: types.map(function (t) { return { type: t }; }) } : null);
+        if (c.key === 'canvas') list = suggestNodesFor(null, 14);
+        else if (like) list = suggestNodesFor(like, 14);
+      }
+    } catch (e) { list = []; }
+    list = list.filter(function (u, i) { return have.indexOf(u) < 0 && list.indexOf(u) === i; });
+    if (!list.length) return null;
+    /* a long list (the models) shows its first ones; what is typed in the search finds any of the rest */
+    var all = list.length;
+    if (q) list = list.filter(function (u) { return brwMatch(u, q); });
+    return { title: title, uids: list.slice(0, 40), total: all, found: list.length };
+  }
+
+  /* every bar that lists it by itself (a button in a group shows wherever its group does) */
+  function brwWhere(uid) {
+    var out = [];
+    if (brwBotUids().indexOf(uid) >= 0) out.push({ bar: 'bot', key: '', name: 'Bottom bar' });
+    [['add', S.customAddBySig, 'Dock'], ['tools', S.customToolsBar, 'Context bar']].forEach(function (p) {
+      Object.keys(p[1] && typeof p[1] === 'object' ? p[1] : {}).sort().forEach(function (k) {
+        if (Array.isArray(p[1][k]) && p[1][k].indexOf(uid) >= 0) out.push({ bar: p[0], key: k, name: p[2] + ' · ' + brwCtxName(p[0], k) });
+      });
+    });
+    return out;
+  }
+
+  /* the strip shows this bar (and, for the dock and the context bar, this kind of node) */
+  function brwGoBar(bar, key) {
+    BRW.bar = (bar === 'add' || bar === 'tools') ? bar : 'bot';
+    if (BRW.bar !== 'bot') {
+      if (key) BRW.ctxKey[BRW.bar] = key;
+      var c = brwCtx();
+      if (c) BRW.ctxKey[BRW.bar] = c.key;
+    }
+    brwRender();
+  }
+
+  function brwStepCtx(dir) {
+    if (BRW.bar !== 'add' && BRW.bar !== 'tools') return;
+    var list = brwCtxs(BRW.bar), c = brwCtx(), at = -1;
+    if (!c || list.length < 2) return;
+    list.forEach(function (x, i) { if (x.key === c.key) at = i; });
+    BRW.ctxKey[BRW.bar] = list[(at + dir + list.length) % list.length].key;
+    brwRender();
+  }
+
+  function brwMapHTML() {
+    var bar = BRW.bar, c = brwCtx();
+    var dockKey = bar === 'add' && c ? c.key : (BRW.ctxKey.add || 'canvas');
+    var many = !!c && brwCtxs(bar).length > 1;
+    var node = bar === 'bot' ? 'Any node' : (c ? c.name : 'No node of this kind yet');
+    return '<button type="button" class="shb-bed-mb shb-bed-mdock' + (bar === 'add' ? ' shb-on' : '') + '" data-bed-pick="add" title="The dock: what comes next for a kind of node. On an API node it is the swap bar, the models to change to">' +
+        '<b>Dock</b><small>' + esc(brwDockSub(dockKey)) + '</small></button>' +
+      '<button type="button" class="shb-bed-mb shb-bed-mctx' + (bar === 'tools' ? ' shb-on' : '') + '" data-bed-pick="tools" title="The context bar: the tools for a kind of node"><b>Context bar</b></button>' +
+      '<div class="shb-bed-mnode">' +
+        '<button type="button" data-bed-ctx="-1" title="The kind of node before" aria-label="The kind of node before"' + (many ? '' : ' disabled') + '>‹</button>' +
+        '<span title="' + esc(bar === 'bot' ? 'The bottom bar is the same on every node' : 'The kind of node this bar is for') + '">' + esc(node) + '</span>' +
+        '<button type="button" data-bed-ctx="1" title="The next kind of node" aria-label="The next kind of node"' + (many ? '' : ' disabled') + '>›</button>' +
+      '</div>' +
+      '<button type="button" class="shb-bed-mb shb-bed-mbot' + (bar === 'bot' ? ' shb-on' : '') + '" data-bed-pick="bot" title="The bottom bar: your buttons and groups, on every node">' +
+        '<b>Bottom bar</b><small>Same everywhere</small></button>';
+  }
+
+  function brwBarCapHTML() {
+    var bar = BRW.bar, c = brwCtx();
+    if (bar === 'bot') return '<b>Bottom bar</b> <small>as the hotbox shows it, on every node</small>';
+    return '<b>' + esc(bar === 'add' ? 'Dock · ' + brwDockSub(c ? c.key : '') : 'Context bar') + '</b> <small>' +
+      (c ? 'for: ' + esc(c.name) + (brwBarOwn() ? '' : ' · as Hotbox proposes it, until you change it') : '') + '</small>' +
+      (c && brwBarOwn() ? '<button type="button" data-bed-act="barreset" title="Back to what Hotbox proposes for this kind of node">Reset</button>' : '');
+  }
+
+  function brwBarAdd(uid, before) {
+    var list = brwBarList();
+    if (BRW.bar === 'bot' || !brwCtx() || !uid || list.indexOf(uid) >= 0) return;
+    var name = hbUidLabel(uid), bar = BRW.bar;
+    brwCommit('baradd', 'putting "' + name + '" on the bar', function () {
+      var to = before ? list.indexOf(before) : -1;
+      if (to < 0) list.push(uid);
+      else list.splice(to, 0, uid);
+      brwBarWrite(list);
+      /* a tool put there by hand stays there, dimmed where it does not apply */
+      hbKeepUid(uid, bar);
+    }, { msg: name + ' is on the bar' });
+  }
+
+  function brwBarRemove(uid) {
+    var list = brwBarList(), at = list.indexOf(uid);
+    if (BRW.bar === 'bot' || !brwCtx() || at < 0) return;
+    var name = hbUidLabel(uid);
+    brwCommit('barrm', 'taking "' + name + '" off the bar', function () {
+      list.splice(at, 1);
+      brwBarWrite(list);
+      /* a group off its last bar is kept, with its buttons, in no bar */
+      var g = /^grp:/.test(uid) ? grpById(uid.slice(4)) : null;
+      if (g) g.keep = true;
+      hbForgetIfGone(uid);
+    }, { msg: name + ' is off the bar' });
+  }
+
+  function brwBarReset() {
+    var c = brwCtx(), k = BRW.bar === 'add' ? 'customAddBySig' : 'customToolsBar';
+    if (BRW.bar === 'bot' || !c || !brwBarOwn()) return;
+    brwCommit('barreset', 'resetting the bar', function () { delete S[k][c.key]; }, { msg: 'The bar is as Hotbox proposes it' });
   }
 
   function brwInGroup() {
@@ -12688,8 +12933,15 @@
         '<div class="shb-bed-mid">' +
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
-              '<div class="shb-bed-cap">Your bottom bar <small>as the hotbox shows it · drop a button on a group to put it in · drag a button or a group here to move it along the bar</small></div>' +
-              '<div class="shb-bed-bar" data-bed-bar></div>' +
+              '<div class="shb-bed-mapcol">' +
+                '<div class="shb-bed-cap">The hotbox <small>click a bar to edit it</small></div>' +
+                '<div class="shb-bed-map" data-bed-map></div>' +
+              '</div>' +
+              '<div class="shb-bed-barcol">' +
+                '<div class="shb-bed-cap" data-bed-barcap></div>' +
+                '<div class="shb-bed-bar" data-bed-bar></div>' +
+                '<div class="shb-bed-barhint" data-bed-barhint></div>' +
+              '</div>' +
             '</div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
@@ -12720,6 +12972,7 @@
     BRW.saved = 0;
     BRW.last = '';
     BRW.inspFor = '';
+    BRW.bar = 'bot';
     BRW.shut = modalOpen(function () { brwClose(); });
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
     bg.addEventListener('click', brwClick);
@@ -12891,6 +13144,29 @@
   }
 
   function brwBarHTML() {
+    if (BRW.bar === 'add' || BRW.bar === 'tools') {
+      /* the dock or the context bar of one kind of node: every button of it is a pill, with a × to take it off */
+      if (!brwCtx()) {
+        return '<span class="shb-bed-barnone">No context bar to show yet. It is here once a node is on the canvas, or once you change one in the hotbox (edit mode)</span>';
+      }
+      var bar = BRW.bar;
+      var html = brwBarList().map(function (u) {
+        var on = BRW.sel && BRW.sel.id === u ? ' shb-on' : '';
+        var rm = '<button type="button" class="shb-bed-prm" data-bed-rm="' + esc(u) + '" title="Take it off this bar" aria-label="Take it off this bar">×</button>';
+        if (/^grp:/.test(u)) {
+          var g = grpById(u.slice(4));
+          if (!g) return '';
+          return '<span class="shb-bed-pill' + on + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '"><i></i>' +
+            esc(hbBtnName(u, g.name)) + '<em>' + (g.items || []).length + '</em>' + rm + '</span>';
+        }
+        var it = null;
+        try { it = resolveBarItem(u, null, true, bar); } catch (e) { it = null; }
+        var mark = /^tpl:/.test(u) ? '<span class="shb-bed-g">' + (hbGlyphOf(u) || '✦') + '</span>' : '<i></i>';
+        return '<span class="shb-bed-pill' + on + (it ? '' : ' shb-mute') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '"' +
+          (it ? '' : ' title="Not in this ComfyUI: it shows nothing in the hotbox"') + '>' + mark + esc(it ? it.label : hbBtnName(u, u.replace(/^[a-z]+:/, ''))) + rm + '</span>';
+      }).join('');
+      return html || '<span class="shb-bed-barnone">Nothing on this bar. Click a card in the first lane, or drag a button here, to add it</span>';
+    }
     var tools = [], pins = '';
     brwBotUids().forEach(function (u) {
       if (/^grp:/.test(u)) {
@@ -12945,6 +13221,27 @@
       '</div>' +
     '</div>';
     html += '<button type="button" class="shb-bed-new" data-bed-act="newgrp" data-bed-lanebox="new"><span>＋</span>New group<small>or drop a button here</small></button>';
+    /* with the dock or the context bar picked, one lane more, first: what else could go on that bar. A click
+       on a card of it puts it there. With the bottom bar it is not there at all */
+    var more = brwMore(q);
+    if (more) {
+      var word = { model: 'Model', node: 'Node', tool: 'Hotbox tool' };
+      var rest = more.found - more.uids.length;
+      html = '<div class="shb-bed-lane shb-bed-extra">' +
+        '<div class="shb-bed-lhd"><b>' + esc(more.title) + '</b><span class="shb-bed-cnt">' + more.total + '</span><span class="shb-bed-place shb-bar">For this bar</span></div>' +
+        '<div class="shb-bed-lbody">' +
+          more.uids.map(function (u) {
+            var it = null;
+            try { it = resolveBarItem(u, null, true, BRW.bar); } catch (e) { it = null; }
+            if (!it) return '';
+            return '<div class="shb-bed-card shb-bed-addc" data-bed-add="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '" title="Put it on this bar">' +
+              '<span class="shb-bed-ct"><b>' + esc(it.label) + '</b><small>' + (word[it.kind] || 'Button') + '</small></span><u>+</u></div>';
+          }).join('') +
+          (more.uids.length ? '' : '<div class="shb-bed-empty">Nothing with that name</div>') +
+          (rest > 0 ? '<div class="shb-bed-hint">' + rest + ' more. Press <kbd>/</kbd> and type a name to find one.</div>' : '') +
+        '</div>' +
+      '</div>' + html;
+    }
     return html;
   }
 
@@ -13026,6 +13323,7 @@
       var names = brwNodeNames(tp), glyph = hbGlyphOf(uid) || '✦';
       var grabbing = !!BRW.grab;
       var bpins = brwBotUids().filter(function (u) { return !/^tool:/.test(u); }), bat = bpins.indexOf(uid);
+      var where = brwWhere(uid), curCtx = brwCtx();
       return '<div class="shb-bed-ibody" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
         '<div class="shb-bed-f"><div class="shb-bed-cap">Button' + (tp && tp.lib ? ' <small>from ' + esc(tp.libLabel || 'a shared library') + (tp.canDelete ? '' : ' · read-only') + '</small>' : '') + '</div>' +
           '<div class="shb-bed-name"><span class="shb-bed-ico">' + (tp ? glyph : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 14)) + '</span>' +
@@ -13046,6 +13344,11 @@
           }).join('') +
           '<button type="button" class="shb-bed-chip' + (inG ? '' : ' shb-on') + '" data-bed-chip="loose"><i></i>None</button>' +
         '</div></div>' +
+        (where.length ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Shows in</span></div><div class="shb-bed-where">' +
+          where.map(function (w) {
+            var cur = w.bar === BRW.bar && (w.bar === 'bot' || (curCtx && curCtx.key === w.key));
+            return '<button type="button" class="shb-bed-chip' + (cur ? ' shb-on' : '') + '" data-bed-where="' + esc(w.bar + '|' + w.key) + '" title="Show that bar in the strip"><i></i>' + esc(w.name) + '</button>';
+          }).join('') + '</div></div>' : '') +
         (!inG && bat >= 0 ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Order in the bar</span></div><div class="shb-bed-two">' +
           '<button type="button" class="shb-bed-ob" data-bed-act="left"' + (bat > 0 ? '' : ' disabled') + '>← Move left</button>' +
           '<button type="button" class="shb-bed-ob" data-bed-act="right"' + (bat < bpins.length - 1 ? '' : ' disabled') + '>Move right →</button>' +
@@ -13075,9 +13378,18 @@
     /* what was picked may be gone (deleted, taken back) */
     if (BRW.sel) {
       var su = BRW.sel.id;
-      var there = BRW.sel.kind === 'group' ? !!grpById(su.slice(4)) : (/^tpl:/.test(su) ? !!tplById(su.slice(4)) : !!brwInGroup()[su]);
+      var there = BRW.sel.kind === 'group' ? !!grpById(su.slice(4))
+        : (/^tpl:/.test(su) ? !!tplById(su.slice(4)) : (!!brwInGroup()[su] || brwBarList().indexOf(su) >= 0));
       if (!there) BRW.sel = null;
     }
+    /* the map, and what the strip says it is showing */
+    var c0 = brwCtx();
+    if (c0) BRW.ctxKey[BRW.bar] = c0.key;
+    bg.querySelector('[data-bed-map]').innerHTML = brwMapHTML();
+    bg.querySelector('[data-bed-barcap]').innerHTML = brwBarCapHTML();
+    bg.querySelector('[data-bed-barhint]').textContent = BRW.bar === 'bot'
+      ? 'Drop a button on a group to put it in · drag a button or a group along the bar to move it'
+      : (c0 ? 'Drag along the bar to reorder · × takes one off · click a card in the first lane, or drag a button here, to add it' : '');
     var nOwn = (S.templates || []).length, nGrp = Object.keys(S.hbGroups || {}).length, nSh = libSharedButtons().length;
     bg.querySelector('[data-bed-sum]').textContent = nOwn + (nOwn === 1 ? ' button' : ' buttons') + ' · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '');
     bg.querySelector('[data-bed-act="undo"]').disabled = !hbUndoLeft();
@@ -13173,16 +13485,16 @@
     }, from !== lane ? { msg: name + ' → ' + gName } : null);
   }
 
-  /* A button or a group of the bottom bar takes another place along it (before `before`, or last) */
+  /* A button or a group of the bar in the strip takes another place along it (before `before`, or last) */
   function brwBarMove(uid, before) {
-    var bar = brwBotUids(), at = bar.indexOf(uid);
+    var bar = brwBarList(), at = bar.indexOf(uid);
     if (at < 0 || before === uid || (before || '') === (bar[at + 1] || '')) return;
     brwCommit('order', 'moving "' + hbUidLabel(uid) + '" along the bar', function () {
       bar.splice(at, 1);
       var to = before ? bar.indexOf(before) : -1;
       if (to < 0) bar.push(uid);
       else bar.splice(to, 0, uid);
-      S.customBotBar = bar;
+      brwBarWrite(bar);
     });
   }
 
@@ -13346,6 +13658,22 @@
     if (act === 'max') { BRW.win.max = !BRW.win.max; brwWinSave(); brwWinApply(); return; }
     var zb = t.closest('[data-bed-z]');
     if (zb) { brwWinZoom(+zb.getAttribute('data-bed-z')); return; }
+    /* the map: a bar, or the kind of node before or after; and the bar in the strip: off it, onto it, as it was */
+    var pk = t.closest('[data-bed-pick]');
+    if (pk) { brwGoBar(pk.getAttribute('data-bed-pick'), ''); return; }
+    var cx = t.closest('[data-bed-ctx]');
+    if (cx) { if (!cx.disabled) brwStepCtx(+cx.getAttribute('data-bed-ctx') || 1); return; }
+    var rmb = t.closest('[data-bed-rm]');
+    if (rmb) { brwBarRemove(rmb.getAttribute('data-bed-rm')); return; }
+    var adc = t.closest('[data-bed-add]');
+    if (adc) { brwBarAdd(adc.getAttribute('data-bed-add'), ''); return; }
+    if (act === 'barreset') { brwBarReset(); return; }
+    var wh = t.closest('[data-bed-where]');
+    if (wh) {
+      var wp = String(wh.getAttribute('data-bed-where') || '').split('|');
+      brwGoBar(wp[0], wp.slice(1).join('|'));
+      return;
+    }
     if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
     if (act === 'pasteadd') { brwPasteAdd(); return; }
     var tg = t.closest('[data-bed-target]');
@@ -13483,6 +13811,28 @@
     ln.classList.add('shb-on');
   }
 
+  /* Where along the strip the pointer is: the pill it is nearest (the row it is on counts first), and the
+     side of it. `before` is the pill the dropped one goes before ('' = last); `line` is where to draw the mark */
+  function brwPillSpot(barEl, x, y, skip, z) {
+    var best = null, bd = 1e9;
+    Array.prototype.forEach.call(barEl.querySelectorAll('[data-bed-pill]'), function (pl) {
+      if (pl === skip) return;
+      var r = pl.getBoundingClientRect();
+      var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0), dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+      var dist = Math.hypot(dx, dy * 4);
+      if (dist < bd) { bd = dist; best = pl; }
+    });
+    if (!best) {
+      var rb = barEl.getBoundingClientRect();
+      return { found: false, before: '', line: { x: rb.left + 8 * z, y: rb.top + 7 * z, w: 3, h: 28 * z } };
+    }
+    var br = best.getBoundingClientRect(), isA = x < br.left + br.width / 2;
+    var nx = isA ? best : best.nextElementSibling;
+    while (nx && (nx === skip || !nx.hasAttribute('data-bed-pill'))) nx = nx.nextElementSibling;
+    return { found: true, before: nx ? nx.getAttribute('data-bed-pill') : '',
+      line: { x: (isA ? br.left - 3 * z : br.right + 3 * z) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 } };
+  }
+
   function brwHot(el) {
     if (!BRW.el) return;
     Array.prototype.forEach.call(BRW.el.querySelectorAll('.shb-hot'), function (x) { if (x !== el) x.classList.remove('shb-hot'); });
@@ -13533,22 +13883,19 @@
     if (d.pill) {
       /* a pill of the bar: only along the bar, among what is pinned */
       if (!bar) { brwLine(null); brwHot(null); return; }
-      var best = null, bd = 1e9;
-      Array.prototype.forEach.call(bar.querySelectorAll('[data-bed-pill]'), function (pl) {
-        if (pl === d.el) return;
-        var r = pl.getBoundingClientRect();
-        var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0), dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
-        /* the row the pointer is on counts first */
-        var dist = Math.hypot(dx, dy * 4);
-        if (dist < bd) { bd = dist; best = pl; }
-      });
+      var sp = brwPillSpot(bar, x, y, d.el, z);
       brwHot(null);
-      if (!best) { brwLine(null); return; }
-      var br = best.getBoundingClientRect(), isA = x < br.left + br.width / 2;
-      var nx = isA ? best : best.nextElementSibling;
-      while (nx && (nx === d.el || !nx.hasAttribute('data-bed-pill'))) nx = nx.nextElementSibling;
-      d.to = { bar: true, before: nx ? nx.getAttribute('data-bed-pill') : '' };
-      brwLine({ x: (isA ? br.left - 3 * z : br.right + 3 * z) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 });
+      if (!sp.found) { brwLine(null); return; }
+      d.to = { bar: true, before: sp.before };
+      brwLine(sp.line);
+      return;
+    }
+    if (bar && (BRW.bar === 'add' || BRW.bar === 'tools') && brwCtx()) {
+      /* a card over the strip of the dock or the context bar: it goes on that bar, where the line is */
+      var sa = brwPillSpot(bar, x, y, null, z);
+      d.to = { addBar: true, before: sa.before };
+      brwHot(null);
+      brwLine(sa.line);
       return;
     }
     var gp = under.closest('[data-bed-pill^="grp:"]');
@@ -13591,6 +13938,7 @@
     BRW.noClick = Date.now() + 250;
     if (!BRW.el || !to) return;
     if (pill) { if (to.bar) brwBarMove(uid, to.before); return; }
+    if (to.addBar) { brwBarAdd(uid, to.before); return; }
     if (!BRW.sel || BRW.sel.id !== uid) { BRW.sel = { kind: 'button', id: uid }; BRW.panel = null; BRW.inspFor = ''; }
     brwMove(uid, to.lane, to.before);
     if (BRW.el) brwRender();

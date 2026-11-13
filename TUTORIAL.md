@@ -128,11 +128,12 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 ![Name, color, icon and key for a button; drag it into a group; a new group; its place in the bar; Undo and Redo](docs/tutorial/11-button-editor.gif)
 
 1. **Settings → Saved Buttons → Browse…** (the **H** in ComfyUI's top bar opens Settings).
-2. On top, **your bottom bar** as the hotbox shows it. Under it, a lane for every group and one for the buttons in no group.
+2. On top, a small **map of the hotbox** and, beside it, the bar picked on it: at first **your bottom bar**, as the hotbox shows it. Under them, a lane for every group and one for the buttons in no group. (The recording was made before the map: the bar is the same, the map is new.)
 3. **Click a button**: its name, color, icon and hotkey are on the right, with the group it is in and the nodes it adds. The hotkey warns when the key already does something.
 4. **Drag** a card to any place in a lane, onto a group in the bar, or onto **New group** (<kbd>G</kbd> makes one too). Drag a group or a button along the bar to move it there.
 5. Every change saves itself. <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes it back, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again, <kbd>/</kbd> finds a button by its name or by a node in it, <kbd>Del</kbd> deletes what is picked.
-6. **A larger window**: the arrows beside **Done** fill the screen, and the corner at the bottom right stretches the window to any size (double-click it for the usual one). The four **A**'s beside them make its text and buttons larger, up to 200% for a 4K screen. Both are kept in this browser.
+6. **The other bars**: click the **Dock** or the **Context bar** on the map and the strip shows that bar; the arrows on the map's node step through the kinds of node it can be for. On an API node the Dock is the **swap bar**: the models to change to. Drag along the strip to reorder, **×** takes a button off, and a click on a card of the first lane (**Models**, **Fits here** or **Tools**) puts it on. **Reset** brings back what Hotbox proposes.
+7. **A larger window**: the arrows beside **Done** fill the screen, and the corner at the bottom right stretches the window to any size (double-click it for the usual one). The four **A**'s beside them make its text and buttons larger, up to 200% for a 4K screen. Both are kept in this browser.
 
 ## 12. Send a button to someone
 
