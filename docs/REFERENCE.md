@@ -18,9 +18,13 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
 - **Save as Button.** Select any nodes (one or many, or a group) and press **Save as Button** (<kbd>X</kbd>): a copy of them melts into one button in the bottom bar, and the nodes themselves stay where they are. Click the button to add those nodes again by the cursor, or drag it onto the canvas to add them right there — settings and inner wires come back exactly as they were. The button is named after what the nodes do (`Flux · Text to Image`, `Wan · Image to Video`, `Upscale`…) and saved with the rest of your preferences. Select a label along with the nodes and the button takes the label's text as its name: the name you already wrote on the canvas (a Label Studio / rgthree label or a Pixaroma label; with several, the top one). A titled group names it when no label is selected, and a label inside a group names it when the group has no title.
 - **Change what a saved button holds, and keep the button.** No need to save a new one, rename it and put it in the old one's place: the button stays where it is, with its name, color and key.
   - **Use selection.** Change the nodes on the canvas, select them, right-click the button and choose **Use selection**: the button takes them instead of the ones it held (it asks for a second click).
-  - **Edit its nodes.** Right-click the button → **Edit its nodes…** (or the pencil on its card in the button browser) opens what it holds: pick a node and change its values, its title or how it runs (normally, muted, bypassed), or take the node out of the button; **JSON** shows the node, or the whole button, as ComfyUI copies it, to edit by hand (it is checked before it is kept). **Put on canvas** adds the nodes to the canvas to change them there. **Save to this button** keeps it.
+  - **Edit its nodes.** Right-click the button → **Edit its nodes…** (or **Edit its nodes…** in the button editor, or a double-click on its card there) opens what it holds: pick a node and change its values, its title or how it runs (normally, muted, bypassed), or take the node out of the button; **JSON** shows the node, or the whole button, as ComfyUI copies it, to edit by hand (it is checked before it is kept). **Put on canvas** adds the nodes to the canvas to change them there. **Save to this button** keeps it.
   - **Versions.** What a button held before is kept behind it (the last five): **Versions…** in that editor brings one back. A button in a writable shared library is written back into its folder (it keeps no versions there).
-- **Button browser.** **Settings → Saved Buttons → Browse…** opens every saved button and every group on cards: its name, color and key, how many nodes it holds and which, and the group it is in. Click a card for Edit Button; drag a button onto a group to put it in, and out of it (or its ×) to take it out; **New Group** makes an empty one in the bottom bar; **Ungroup** gives a group's buttons back to its bar; the pencil opens a button's nodes and the trash deletes it. Every change saves itself, and **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes it back, a deleted button too.
+- **Button editor.** **Settings → Saved Buttons → Browse…** opens it. At the top, **your bottom bar** as the hotbox shows it; under it, a **lane for every group** with its buttons, a lane for the saved buttons that are **in no group**, and **New group**. Click a button or a group and the panel on the right holds what it is: its **name** (it saves as you type), its **color** (and whether it paints the whole button), an **icon** for a saved button (eight signs, shown in the hotbox too), its **hotkey** (it warns when the key already does something), the **group** it is in, and **what it adds**, node by node. For a group: **where it shows** (the bottom bar, or hidden: kept with its buttons, in no bar) and its **order in the bar**.
+  - **Drag** a card to any place in a lane, onto a group in the bar, or onto **New group**; drag a button or a group along the bar to move it there. An amber line marks the place.
+  - **Edit its nodes…** (or a double-click) opens what a saved button holds; **Duplicate** makes a copy of your own; **Delete** asks nothing, since **Undo** brings it back. Deleting a group keeps its buttons: they go back to the bar.
+  - Every change saves itself. **Undo** and **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) go back and forth, and each move, delete or new group shows a note with **Undo** on it.
+  - Keys: <kbd>/</kbd> finds a button by its name or by a node it holds (the others dim, nothing moves), <kbd>G</kbd> makes a group (with the picked button in it), <kbd>Del</kbd> deletes what is picked, <kbd>Esc</kbd> lets go of it.
 - **Button groups.** Drag a button over the middle of another and rest there a moment: a line comes up around the other one, then it lights up, and letting go makes the two a group, with a little pop. Nothing moves away while you aim: the middle of a button is where a button rests to be grouped, its two ends are places beside it, and a button let go on the middle too soon simply lands beside it. Drop more buttons on the middle of the group to fill it. Hover a group and its buttons drop down in a list under it, one after another (a soft spring in Fluid, little balloons in Compact, a quiet slide in Quiet); its arrow keeps it open until the hotbox closes, and a second click closes it. Rest on a group with a button in the hand and its list opens at once, its buttons in their places; there the button goes to any place in it, the first one too: a line between two of them shows where. A list a button was just put in stays open while the pointer is on it. Click the group in edit mode (or right-click it any time) to rename it. Drag a button from the list onto the bar to take it out; × on the group ungroups it and its buttons stay in the bar. A group left with one button, or none, asks before it goes: **Keep group** leaves it in the bar with its name and color, empty too, ready to be filled again (its × removes it); **Remove group** unfolds it, and its last button goes back to the bar. <kbd>Enter</kbd>, <kbd>Esc</kbd> or a click outside keep it, so a group is never lost by accident.
 - **Group with `G`.** Press <kbd>G</kbd> in the hotbox to group the selection (or the node under the cursor). It uses ComfyUI's own Group Selected Nodes, so the title editor opens right away, already holding a name read from the nodes, like a saved button's.
 - **Swap Nodes.** Select two nodes and press **Swap Nodes** (<kbd>W</kbd>): they trade places and wires.
@@ -31,7 +35,7 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
   - **Undo.** <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or **Undo** in the edit bar) takes back the last change to the bars, the groups and the saved buttons, one step at a time.
   - **Edit Button.** Click a button in edit mode, or right-click it any time: its name; a color, in the same seven colors as the node swatches, so a button is easy to find at a glance (nodes keep their own colors); **Paint**, which chooses where the color goes (**Mark** colors only the button's dot, icon or number, **Whole button** gives the whole button a soft shade of it); and a **Key** of its own. **Reset** there brings back the button's own name and color, and clears its key.
   - **A key of its own.** In Edit Button, click **Key** and press one key (a letter, a number, a sign or <kbd>F1</kbd>–<kbd>F12</kbd>; <kbd>Backspace</kbd> clears it). The button answers to it while the hotbox is open and the button shows, in a bar or inside a group. A button that came with a key (its number in the dock, a tool's letter) lets go of the old one, and the box says so when the key already does something else or belongs to another button, which then loses it.
-  - One name and one color per button: what you set on a bar is what Settings, the drawer and the button browser show.
+  - One name and one color per button: what you set on a bar is what Settings, the drawer and the button editor show.
 
   **Reset** in the edit bar restores the defaults, **Done** / <kbd>Esc</kbd> / a click on the canvas exits. Edit mode starts with the very same buttons, right where they were, so the one under the pointer is still there and can be dragged with the same press. The buttons a bar holds that do not apply to the node under the hotbox stay hidden until you click **+N hidden here** in the edit bar; show them to move, rename or remove them too.
 - **Works with both node renderers** — Nodes 2.0 (Vue) and the classic LiteGraph canvas.
@@ -86,7 +90,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | <kbd>↑</kbd> <kbd>↓</kbd> · <kbd>Enter</kbd> · <kbd>Esc</kbd> | In the drawer's search: pick a result · add it · clear the search (again: close the drawer). |
 | <kbd>G</kbd> | Group the selection (or the node under the cursor) and name it. |
 | <kbd>Esc</kbd> | Leave edit mode, or close the hotbox. |
-| <kbd>Ctrl</kbd>+<kbd>Z</kbd> | In edit mode and in the button browser: take back the last change to the bars, groups and saved buttons. |
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd> | In edit mode and in the button editor: take back the last change to the bars, groups and saved buttons (in the editor, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again). |
 | a key of your own | Any bar button can have one: right-click it → **Key**. |
 | <kbd>Alt</kbd>+<kbd>Z</kbd> | **Magnifier** — big live prompt editor · **Visual Crop editor** on crop nodes · **Paint Studio** on paint / `LoadImage` nodes. |
 | <kbd>Alt</kbd>+<kbd>N</kbd> | **Label Studio** — rich canvas titles/notes (`Label (rgthree)` when installed, otherwise `MarkdownNote` / `Note` / `Group`). |
@@ -104,7 +108,7 @@ Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Sel
 
 ## ⚙️ Settings
 
-The **H** button in ComfyUI's top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim or leader lines, glass blur, UI scale, bar spacing, power tools, saved buttons and groups with the button browser, where your preferences are saved), right-click it to enable or disable the hotbox.
+The **H** button in ComfyUI's top bar: click it for settings (hotkey, toggle vs. hold, style, edit-mode animation, canvas dim or leader lines, glass blur, UI scale, bar spacing, power tools, saved buttons and groups with the button editor, where your preferences are saved), right-click it to enable or disable the hotbox.
 
 **Glass Blur** (Fluid and Compact) is the frosted glass behind the bars and cards. It asks a lot of a browser that draws without a graphics card (a remote desktop, some Linux workstations): switched off, the bars are plain panels.
 
@@ -189,7 +193,7 @@ window.__hotbox.pack(uids)          // uids: 'grp:<id>' and / or 'tpl:<id>'
 //   { hotbox_pack: 1, hotbox: '1.2.9',
 //     groups:    [{ id, name, items: [uid…] }],
 //     templates: [{ id, name, count, at, data }],   // each saved button with its nodes
-//     labels: { uid: name }, colors: { uid: … }, fill: { uid: true }, keys: { uid: key } }
+//     labels: { uid: name }, colors: { uid: … }, fill: { uid: true }, keys: { uid: key }, icons: { uid: sign } }
 
 window.__hotbox.addPack(pack, { from: 'ana' })
 // → Promise { file: 'hotbox_v4.json', version: 'Version 4',
@@ -199,10 +203,37 @@ window.__hotbox.addPack(pack, { from: 'ana' })
 - A group travels with its buttons. Its saved buttons go into `templates`; its tools, nodes and models travel by name, since every Hotbox has them. A shared library's button becomes a button of one's own (`tpl:<id>`): whoever gets it may not have that library.
 - `addPack` never overwrites the file in use. It writes what is pending to that file first, adds the pack to the preferences, and keeps the result as the **next version** (`hotbox_v2.json`, …), used right away: **Settings → Version** goes back any time.
 - A saved button or a group with the **same id** takes the place of the one that was there, where it was: it is the same button, sent again after a change. The button it replaced stays behind it as a version. A new one goes to the end of the bottom bar (a new button that came inside a group shows in its group).
-- A saved button and a group bring their name, color and key. For a tool or a node, the name, color and key you gave it yourself stay, and a key another of your buttons already has is not taken.
+- A saved button and a group bring their name, color, icon and key. For a tool or a node, the name, color and key you gave it yourself stay, and a key another of your buttons already has is not taken.
 - The promise is **rejected**, and nothing is written, when the pack is not one (`hotbox_pack` missing, or nothing in it) or when the files cannot be reached (ComfyUI not answering, or `window.__hotboxFiles` not ready): the message says why, so the page can try again later.
 
-`window.__hotbox.browseButtons()` opens the button browser, and `window.__hotbox.editButton(id)` the nodes of one saved button.
+`window.__hotbox.browseButtons()` opens the button editor, and `window.__hotbox.editButton(id)` the nodes of one saved button.
+
+### Sending a button or a group to someone
+Off by default: Hotbox shows no way to send anything until a page, or a preference, turns one on. Who gets it, and how it travels, is not Hotbox's to know.
+
+```js
+// A page that has people to send to (a studio panel) gives Hotbox a sender. The button editor then shows
+// its label on every saved button and every group, lists the targets, and hands the pack over.
+window.__hotbox.sendVia({
+  label: 'Send to a teammate…',
+  targets: function (what) { return [{ id: 'ana', label: 'Ana', hint: 'comp · online' }]; },   // or a Promise; optional
+  send: function (pack, target, info) { /* carry the pack; return a Promise to report failure */ }
+});                                   // info: { uid, name, kind: 'button' | 'group', label }
+window.__hotbox.sendVia(null);        // takes it away again
+
+// On the other side, the page hands over what arrived. A card asks before anything is added:
+window.__hotbox.offer(pack, { from: 'Ana', note: 'the one with the crop' })
+// → Promise { accepted: true, result: <what addPack gives> } | { accepted: false }
+
+// With no pipeline at all, a pack travels as text through any chat or mail:
+window.__hotbox.share(true)           // the preference hbShare: the button editor shows Copy to share and Paste…
+window.__hotbox.packToText(pack)      // → Promise<string>: a line that says what it is, then HOTBOX1Z.….
+window.__hotbox.packFromText(text)    // → Promise<pack>; finds the pack in the middle of a message, folded lines too
+```
+
+- Without `targets`, **Send** calls `send(pack, null, info)` right away: the page shows its own list, or has only one place to send to.
+- `share(true)` is kept in the preferences (`"hbShare": true` in `hotbox.json`), so a studio can turn it on for everyone in the file it hands out. **Copy to share** puts the button or the group on the clipboard as text; whoever gets the message opens **Browse… → Paste…**, pastes it, sees what it holds and adds it.
+- Whatever the way, what arrives is added with `addPack`: as the next version, the one before left as it was.
 
 > Upgrading from *Super Hotbox*? Your settings are picked up automatically. Remove the old `super_hotbox` folder from `custom_nodes` so the two don't load side by side.
 

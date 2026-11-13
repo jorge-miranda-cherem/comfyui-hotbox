@@ -68,7 +68,8 @@ moves while it is in your hand, and a line marks where it will land. Let go outs
 was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
 
 A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
-nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** shows every button and group on cards.
+nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: your bottom bar,
+a lane for every group, and each button's name, color, icon, key and nodes.
 
 **Put any tool anywhere**
 

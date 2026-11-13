@@ -62,6 +62,8 @@
     customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
     customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
     customKeys: {},         /* a key of its own for a bar button (uid: 'q'), set in its Edit Button box; it works while the button shows */
+    customIcons: {},        /* the sign picked for a saved button in the button editor (uid: '◆'), where its sparkles were */
+    hbShare: false,         /* the button editor shows Copy to share / Paste: a button or a group travels as text (off: not shown) */
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
@@ -170,6 +172,7 @@
     if (rev < 6 && S.hbStyle === 'pro') S.hbStyle = 'classic';
     S.cfgRev = 6;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
+    if (!S.customIcons || typeof S.customIcons !== 'object' || Array.isArray(S.customIcons)) S.customIcons = {};
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
       S.hbCode = 'Backquote';
@@ -322,6 +325,7 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) {}
     /* the steps to undo belonged to the preferences that were in use until now */
     HB_UNDO = [];
+    HB_REDO = [];
     updateTopBarButtonState();
     hbRedrawAll();
   }
@@ -1072,52 +1076,191 @@
       '.shb-ebtn-row{flex-wrap:wrap}',
       '.shb-ebtn-key{min-width:96px;justify-content:center;font-weight:600}',
       '.shb-ebtn-row .shb-btn.shb-na{opacity:.45}',
-      /* The button browser */
-      '.shb-modal.shb-brw{width:min(1040px,95vw);height:min(780px,90vh);max-height:90vh;padding:0;gap:0;overflow:hidden}',
-      '.shb-brw > .shb-modal-t,.shb-ted > .shb-modal-t{padding:14px 18px 12px;gap:12px;flex-shrink:0}',
+      /* The nodes of a saved button (and what it shares with the header of the button editor) */
+      '.shb-ted > .shb-modal-t{padding:14px 18px 12px;gap:12px;flex-shrink:0}',
       '.shb-brw-title{display:inline-flex;align-items:center;gap:9px;min-width:0}',
       '.shb-brw-title > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.shb-brw-title small{font:400 11.5px/1.2 Inter,system-ui,sans-serif;color:#8a8a8a;margin-left:4px;white-space:nowrap}',
       '.shb-brw-tools{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}',
       '.shb-brw-tools .shb-btn:disabled,.shb-ted-foot .shb-btn:disabled{opacity:.4;pointer-events:none}',
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
-      '.shb-brw-find{position:relative;display:inline-flex;align-items:center}',
-      '.shb-brw-find .shb-ico{position:absolute;left:9px;color:#7d7d7d;pointer-events:none}',
-      '.shb-brw-find .shb-input{width:200px;padding-left:28px}',
-      '.shb-brw-body{flex:1;min-height:0;overflow-y:auto;padding:2px 18px 18px;scrollbar-width:thin}',
-      '.shb-brw-sec{margin:16px 0 9px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:#a9a9a9}',
-      '.shb-brw-sec small{font-weight:400;letter-spacing:0;text-transform:none;color:#6e6e6e;margin-left:8px}',
-      '.shb-brw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}',
-      '.shb-brw-card{--shb-tint:#b9a6ff;position:relative;display:flex;flex-direction:column;gap:6px;padding:11px 12px 9px 14px;border-radius:10px;background:#262628;border:1px solid #34343a;cursor:pointer;user-select:none;touch-action:none;transition:border-color .12s,background .12s}',
-      '.shb-brw-card:hover{border-color:#5a5a64;background:#2b2b2e}',
-      '.shb-brw-card::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--shb-tint)}',
-      '.shb-brw-card.shb-brw-fill{background:color-mix(in srgb,var(--shb-tint) 18%,#262628)}',
-      '.shb-brw-c1{display:flex;align-items:center;gap:8px;min-width:0}',
-      '.shb-brw-c1 b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px/1.25 Inter,system-ui,sans-serif;color:#f0f0f0}',
-      '.shb-brw-ico{display:inline-grid;place-items:center;color:var(--shb-tint);flex-shrink:0}',
-      '.shb-brw-ico .shb-ico{color:inherit !important}',
-      '.shb-brw-c2{font:400 11.5px/1.35 Inter,system-ui,sans-serif;color:#8f8f95;min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.shb-brw-c3{display:flex;align-items:center;gap:6px;min-height:26px}',
-      '.shb-brw-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#33333a;color:#cfcfd6;font:500 10.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;max-width:140px;overflow:hidden}',
-      '.shb-brw-chip > span{overflow:hidden;text-overflow:ellipsis}',
-      '.shb-brw-chip-no{background:transparent;color:#66666c;padding-left:0}',
-      '.shb-brw-acts{margin-left:auto;display:inline-flex;gap:2px;opacity:0;transition:opacity .12s}',
-      '.shb-brw-card:hover .shb-brw-acts,.shb-brw-grp:hover .shb-brw-acts{opacity:1}',
-      '.shb-brw .shb-key{font:600 10px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#d6d6d6;background:#1b1b1d;border:1px solid #45454c;border-radius:4px;padding:3px 5px;flex-shrink:0}',
-      '.shb-brw-dragging{opacity:.4}',
-      '.shb-brw-grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}',
-      '.shb-brw-grp{--shb-tint:#7aa7e0;display:flex;flex-direction:column;gap:9px;padding:10px 12px 12px;border-radius:10px;background:#1f1f21;border:1px dashed #3d3d44;transition:border-color .12s,background .12s}',
-      '.shb-brw-grp.shb-brw-hot{border-color:#6ea5f5;border-style:solid;background:#222a36}',
-      '.shb-brw-ghd{display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;min-height:28px}',
-      '.shb-brw-ghd b{font:600 13px/1.25 Inter,system-ui,sans-serif;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.shb-brw-ghd small{font:400 11px/1 Inter,system-ui,sans-serif;color:#7d7d83;white-space:nowrap}',
-      '.shb-brw-mems{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center}',
-      '.shb-brw-mem{--shb-tint:#b0b0b8;display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 8px;border-radius:8px;background:#2c2c30;border:1px solid #3a3a41;color:#e4e4e8;font:500 12px/1 Inter,system-ui,sans-serif;cursor:grab;user-select:none;touch-action:none}',
-      '.shb-brw-mem:hover{border-color:#5a5a64}',
-      '.shb-brw-out{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;font:600 12px/1 Inter,system-ui,sans-serif;font-style:normal;color:#9a9aa2;cursor:pointer}',
-      '.shb-brw-out:hover{background:rgba(232,115,95,.3);color:#fff}',
-      '.shb-brw-none{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:#6e6e74}',
-      '.shb-brw-foot{flex-shrink:0;padding:9px 18px;border-top:1px solid #2e2e32;font:400 11px/1.3 Inter,system-ui,sans-serif;color:#7d7d83}',
+      /* The button editor (Settings → Saved Buttons → Browse…): the look of the studio tools it sits beside —
+         neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
+      '.shb-modal.shb-bed{position:relative;width:min(1360px,96vw);height:min(820px,92vh);max-height:92vh;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none}',
+      '.shb-bed *{box-sizing:border-box}',
+      '.shb-bed ::-webkit-scrollbar{width:8px;height:8px}',
+      '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0 0);border-radius:4px}',
+      '.shb-bed ::-webkit-scrollbar-track{background:transparent}',
+      '.shb-bed button{font-family:inherit;cursor:pointer}',
+      '.shb-bed button:disabled{cursor:default}',
+      '.shb-bed kbd,.shb-bed-kc,.shb-bed-cnt,.shb-bed-key,.shb-bed-n,.shb-bed-lab em,.shb-bed-pill em{font-family:"IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;font-style:normal}',
+      '.shb-bed-hd{height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;border-bottom:1px solid oklch(0.27 0 0)}',
+      '.shb-bed-mark{width:9px;height:9px;border-radius:2px;background:oklch(0.82 0.13 78);flex:none}',
+      '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0 0)}',
+      '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0 0)}',
+      '.shb-bed-t2{color:oklch(0.8 0 0)}',
+      '.shb-bed-sum{font-size:12px;color:oklch(0.5 0 0);margin-left:4px;white-space:nowrap}',
+      '.shb-bed-sp{flex:1}',
+      '.shb-bed-find{height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0 0);border-radius:5px;background:oklch(0.2 0 0);color:oklch(0.5 0 0);cursor:text}',
+      '.shb-bed-find:focus-within{border-color:oklch(0.55 0.09 78)}',
+      '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0 0);font:inherit;user-select:text}',
+      '.shb-bed-find input::placeholder{color:oklch(0.5 0 0)}',
+      '.shb-bed-kc{font-size:10px;line-height:1;color:oklch(0.5 0 0);padding:2px 5px;border-radius:3px;background:oklch(0.27 0 0)}',
+      '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0 0);font-size:12.5px}',
+      '.shb-bed-hb:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-hb:disabled{color:oklch(0.42 0 0);background:transparent}',
+      '.shb-bed-done{height:30px;padding:0 16px;border:0;border-radius:4px;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-size:12.5px;font-weight:600}',
+      '.shb-bed-done:hover{background:oklch(0.87 0.12 78)}',
+      '.shb-bed-mid{flex:1;min-height:0;display:flex}',
+      '.shb-bed-main{flex:1;min-width:0;display:flex;flex-direction:column}',
+      '.shb-bed-barbox{flex:none;padding:14px 18px 12px;border-bottom:1px solid oklch(0.27 0 0);background:oklch(0.205 0 0)}',
+      '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
+      '.shb-bed-bar{margin-top:9px;min-height:40px;max-height:112px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);overflow-y:auto}',
+      '.shb-bed-pill{flex:none;height:28px;display:flex;align-items:center;gap:7px;padding:0 11px;border-radius:999px;background:oklch(0.26 0 0);font-size:12px;color:oklch(0.9 0 0);white-space:nowrap;cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s}',
+      '.shb-bed-pill:hover{background:oklch(0.3 0 0)}',
+      '.shb-bed-pill.shb-mute{background:oklch(0.24 0 0);color:oklch(0.6 0 0)}',
+      '.shb-bed-pill.shb-mute:not([data-bed-pill]){cursor:default}',
+      '.shb-bed-pill kbd{font-size:10px;color:oklch(0.45 0 0)}',
+      '.shb-bed-pill.shb-on,.shb-bed-pill.shb-hot{box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
+      '.shb-bed-pill.shb-hot{background:oklch(0.36 0.05 78)}',
+      '.shb-bed-pill > i{width:8px;height:8px;border-radius:2px;background:var(--shb-tint,oklch(0.5 0 0));flex:none}',
+      '.shb-bed-pill em{font-size:10px;line-height:1.5;padding:0 5px;border-radius:999px;background:oklch(0.32 0 0);color:oklch(0.75 0 0)}',
+      '.shb-bed-g{font-size:12px;line-height:1;color:var(--shb-tint)}',
+      '.shb-bed-vsep{flex:none;width:1px;height:18px;background:oklch(0.32 0 0);margin:0 4px}',
+      '.shb-bed-barnone{font-size:12px;color:oklch(0.45 0 0)}',
+      '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden}',
+      '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0 0);border:1px solid oklch(0.29 0 0);transition:background .14s,border-color .14s}',
+      '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
+      '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0 0);border-color:oklch(0.27 0 0)}',
+      '.shb-bed-lane.shb-hot{background:oklch(0.25 0.012 78);border-color:oklch(0.6 0.1 78)}',
+      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0 0);border-radius:8px 8px 0 0;cursor:pointer}',
+      '.shb-bed-lhd:hover{background:oklch(0.26 0 0)}',
+      '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0 0)}',
+      '.shb-bed-loose > .shb-bed-lhd{cursor:default;background:transparent}',
+      '.shb-bed-sq{width:10px;height:10px;border-radius:3px;background:var(--shb-tint,oklch(0.45 0 0));flex:none}',
+      '.shb-bed-lhd b{flex:1;min-width:0;font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0 0)}',
+      '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0 0);font-size:10px;color:oklch(0.6 0 0);white-space:nowrap}',
+      '.shb-bed-place.shb-bar{color:oklch(0.82 0.1 78)}',
+      '.shb-bed-lbody{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}',
+      '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0 0);box-shadow:inset 0 0 0 1px oklch(0.3 0 0);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
+      '.shb-bed-card:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-card.shb-on{background:oklch(0.31 0 0);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
+      '.shb-bed-card.shb-dim{opacity:.28}',
+      '.shb-bed-src{opacity:.35 !important}',
+      '.shb-bed-card::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--shb-tint)}',
+      '.shb-bed-ico{flex:none;display:inline-grid;place-items:center;min-width:14px;font-size:13px;line-height:1;color:var(--shb-tint)}',
+      '.shb-bed-ico .shb-ico{color:inherit !important}',
+      '.shb-bed-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
+      '.shb-bed-ct b{font-size:12.5px;font-weight:500;color:oklch(0.9 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-card.shb-on .shb-bed-ct b{color:oklch(0.99 0 0)}',
+      '.shb-bed-ct small{font-size:11px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-key{flex:none;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:3px;border:1px solid oklch(0.36 0 0);font-size:10px;color:oklch(0.8 0 0)}',
+      '.shb-bed-n{flex:none;font-size:10px;line-height:1.6;padding:0 6px;border-radius:999px;background:oklch(0.3 0 0);color:oklch(0.7 0 0)}',
+      '.shb-bed-lib{flex:none;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid oklch(0.36 0 0);color:oklch(0.62 0 0)}',
+      '.shb-bed-empty{flex:none;height:86px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(0.36 0 0);border-radius:6px;font-size:12px;color:oklch(0.5 0 0)}',
+      '.shb-bed-hint{flex:none;margin-top:4px;padding:10px 12px;border-radius:6px;background:oklch(0.21 0 0);font-size:11.5px;line-height:1.5;color:oklch(0.55 0 0)}',
+      '.shb-bed-hint kbd{font-size:10.5px;padding:0 4px;border-radius:3px;background:oklch(0.3 0 0);color:oklch(0.85 0 0)}',
+      '.shb-bed-new{width:200px;flex:none;border:1px dashed oklch(0.36 0 0);border-radius:8px;background:transparent;color:oklch(0.62 0 0);font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:background .14s,border-color .14s}',
+      '.shb-bed-new:hover{background:oklch(0.25 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-new.shb-hot{border-color:oklch(0.7 0.11 78);background:oklch(0.26 0.02 78)}',
+      '.shb-bed-new span{font-size:20px;line-height:1}',
+      '.shb-bed-new small{font-size:11px;color:oklch(0.48 0 0)}',
+      '.shb-bed-fresh .shb-bed-card{animation:shbBedRise .18s ease-out}',
+      '.shb-bed-line{position:fixed;left:0;top:0;z-index:5;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
+      '.shb-bed-line.shb-on{opacity:1}',
+      '.shb-bed-ghost,.shb-bed-ghost *{box-sizing:border-box}',
+      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
+      '.shb-bed-insp{width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
+      '.shb-bed-ibody{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}',
+      '.shb-bed-f{display:flex;flex-direction:column;gap:8px}',
+      '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0 0)}',
+      '.shb-bed-lab em{color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-name{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:6px;background:oklch(0.25 0 0);border:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-name:focus-within{border-color:oklch(0.55 0.09 78)}',
+      '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0 0);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
+      '.shb-bed-name .shb-bed-ico{font-size:15px}',
+      '.shb-bed-name .shb-bed-sq{width:11px;height:11px}',
+      '.shb-bed-sws{display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
+      '.shb-bed-sw{width:24px;height:24px;border:0;border-radius:6px;padding:0;transition:transform .1s}',
+      '.shb-bed-sw:hover{transform:scale(1.12)}',
+      '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0 0),0 0 0 4px oklch(0.92 0 0)}',
+      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0 0)}',
+      '.shb-bed-fill.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-fill:disabled{opacity:.4}',
+      '.shb-bed-gl{display:flex;gap:4px}',
+      '.shb-bed-gl button{width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0 0);font-size:14px;line-height:1;padding:0}',
+      '.shb-bed-gl button:hover{background:oklch(0.3 0 0)}',
+      '.shb-bed-gl button.shb-on{background:oklch(0.32 0 0);color:var(--shb-tint)}',
+      '.shb-bed-keyb{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font-size:12.5px;text-align:left;transition:border-color .12s}',
+      '.shb-bed-keyb.shb-on{border-color:oklch(0.82 0.13 78)}',
+      '.shb-bed-keyb kbd{min-width:24px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:4px;border:1px solid oklch(0.4 0 0);background:oklch(0.27 0 0);font-size:11.5px;color:inherit}',
+      '.shb-bed-keyb span{flex:1;color:oklch(0.55 0 0)}',
+      '.shb-bed-keyb.shb-on span{color:oklch(0.85 0.12 78)}',
+      '.shb-bed-warn{font-size:11.5px;line-height:1.4;color:oklch(0.78 0.13 60)}',
+      '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px}',
+      '.shb-bed-chip{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;color:oklch(0.66 0 0);font-size:12px;transition:all .12s}',
+      '.shb-bed-chip.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-chip i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0 0))}',
+      '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0 0)}',
+      '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0 0);font-size:12px;color:oklch(0.78 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-nodes div:last-child{border-bottom:0}',
+      '.shb-bed-nodes i{width:6px;height:6px;border-radius:2px;flex:none}',
+      '.shb-bed-nodes .shb-more{font-size:11.5px;color:oklch(0.5 0 0)}',
+      '.shb-bed-pl{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid oklch(0.3 0 0);border-radius:6px;background:transparent;text-align:left;transition:all .12s}',
+      '.shb-bed-pl:hover{border-color:oklch(0.42 0 0)}',
+      '.shb-bed-pl.shb-on{background:oklch(0.27 0.01 78);border-color:oklch(0.55 0.09 78)}',
+      '.shb-bed-pl > i{width:14px;height:14px;border-radius:50%;border:1.5px solid oklch(0.45 0 0);flex:none}',
+      '.shb-bed-pl.shb-on > i{border:4px solid oklch(0.82 0.13 78)}',
+      '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0 0)}',
+      '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0 0)}',
+      '.shb-bed-two{display:flex;gap:6px}',
+      '.shb-bed-ob{flex:1;height:30px;border:1px solid oklch(0.33 0 0);border-radius:5px;background:transparent;color:oklch(0.82 0 0);font-size:12px}',
+      '.shb-bed-ob:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-ob:disabled{opacity:.35;background:transparent}',
+      '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0 0);font-size:11.5px;line-height:1.55;color:oklch(0.55 0 0)}',
+      '.shb-bed-note b{font-weight:400;color:oklch(0.8 0 0)}',
+      '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0 0)}',
+      '.shb-bed-ab{height:32px;border:1px solid oklch(0.36 0 0);border-radius:5px;background:transparent;color:oklch(0.92 0 0);font-size:12.5px}',
+      '.shb-bed-ab:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-ab.shb-pri{border-color:oklch(0.6 0.1 78);color:oklch(0.88 0.11 78)}',
+      '.shb-bed-ab:disabled{opacity:.4;background:transparent}',
+      '.shb-bed-tb{flex:1;height:28px;border:0;border-radius:4px;background:transparent;color:oklch(0.66 0 0);font-size:12px}',
+      '.shb-bed-tb:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-tb.shb-red{color:oklch(0.7 0.13 25)}',
+      '.shb-bed-tb.shb-red:hover{background:oklch(0.3 0.06 25);color:oklch(0.9 0.08 25)}',
+      '.shb-bed-none{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;font-size:13px;color:oklch(0.62 0 0)}',
+      '.shb-bed-none small{font-size:11.5px;line-height:1.6;color:oklch(0.48 0 0)}',
+      '.shb-bed-ta{width:100%;height:130px;resize:none;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font:400 11px/1.4 "IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;padding:8px;outline:none;user-select:text;word-break:break-all}',
+      '.shb-bed-ta:focus{border-color:oklch(0.55 0.09 78)}',
+      '.shb-bed-ft{height:36px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid oklch(0.27 0 0);font-size:11.5px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-ft > span{display:flex;align-items:center;gap:5px}',
+      '.shb-bed-ft kbd{height:18px;display:flex;align-items:center;padding:0 6px;border-radius:3px;background:oklch(0.28 0 0);color:oklch(0.8 0 0);font-size:10.5px}',
+      '.shb-bed-saved{color:oklch(0.6 0 0)}',
+      '.shb-bed-saved i{width:6px;height:6px;border-radius:50%;background:oklch(0.72 0.15 150)}',
+      '.shb-bed-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:14px;height:38px;padding:0 8px 0 16px;border-radius:8px;background:oklch(0.3 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px;color:oklch(0.94 0 0);white-space:nowrap;animation:shbBedToast .16s ease-out}',
+      '.shb-bed-toast.shb-plain{padding-right:16px}',
+      '.shb-bed-toast button{height:26px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.85 0.12 78);font-size:12.5px;font-weight:600}',
+      '.shb-bed-toast button:hover{background:oklch(0.36 0 0)}',
+      '@keyframes shbBedToast{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}',
+      '@keyframes shbBedRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
+      /* a saved button's own sign, picked in the button editor, where its sparkles were */
+      '.shb-glyph{font-style:normal;font-weight:400;line-height:1;color:oklch(0.82 0.11 300)}',
+      '.shb-tinted > .shb-tpl-ico .shb-glyph,.shb-pt-row[style*="--shb-tint"] .shb-tpl-ico .shb-glyph{color:var(--shb-tint)}',
+      /* buttons someone sent: a card asks before anything is added (window.__hotbox.offer) */
+      '.shb-offer{position:fixed;right:18px;bottom:18px;z-index:2147483200;width:330px;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:8px;background:oklch(0.26 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 14px 40px rgba(0,0,0,.5);font:400 12.5px/1.45 "IBM Plex Sans",Inter,system-ui,sans-serif;color:oklch(0.9 0 0);animation:shbBedRise .18s ease-out}',
+      '.shb-offer *{box-sizing:border-box}',
+      '.shb-offer-t{display:flex;align-items:center;gap:9px}',
+      '.shb-offer-t b{font-weight:600;color:oklch(0.96 0 0)}',
+      '.shb-offer-b{display:flex;flex-direction:column;gap:3px;color:oklch(0.86 0 0)}',
+      '.shb-offer-b small{font-size:11.5px;color:oklch(0.58 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-offer-a{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:30px;font-size:12px;color:oklch(0.7 0 0)}',
+      '.shb-offer-a button{height:30px;padding:0 12px;border:1px solid oklch(0.38 0 0);border-radius:5px;background:transparent;color:oklch(0.86 0 0);font:inherit;cursor:pointer}',
+      '.shb-offer-a button:hover{background:oklch(0.32 0 0)}',
+      '.shb-offer-a button.shb-pri{border:0;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-weight:600}',
+      '.shb-offer-a button.shb-pri:hover{background:oklch(0.87 0.12 78)}',
       /* The nodes of a saved button */
       '.shb-modal.shb-ted{width:min(920px,95vw);height:min(700px,90vh);max-height:90vh;padding:0;gap:0;overflow:hidden}',
       '.shb-select.shb-ted-hist{width:auto;max-width:210px}',
@@ -6627,7 +6770,7 @@
     return '';
   }
 
-  /* The one name a button shows everywhere (bars, drawer, Settings, the button browser). A saved button of your
+  /* The one name a button shows everywhere (bars, drawer, Settings, the button editor). A saved button of your
      own and a group keep it in themselves; anything else (a tool, a node, a shared library's button) keeps the
      name you gave it in customLabels */
   function hbBtnName(uid, own) {
@@ -6664,7 +6807,7 @@
       var src = btnEl && btnEl.querySelector(':scope > .shb-num, :scope > .shb-pin-dot, :scope > .shb-tpl-ico, :scope > .shb-ico');
       lead = src ? src.outerHTML : '';
     } catch (e) {}
-    if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' : '<i class="shb-pin-dot"></i>');
+    if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? tplIcoHTML(uid, 15) : '<i class="shb-pin-dot"></i>');
     var cur = (S.customColors && S.customColors[uid]) || '';
     var fill = !!(S.customFill && S.customFill[uid]);
     var bg = owns(document.createElement('div'));
@@ -7207,7 +7350,7 @@
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
     if (item.off) btnCls += ' shb-na';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
-      : (isTpl ? '<span class="shb-tpl-ico">' + ico('sparkles', hbIsFluid() ? 15 : 13) + '</span>'
+      : (isTpl ? tplIcoHTML(item.uid, hbIsFluid() ? 15 : 13)
         : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13)));
     var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
       : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
@@ -7259,7 +7402,7 @@
         var uid = 'tpl:' + tp.id;
         var inBar = allPinned.indexOf(uid) >= 0;
         return '<button type="button" class="shb-btn shb-btn-row shb-tpl" data-hb-run="' + esc(uid) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to add the nodes" style="cursor:grab">' +
-          '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0"><span class="shb-tpl-ico">' + ico('sparkles') + '</span>' +
+          '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0">' + tplIcoHTML('tpl:' + tp.id) +
             '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(tp.name) + '</span><span class="shb-tpl-n">' + esc(tp.count) + '</span></span>' +
           '<span style="display:inline-flex;align-items:center;gap:4px">' +
             (inBar ? '<span class="shb-inbar">✓</span>' : '') +
@@ -7962,12 +8105,14 @@
   }
 
   /* ---------------------------------------------------------------------
-   * UNDO, for edit mode and the button browser: every change to the bars, the groups, the saved buttons and
+   * UNDO, for edit mode and the button editor: every change to the bars, the groups, the saved buttons and
    * their names, colors and keys is taken back one step at a time (Ctrl+Z, or Undo in the edit bar)
    * --------------------------------------------------------------------- */
   var HB_UNDO = [];
   var HB_UNDO_KEYS = ['customAddBar', 'customAddBySig', 'customToolsBar', 'customBotBar', 'customLabels', 'customColors', 'customFill',
-    'customKeys', 'hbKeep', 'hotboxPins', 'templates', 'hbGroups'];
+    'customKeys', 'customIcons', 'hbKeep', 'hotboxPins', 'templates', 'hbGroups'];
+  /* what Undo took back, to be done again (Redo): gone as soon as something new changes */
+  var HB_REDO = [];
 
   function hbUndoShot() {
     var o = {};
@@ -7979,6 +8124,7 @@
   function hbUndoPush(what) {
     var shot = hbUndoShot();
     var top = HB_UNDO[HB_UNDO.length - 1];
+    HB_REDO = [];
     if (top && top.shot === shot && !top.libs.length) { top.what = what || top.what; return top; }
     top = { shot: shot, what: what || 'the last change', libs: [] };
     HB_UNDO.push(top);
@@ -7998,6 +8144,9 @@
     var u = HB_UNDO.pop(), o = null;
     try { o = JSON.parse(u.shot); } catch (e) { o = null; }
     if (!o) return false;
+    /* a step that put a file back into a shared library is not done again from here */
+    if (u.libs.length) HB_REDO = [];
+    else HB_REDO.push({ shot: hbUndoShot(), what: u.what });
     HB_UNDO_KEYS.forEach(function (k) { S[k] = o[k]; });
     if (!Array.isArray(S.templates)) S.templates = [];
     /* a button deleted from a shared library goes back into its folder */
@@ -8011,14 +8160,28 @@
     return true;
   }
 
-  /* whatever shows the buttons is drawn again: the hotbox, Settings and the button browser */
+  function hbRedo() {
+    if (!HB_REDO.length) { setStatus('ok', 'Nothing to redo'); return false; }
+    var r = HB_REDO.pop(), o = null;
+    try { o = JSON.parse(r.shot); } catch (e) { o = null; }
+    if (!o) return false;
+    HB_UNDO.push({ shot: hbUndoShot(), what: r.what, libs: [] });
+    HB_UNDO_KEYS.forEach(function (k) { S[k] = o[k]; });
+    if (!Array.isArray(S.templates)) S.templates = [];
+    save();
+    hbRedrawAll();
+    setStatus('ok', '↷ Did ' + r.what + ' again');
+    return true;
+  }
+
+  /* whatever shows the buttons is drawn again: the hotbox, Settings and the button editor */
   function hbRedrawAll() {
     if (HB.el) hbPaint();
     if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
     if (BRW.el) brwRender();
   }
 
-  /* Hotbox windows on top of the page (the button browser, the node editor, Edit Button): Esc closes the top
+  /* Hotbox windows on top of the page (the button editor, the node editor, Edit Button): Esc closes the top
      one, and no key reaches the hotbox or the canvas behind them */
   var HB_MODALS = [];
   function modalOpen(closeFn) { HB_MODALS.push(closeFn); return closeFn; }
@@ -10615,6 +10778,7 @@
         if (a === 'editreset') {
           hbUndoPush('Reset');
           S.customKeys = {};
+          S.customIcons = {};
           S.hbGroups = {};
           S.customAddBar = null;
           S.customAddBySig = {};
@@ -12204,6 +12368,7 @@
     if (S.customColors) delete S.customColors[uid];
     if (S.customFill) delete S.customFill[uid];
     if (S.customKeys) delete S.customKeys[uid];
+    if (S.customIcons) delete S.customIcons[uid];
     save();
     setStatus('ok', 'Deleted the saved button "' + t.name + '"');
   }
@@ -12289,7 +12454,7 @@
     });
     if (!found && items.length) hbBotAppend(items);
     delete S.hbGroups[gid];
-    ['customLabels', 'customColors', 'customFill', 'customKeys'].forEach(function (k) { if (S[k]) delete S[k][uid]; });
+    ['customLabels', 'customColors', 'customFill', 'customKeys', 'customIcons'].forEach(function (k) { if (S[k]) delete S[k][uid]; });
     delete HB.grpOpen[gid];
   }
 
@@ -12336,266 +12501,1128 @@
   }
 
   /* ---------------------------------------------------------------------
-   * 14b. THE BUTTON BROWSER (Settings → Saved Buttons → Browse): every saved button and every group on cards,
-   * to rename, color and give a key to, to put into groups and take out of them, to edit the nodes of, and to
-   * delete. Every change saves itself and can be taken back (Undo, Ctrl+Z)
+   * 14b. THE BUTTON EDITOR (Settings → Saved Buttons → Browse…): the bottom bar as it is, a lane for every
+   * group with its buttons, a lane for the saved buttons that are in no group, and an inspector for the one
+   * that is picked (name, color, icon, key, group and what it adds; for a group, where it shows and its place
+   * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
+   * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
-  var BRW = { el: null, q: '', drag: null, noClick: 0 };
+  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '' };
+  /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
+  var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
+
+  /* the sign picked for a saved button, or '' while it keeps the sparkles it came with */
+  function hbGlyphOf(uid) {
+    var g = (S.customIcons && typeof S.customIcons === 'object') ? S.customIcons[uid] : '';
+    return (g && BRW_GLYPHS.indexOf(g) > 0) ? g : '';
+  }
+
+  function tplIcoHTML(uid, size) {
+    var g = hbGlyphOf(uid);
+    return '<span class="shb-tpl-ico">' + (g ? '<b class="shb-glyph" style="font-size:' + (size || 14) + 'px">' + g + '</b>' : ico('sparkles', size)) + '</span>';
+  }
+
+  /* the bottom bar's list, as it is (a bar that was never customized makes its own) */
+  function brwBotUids() {
+    return Array.isArray(S.customBotBar) ? S.customBotBar.slice() : getBarUids('bot', null);
+  }
+
+  function brwInGroup() {
+    var m = {};
+    Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (g) {
+      ((S.hbGroups[g] || {}).items || []).forEach(function (u) { m[u] = g; });
+    });
+    return m;
+  }
+
+  /* every group: the ones in the bottom bar first, in its order */
+  function brwGroups() {
+    var all = Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}), out = [];
+    brwBotUids().forEach(function (u) {
+      var g = /^grp:/.test(u) ? u.slice(4) : '';
+      if (g && all.indexOf(g) >= 0 && out.indexOf(g) < 0) out.push(g);
+    });
+    all.forEach(function (g) { if (out.indexOf(g) < 0) out.push(g); });
+    return out;
+  }
+
+  /* the saved buttons that are in no group: the ones in the bottom bar first, in its order */
+  function brwLoose() {
+    var inG = brwInGroup(), out = [];
+    var all = (Array.isArray(S.templates) ? S.templates : []).concat(libSharedButtons())
+      .map(function (t) { return 'tpl:' + t.id; }).filter(function (u) { return !inG[u]; });
+    brwBotUids().forEach(function (u) { if (all.indexOf(u) >= 0 && out.indexOf(u) < 0) out.push(u); });
+    all.forEach(function (u) { if (out.indexOf(u) < 0) out.push(u); });
+    return out;
+  }
+
+  /* where a group shows: 'bar' (the bottom bar), 'other' (the dock or the context bar of some kind of node,
+     where edit mode put it) or 'hidden' (kept, with its buttons, in no bar) */
+  function brwPlace(gid) {
+    var uid = 'grp:' + gid, where = '';
+    hbBarLists().forEach(function (L) {
+      if (L.get().indexOf(uid) >= 0 && where !== 'bot') where = L.bar;
+    });
+    return where === 'bot' ? 'bar' : (where ? 'other' : 'hidden');
+  }
+
+  function brwTint(uid) {
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : 'oklch(0.62 0 0)');
+  }
+
+  function brwNodeNames(tp) {
+    return ((tp && tp.data && tp.data.nodes) || []).map(function (n) { return tedNodeName(n); }).filter(Boolean);
+  }
+
+  var BRW_NODE_HUE = [['lora', 300], ['load', 250], ['clip', 195], ['model', 150], ['image', 78], ['sampler', 25], ['video', 150], ['vae', 195]];
+  function brwNodeDot(title) {
+    var s = String(title || '').toLowerCase();
+    for (var i = 0; i < BRW_NODE_HUE.length; i++) if (s.indexOf(BRW_NODE_HUE[i][0]) >= 0) return 'oklch(0.74 0.14 ' + BRW_NODE_HUE[i][1] + ')';
+    return 'oklch(0.66 0 0)';
+  }
+
+  function brwCanEdit(uid) {
+    var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
+    return !!(tp && (!tp.lib || tp.canDelete));
+  }
 
   function brwOpen() {
     if (BRW.el) { brwRender(); return; }
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
-    bg.innerHTML = '<div class="shb-modal shb-brw"></div>';
+    bg.innerHTML =
+      '<div class="shb-modal shb-bed shb-bed-fresh">' +
+        '<div class="shb-bed-hd">' +
+          '<span class="shb-bed-mark"></span><b>Hotbox</b><i>/</i><span class="shb-bed-t2">Buttons</span><span class="shb-bed-sum" data-bed-sum></span>' +
+          '<span class="shb-bed-sp"></span>' +
+          '<label class="shb-bed-find"><span>⌕</span><input type="text" data-bed-q spellcheck="false" placeholder="Find a button or node…"><span class="shb-bed-kc">/</span></label>' +
+          '<span data-bed-extra></span>' +
+          '<span class="shb-bed-two" style="gap:2px">' +
+            '<button type="button" class="shb-bed-hb" data-bed-act="undo" title="Undo (Ctrl+Z)">↶ Undo</button>' +
+            '<button type="button" class="shb-bed-hb" data-bed-act="redo" title="Redo (Ctrl+Shift+Z)">↷</button>' +
+          '</span>' +
+          '<button type="button" class="shb-bed-done" data-bed-act="close">Done</button>' +
+        '</div>' +
+        '<div class="shb-bed-mid">' +
+          '<div class="shb-bed-main">' +
+            '<div class="shb-bed-barbox">' +
+              '<div class="shb-bed-cap">Your bottom bar <small>as the hotbox shows it · drop a button on a group to put it in · drag a button or a group here to move it along the bar</small></div>' +
+              '<div class="shb-bed-bar" data-bed-bar></div>' +
+            '</div>' +
+            '<div class="shb-bed-lanes" data-bed-lanes></div>' +
+          '</div>' +
+          '<div class="shb-bed-insp" data-bed-insp></div>' +
+        '</div>' +
+        '<div class="shb-bed-ft">' +
+          [['drag', 'move'], ['dbl-click', 'edit nodes'], ['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']].map(function (h) {
+            return '<span><kbd>' + h[0] + '</kbd>' + h[1] + '</span>';
+          }).join('') +
+          '<span class="shb-bed-sp"></span><span class="shb-bed-saved"><i></i><span data-bed-saved></span></span>' +
+        '</div>' +
+        '<div data-bed-toast></div>' +
+      '</div>' +
+      '<div class="shb-bed-line" data-bed-line></div>';
     document.body.appendChild(bg);
     BRW.el = bg;
     BRW.q = '';
+    BRW.sel = null;
+    BRW.panel = null;
+    BRW.saved = 0;
+    BRW.last = '';
+    BRW.inspFor = '';
     BRW.shut = modalOpen(function () { brwClose(); });
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
     bg.addEventListener('click', brwClick);
-    bg.addEventListener('pointerdown', brwDown);
-    bg.addEventListener('input', function (ev) {
-      if (!ev.target || !ev.target.hasAttribute || !ev.target.hasAttribute('data-brw-q')) return;
-      BRW.q = ev.target.value;
-      brwRenderBody();
+    bg.addEventListener('dblclick', function (ev) {
+      var c = ev.target && ev.target.closest ? ev.target.closest('[data-bed-card]') : null;
+      if (c && brwCanEdit(c.getAttribute('data-bed-card'))) tplEditOpen(c.getAttribute('data-bed-card').slice(4));
     });
-    bg.addEventListener('keydown', function (ev) {
-      if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName || '')) ev.stopPropagation();
+    bg.addEventListener('pointerdown', brwDown);
+    bg.addEventListener('input', brwInput);
+    bg.addEventListener('paste', function (ev) {
+      /* the text a teammate sent, pasted into its box: read as it lands */
+      if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-bed-paste')) setTimeout(function () { brwPasteRead(ev.target.value); }, 0);
     });
     libRefresh(true).then(function () { if (BRW.el) brwRender(); });
     brwRender();
+    setTimeout(function () {
+      var box = BRW.el && BRW.el.querySelector('.shb-bed');
+      if (box) box.classList.remove('shb-bed-fresh');
+    }, 260);
   }
 
   function brwClose() {
     var bg = BRW.el;
     if (!bg) return;
+    brwDragEnd();
+    if (BRW.grab) { if (HB.keyGrab === BRW.grab) HB.keyGrab = null; BRW.grab = null; }
+    clearTimeout(BRW.toastT);
     BRW.el = null;
-    BRW.drag = null;
+    BRW.panel = null;
     modalShut(BRW.shut);
     tipHide();
     if (bg.parentNode) bg.parentNode.removeChild(bg);
   }
 
-  /* where a group sits: "in the bottom bar" */
-  function brwWhere(uid) {
-    var names = { bot: 'bottom bar', add: 'dock', tools: 'context bar' }, seen = [];
-    hbBarLists().forEach(function (L) {
-      if (L.get().indexOf(uid) >= 0 && seen.indexOf(names[L.bar]) < 0) seen.push(names[L.bar]);
+  function brwToast(msg, undo) {
+    var box = BRW.el && BRW.el.querySelector('[data-bed-toast]');
+    if (!box) return;
+    clearTimeout(BRW.toastT);
+    box.innerHTML = '<div class="shb-bed-toast' + (undo ? '' : ' shb-plain') + '"><span>' + esc(msg) + '</span>' +
+      (undo ? '<button type="button" data-bed-act="undo">Undo</button>' : '') + '</div>';
+    BRW.toastT = setTimeout(function () { if (box.isConnected) box.innerHTML = ''; }, undo ? 4000 : 1600);
+  }
+
+  /* One change: it can be taken back, it saves itself, and whatever shows the buttons is drawn again.
+     Renames typed one after another on the same button are one step to take back, not one per letter */
+  function brwCommit(label, what, fn, toast) {
+    var merge = !!label && label === BRW.last && /^rename:/.test(label) && HB_UNDO[HB_UNDO.length - 1] === BRW.lastTop;
+    if (!merge) BRW.lastTop = hbUndoPush(what);
+    BRW.last = label || '';
+    fn();
+    save();
+    BRW.saved = Date.now();
+    hbRedrawAll();
+    if (toast) brwToast(toast.msg, toast.undo !== false);
+  }
+
+  function brwMatch(uid, q) {
+    if (!q) return true;
+    var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
+    return (hbUidLabel(uid) + ' ' + brwNodeNames(tp).join(' ')).toLowerCase().indexOf(q) >= 0;
+  }
+
+  function brwCardHTML(uid, lane, q) {
+    var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
+    var sub = tp ? brwNodeNames(tp).slice(0, 3).join(' · ')
+      : (/^tool:/.test(uid) ? 'Hotbox tool' : (/^model:/.test(uid) ? 'Model' : 'Node'));
+    var icon = tp ? (hbGlyphOf(uid) || '✦') : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 13);
+    var key = hbKeyName(hbKeyFor(uid));
+    var on = BRW.sel && BRW.sel.id === uid;
+    return '<div class="shb-bed-card' + (on ? ' shb-on' : '') + (brwMatch(uid, q) ? '' : ' shb-dim') + '" data-bed-card="' + esc(uid) + '" data-bed-lane="' + esc(lane) + '" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
+      '<span class="shb-bed-ico">' + icon + '</span>' +
+      '<span class="shb-bed-ct"><b>' + esc(hbUidLabel(uid)) + '</b><small>' + esc(sub) + '</small></span>' +
+      (tp && tp.lib ? '<span class="shb-bed-lib" title="From the shared library ' + esc(tp.libLabel || '') + (tp.canDelete ? '' : ' (read-only)') + '">' + esc(tp.libLabel || 'shared') + '</span>' : '') +
+      (key ? '<span class="shb-bed-key">' + esc(key) + '</span>' : '') +
+      (tp ? '<span class="shb-bed-n" title="Nodes it adds">' + esc(tp.count) + '</span>' : '') +
+    '</div>';
+  }
+
+  function brwBarHTML() {
+    var tools = [], pins = '';
+    brwBotUids().forEach(function (u) {
+      if (/^grp:/.test(u)) {
+        var g = grpById(u.slice(4));
+        if (!g) return;
+        pins += '<span class="shb-bed-pill' + (BRW.sel && BRW.sel.id === u ? ' shb-on' : '') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '">' +
+          '<i></i>' + esc(hbBtnName(u, g.name)) + '<em>' + (g.items || []).length + '</em></span>';
+        return;
+      }
+      var it = null;
+      try { it = resolveBarItem(u, null, true, 'bot'); } catch (e) { it = null; }
+      if (!it) return;
+      if (it.kind === 'tool') {
+        tools.push(it.label + (it.kbd ? ' (' + it.kbd + ')' : ''));
+      } else if (it.kind === 'template') {
+        pins += '<span class="shb-bed-pill' + (BRW.sel && BRW.sel.id === u ? ' shb-on' : '') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '">' +
+          '<span class="shb-bed-g">' + (hbGlyphOf(u) || '✦') + '</span>' + esc(it.label) + '</span>';
+      } else {
+        pins += '<span class="shb-bed-pill shb-mute" data-bed-pill="' + esc(u) + '"><i></i>' + esc(it.label) + '</span>';
+      }
     });
-    return seen.length ? 'in the ' + seen.join(' and the ') : 'not on a bar';
+    /* the hotbox's own actions keep the start of the bar, each where it applies: here they are one quiet
+       pill, so what is yours has the room */
+    var toolsHTML = tools.length ? '<span class="shb-bed-pill shb-mute" title="' + esc(tools.join(' · ')) + '">' +
+      (tools.length === 1 ? esc(tools[0]) : tools.length + ' actions') + '</span>' : '';
+    return toolsHTML + (toolsHTML && pins ? '<span class="shb-bed-vsep"></span>' : '') + pins +
+      (pins ? '' : '<span class="shb-bed-barnone">Nothing of yours in the bar yet</span>');
+  }
+
+  function brwLanesHTML() {
+    var q = String(BRW.q || '').toLowerCase().trim();
+    var placeName = { bar: 'Bottom bar', other: 'Another bar', hidden: 'Hidden' };
+    var html = brwGroups().map(function (gid) {
+      var g = S.hbGroups[gid] || {}, uid = 'grp:' + gid, items = g.items || [], place = brwPlace(gid);
+      return '<div class="shb-bed-lane' + (BRW.sel && BRW.sel.id === uid ? ' shb-on' : '') + '" data-bed-lanebox="' + esc(gid) + '">' +
+        '<div class="shb-bed-lhd" data-bed-group="' + esc(gid) + '" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
+          '<i class="shb-bed-sq"></i><b>' + esc(hbBtnName(uid, g.name)) + '</b><span class="shb-bed-cnt">' + items.length + '</span>' +
+          '<span class="shb-bed-place' + (place === 'bar' ? ' shb-bar' : '') + '">' + placeName[place] + '</span>' +
+        '</div>' +
+        '<div class="shb-bed-lbody">' +
+          items.map(function (u) { return brwCardHTML(u, gid, q); }).join('') +
+          (items.length ? '' : '<div class="shb-bed-empty">Drag buttons here</div>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    var loose = brwLoose();
+    html += '<div class="shb-bed-lane shb-bed-loose" data-bed-lanebox="loose">' +
+      '<div class="shb-bed-lhd"><i class="shb-bed-sq"></i><b>Not in a group</b><span class="shb-bed-cnt">' + loose.length + '</span><span class="shb-bed-place">Hotbox</span></div>' +
+      '<div class="shb-bed-lbody">' +
+        loose.map(function (u) { return brwCardHTML(u, 'loose', q); }).join('') +
+        '<div class="shb-bed-hint">New button: select nodes in the graph and press <kbd>X</kbd>. It lands here.</div>' +
+      '</div>' +
+    '</div>';
+    html += '<button type="button" class="shb-bed-new" data-bed-act="newgrp" data-bed-lanebox="new"><span>＋</span>New group<small>or drop a button here</small></button>';
+    return html;
+  }
+
+  function brwSwatchesHTML(uid) {
+    var cur = (S.customColors && S.customColors[uid]) || '';
+    var fill = !!(S.customFill && S.customFill[uid]);
+    return '<div class="shb-bed-sws">' +
+      HB_SWATCHES.map(function (sw, i) {
+        var on = i ? cur === sw.name : !cur;
+        return '<button type="button" class="shb-bed-sw' + (on ? ' shb-on' : '') + '" data-bed-sw="' + (i ? esc(sw.name) : '') + '" style="background:' + sw.dot + '" title="' + esc(i ? sw.name : 'Its own color') + '"></button>';
+      }).join('') +
+      '<button type="button" class="shb-bed-fill' + (fill ? ' shb-on' : '') + '" data-bed-act="fill"' + (cur ? '' : ' disabled') +
+        ' title="Paint the whole button in a soft shade of the color, in the hotbox (off: only its mark)">Whole button</button>' +
+    '</div>';
+  }
+
+  /* what the Send / share buttons of the picked button or group are, if any (14e) */
+  function brwShareHTML() {
+    var out = '';
+    if (HB_SENDER) out += '<button type="button" class="shb-bed-ab shb-pri" data-bed-act="send">➤ ' + esc(HB_SENDER.label || 'Send…') + '</button>';
+    if (S.hbShare) out += '<button type="button" class="shb-bed-ab" data-bed-act="copy" title="Copies it as text: paste it into a chat or a mail, and whoever gets it pastes it into their Hotbox (Buttons → Paste…)">⧉ Copy to share</button>';
+    return out;
+  }
+
+  function brwInspHTML() {
+    var P = BRW.panel;
+    if (P && P.kind === 'send') {
+      return '<div class="shb-bed-ibody">' +
+        '<div class="shb-bed-f"><div class="shb-bed-cap">Send</div><div class="shb-bed-note"><b>' + esc(P.what) + '</b></div></div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>To</span></div>' +
+          (P.loading ? '<div class="shb-bed-note">Looking for who it can go to…</div>'
+            : (P.err ? '<div class="shb-bed-warn">⚠ ' + esc(P.err) + '</div>'
+              : (P.targets.length ? P.targets.map(function (t, i) {
+                return '<button type="button" class="shb-bed-pl" data-bed-target="' + i + '"><i></i><span>' + esc(t.label) + (t.hint ? '<small>' + esc(t.hint) + '</small>' : '') + '</span></button>';
+              }).join('') : '<div class="shb-bed-note">Nobody to send it to right now.</div>'))) +
+        '</div>' +
+      '</div>' +
+      '<div class="shb-bed-iact"><button type="button" class="shb-bed-ab" data-bed-act="panelclose">Cancel</button></div>';
+    }
+    if (P && P.kind === 'paste') {
+      return '<div class="shb-bed-ibody">' +
+        '<div class="shb-bed-f"><div class="shb-bed-cap">Paste shared buttons</div>' +
+          '<div class="shb-bed-note">Paste here the text a teammate copied with <b>Copy to share</b> (Ctrl+V).</div></div>' +
+        '<div class="shb-bed-f"><textarea class="shb-bed-ta" data-bed-paste spellcheck="false" placeholder="HOTBOX1…"></textarea></div>' +
+        '<div class="shb-bed-f" data-bed-pasteinfo></div>' +
+      '</div>' +
+      '<div class="shb-bed-iact">' +
+        '<button type="button" class="shb-bed-ab shb-pri" data-bed-act="pasteadd" disabled>Add to my buttons</button>' +
+        '<button type="button" class="shb-bed-ab" data-bed-act="panelclose">Cancel</button>' +
+      '</div>';
+    }
+    var sel = BRW.sel, uid = sel ? sel.id : '';
+    if (sel && sel.kind === 'group' && grpById(uid.slice(4))) {
+      var gid = uid.slice(4), g = grpById(gid), place = brwPlace(gid), n = (g.items || []).length;
+      var pins = brwBotUids().filter(function (u) { return !/^tool:/.test(u); }), at = pins.indexOf(uid);
+      return '<div class="shb-bed-ibody">' +
+        '<div class="shb-bed-f"><div class="shb-bed-cap">Group</div>' +
+          '<div class="shb-bed-name" style="--shb-tint:' + esc(brwTint(uid)) + '"><i class="shb-bed-sq"></i><input type="text" data-bed-name spellcheck="false" value="' + esc(hbBtnName(uid, g.name)) + '"></div></div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Color</span></div>' + brwSwatchesHTML(uid) + '</div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Where it shows</span></div>' +
+          '<button type="button" class="shb-bed-pl' + (place === 'bar' ? ' shb-on' : '') + '" data-bed-place="bar"><i></i><span>Bottom bar<small>In the hotbox\'s bottom bar, on every node</small></span></button>' +
+          (place === 'other' ? '<button type="button" class="shb-bed-pl shb-on" data-bed-place="other"><i></i><span>Another bar<small>The dock or a context bar, where edit mode put it</small></span></button>' : '') +
+          '<button type="button" class="shb-bed-pl' + (place === 'hidden' ? ' shb-on' : '') + '" data-bed-place="hidden"><i></i><span>Hidden<small>Kept, with its buttons, but in no bar</small></span></button>' +
+        '</div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Order in the bar</span></div><div class="shb-bed-two">' +
+          '<button type="button" class="shb-bed-ob" data-bed-act="left"' + (at > 0 ? '' : ' disabled') + '>← Move left</button>' +
+          '<button type="button" class="shb-bed-ob" data-bed-act="right"' + (at >= 0 && at < pins.length - 1 ? '' : ' disabled') + '>Move right →</button>' +
+        '</div></div>' +
+        '<div class="shb-bed-note">' + n + (n === 1 ? ' button' : ' buttons') + '. Deleting the group keeps its buttons: they go back to the bar, and show under <b>Not in a group</b>.</div>' +
+      '</div>' +
+      '<div class="shb-bed-iact">' + brwShareHTML() +
+        '<div class="shb-bed-two"><button type="button" class="shb-bed-tb shb-red" data-bed-act="del">Delete group</button></div>' +
+      '</div>';
+    }
+    if (sel && sel.kind === 'button' && (/^tpl:/.test(uid) ? tplById(uid.slice(4)) : resolveBarItem(uid, null, true))) {
+      var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
+      var canEdit = brwCanEdit(uid), inG = brwInGroup()[uid] || '';
+      var key = hbKeyFor(uid), clash = key ? hbKeyClash(key, uid) : '';
+      var names = brwNodeNames(tp), glyph = hbGlyphOf(uid) || '✦';
+      var grabbing = !!BRW.grab;
+      var bpins = brwBotUids().filter(function (u) { return !/^tool:/.test(u); }), bat = bpins.indexOf(uid);
+      return '<div class="shb-bed-ibody" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
+        '<div class="shb-bed-f"><div class="shb-bed-cap">Button' + (tp && tp.lib ? ' <small>from ' + esc(tp.libLabel || 'a shared library') + (tp.canDelete ? '' : ' · read-only') + '</small>' : '') + '</div>' +
+          '<div class="shb-bed-name"><span class="shb-bed-ico">' + (tp ? glyph : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 14)) + '</span>' +
+            '<input type="text" data-bed-name spellcheck="false" value="' + esc(hbUidLabel(uid)) + '"></div></div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Color</span></div>' + brwSwatchesHTML(uid) + '</div>' +
+        (tp ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Icon</span></div><div class="shb-bed-gl">' +
+          BRW_GLYPHS.map(function (gl) {
+            return '<button type="button" class="' + (gl === glyph ? 'shb-on' : '') + '" data-bed-glyph="' + gl + '">' + gl + '</button>';
+          }).join('') + '</div></div>' : '') +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Hotkey</span></div>' +
+          '<button type="button" class="shb-bed-keyb' + (grabbing ? ' shb-on' : '') + '" data-bed-act="key"><kbd>' + (grabbing ? '…' : esc(hbKeyName(key) || '—')) + '</kbd>' +
+            '<span>' + (grabbing ? 'Press a key · Esc cancels · ⌫ clears' : (key ? 'Click to change' : 'Click, then press a key')) + '</span></button>' +
+          (BRW.keyNote ? '<div class="shb-bed-warn">⚠ ' + esc(BRW.keyNote) + '</div>' : (clash ? '<div class="shb-bed-warn">⚠ ' + esc(clash) + '</div>' : '')) +
+        '</div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Group</span></div><div class="shb-bed-chips">' +
+          brwGroups().map(function (g2) {
+            return '<button type="button" class="shb-bed-chip' + (inG === g2 ? ' shb-on' : '') + '" data-bed-chip="' + esc(g2) + '" style="--shb-tint:' + esc(brwTint('grp:' + g2)) + '"><i></i>' + esc(hbBtnName('grp:' + g2, S.hbGroups[g2].name)) + '</button>';
+          }).join('') +
+          '<button type="button" class="shb-bed-chip' + (inG ? '' : ' shb-on') + '" data-bed-chip="loose"><i></i>None</button>' +
+        '</div></div>' +
+        (!inG && bat >= 0 ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Order in the bar</span></div><div class="shb-bed-two">' +
+          '<button type="button" class="shb-bed-ob" data-bed-act="left"' + (bat > 0 ? '' : ' disabled') + '>← Move left</button>' +
+          '<button type="button" class="shb-bed-ob" data-bed-act="right"' + (bat < bpins.length - 1 ? '' : ' disabled') + '>Move right →</button>' +
+        '</div></div>' : '') +
+        (tp ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>What it adds</span><em>' + esc(tp.count) + (tp.count === 1 ? ' node' : ' nodes') + '</em></div><div class="shb-bed-nodes">' +
+          names.slice(0, 6).map(function (t) { return '<div><i style="background:' + brwNodeDot(t) + '"></i>' + esc(t) + '</div>'; }).join('') +
+          (names.length > 6 ? '<div class="shb-more">+' + (names.length - 6) + ' more</div>' : '') +
+        '</div></div>' : '') +
+      '</div>' +
+      '<div class="shb-bed-iact">' +
+        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON, bring back an older version, or put the nodes on the canvas. It stays the same button">✎ Edit its nodes…</button>' : '') +
+        (tp ? brwShareHTML() : '') +
+        '<div class="shb-bed-two">' +
+          (tp ? '<button type="button" class="shb-bed-tb" data-bed-act="dup" title="A copy of your own, with the same nodes">Duplicate</button>' : '') +
+          (canEdit ? '<button type="button" class="shb-bed-tb shb-red" data-bed-act="del">Delete</button>'
+            : (inG ? '<button type="button" class="shb-bed-tb" data-bed-chip="loose">Take out of the group</button>' : '')) +
+        '</div>' +
+      '</div>';
+    }
+    return '<div class="shb-bed-none">Pick a button or a group<small>Drag buttons between groups to organise them. Double-click a button to edit its nodes.</small></div>';
   }
 
   function brwRender() {
-    if (!BRW.el) return;
-    var box = BRW.el.querySelector('.shb-brw');
+    var bg = BRW.el;
+    if (!bg) return;
+    /* what was picked may be gone (deleted, taken back) */
+    if (BRW.sel) {
+      var su = BRW.sel.id;
+      var there = BRW.sel.kind === 'group' ? !!grpById(su.slice(4)) : (/^tpl:/.test(su) ? !!tplById(su.slice(4)) : !!brwInGroup()[su]);
+      if (!there) BRW.sel = null;
+    }
     var nOwn = (S.templates || []).length, nGrp = Object.keys(S.hbGroups || {}).length, nSh = libSharedButtons().length;
-    tipHide();
-    box.innerHTML =
-      '<div class="shb-modal-t shb-brw-hd">' +
-        '<span class="shb-brw-title">' + hbLogoChip(20) + '<span>Buttons</span>' +
-          '<small>' + nOwn + ' saved · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '') + '</small></span>' +
-        '<span class="shb-brw-tools">' +
-          '<span class="shb-brw-find">' + ico('search', 13) + '<input type="text" class="shb-input" data-brw-q spellcheck="false" placeholder="Find a button…" value="' + esc(BRW.q) + '"></span>' +
-          '<button type="button" class="shb-btn shb-btn-pri" data-brw-act="newgrp" data-tip="A new, empty group in the bottom bar: drag buttons onto it">' + ico('folder', 13) + '<span>New Group</span></button>' +
-          '<button type="button" class="shb-btn shb-btn-pri" data-brw-act="undo"' + (hbUndoLeft() ? '' : ' disabled') + ' data-tip="Take back the last change (Ctrl+Z)">' + ico('history', 13) + '<span>Undo</span></button>' +
-          '<button type="button" class="shb-btn shb-btn-on" data-brw-act="close">Done</button>' +
-        '</span>' +
-      '</div>' +
-      '<div class="shb-brw-body" data-brw-body></div>' +
-      '<div class="shb-brw-foot">Click a card for its name, color and key · drag a button onto a group to put it in, and out of it to take it out · the pencil opens its nodes · every change saves itself</div>';
-    brwRenderBody();
+    bg.querySelector('[data-bed-sum]').textContent = nOwn + (nOwn === 1 ? ' button' : ' buttons') + ' · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '');
+    bg.querySelector('[data-bed-act="undo"]').disabled = !hbUndoLeft();
+    bg.querySelector('[data-bed-act="redo"]').disabled = !HB_REDO.length;
+    bg.querySelector('[data-bed-extra]').innerHTML = S.hbShare
+      ? '<button type="button" class="shb-bed-hb" data-bed-act="paste" title="Add the buttons a teammate copied for you with Copy to share">⇩ Paste…</button>' : '';
+    bg.querySelector('[data-bed-saved]').textContent = CFG.state === 'error' ? 'Could not save (' + (CFG.err || 'error') + ')'
+      : (BRW.saved ? 'Saved · ' + (Date.now() - BRW.saved < 60000 ? 'just now' : new Date(BRW.saved).toLocaleTimeString()) : 'All changes saved');
+    bg.querySelector('[data-bed-bar]').innerHTML = brwBarHTML();
+    /* the lanes keep their place: how far along they are scrolled, and each one down its list */
+    var lanes = bg.querySelector('[data-bed-lanes]'), sx = lanes.scrollLeft, sy = {};
+    Array.prototype.forEach.call(lanes.querySelectorAll('[data-bed-lanebox]'), function (l) {
+      var b = l.querySelector('.shb-bed-lbody');
+      if (b) sy[l.getAttribute('data-bed-lanebox')] = b.scrollTop;
+    });
+    lanes.innerHTML = brwLanesHTML();
+    lanes.scrollLeft = sx;
+    Array.prototype.forEach.call(lanes.querySelectorAll('[data-bed-lanebox]'), function (l) {
+      var b = l.querySelector('.shb-bed-lbody'), y = sy[l.getAttribute('data-bed-lanebox')];
+      if (b && y) b.scrollTop = y;
+    });
+    /* a name being typed keeps its field (and the caret in it): the rest is drawn around it */
+    var insp = bg.querySelector('[data-bed-insp]');
+    var forWhat = (BRW.panel ? 'panel:' + BRW.panel.kind : '') + '|' + (BRW.sel ? BRW.sel.id : '');
+    var a = document.activeElement;
+    var typing = a && insp.contains(a) && a.hasAttribute && (a.hasAttribute('data-bed-name') || a.hasAttribute('data-bed-paste'));
+    if (!(typing && BRW.inspFor === forWhat)) {
+      insp.innerHTML = brwInspHTML();
+      BRW.inspFor = forWhat;
+    }
   }
 
-  function brwRenderBody() {
-    var body = BRW.el && BRW.el.querySelector('[data-brw-body]');
-    if (!body) return;
-    var q = String(BRW.q || '').toLowerCase().trim();
-    var gids = Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {});
-    var inGrp = {};
-    gids.forEach(function (gid) { ((S.hbGroups[gid] || {}).items || []).forEach(function (u) { inGrp[u] = gid; }); });
-    function hit(text) { return !q || String(text || '').toLowerCase().indexOf(q) >= 0; }
-    function tintStyle(uid) { var t = barTint(uid); return t ? ' style="--shb-tint:' + esc(t) + '"' : ''; }
-    function keyChip(uid) { var k = hbKeyName(hbKeyFor(uid)); return k ? '<span class="shb-key" title="Its key in the hotbox">' + esc(k) + '</span>' : ''; }
+  function brwSelect(kind, uid) {
+    if (BRW.grab) brwGrabEnd();
+    BRW.keyNote = '';
+    BRW.panel = null;
+    BRW.sel = uid ? { kind: kind, id: uid } : null;
+    brwRender();
+  }
 
-    function tplCard(tp) {
-      var uid = 'tpl:' + tp.id, name = hbBtnName(uid, tp.name), sum = tplSummaryOf(tp), gid = inGrp[uid];
-      if (!hit(name + ' ' + sum + ' ' + (gid ? S.hbGroups[gid].name : ''))) return '';
-      var canEdit = !tp.lib || tp.canDelete;
-      return '<div class="shb-brw-card' + (S.customFill && S.customFill[uid] && barTint(uid) ? ' shb-brw-fill' : '') + '" data-brw-uid="' + esc(uid) + '" data-brw-drag' + tintStyle(uid) + '>' +
-        '<div class="shb-brw-c1"><span class="shb-brw-ico">' + ico('sparkles', 16) + '</span><b>' + esc(name) + '</b>' + keyChip(uid) +
-          '<span class="shb-tpl-n" title="Nodes it holds">' + esc(tp.count) + '</span></div>' +
-        '<div class="shb-brw-c2">' + esc(sum) + '</div>' +
-        '<div class="shb-brw-c3">' +
-          (gid ? '<span class="shb-brw-chip">' + ico('folder', 11) + '<span>' + esc(hbBtnName('grp:' + gid, S.hbGroups[gid].name)) + '</span></span>'
-            : '<span class="shb-brw-chip shb-brw-chip-no">not in a group</span>') +
-          (tp.lib ? '<span class="shb-brw-chip">' + esc(tp.libLabel || 'shared') + '</span>' : '') +
-          '<span class="shb-brw-acts">' +
-            (canEdit ? '<button type="button" class="shb-btn shb-btn-ico" data-brw-act="nodes" data-tip="Edit its nodes: change a value or a title, take a node out, or edit the JSON. It stays the same button">' + ico('edit', 13) + '</button>' +
-              '<button type="button" class="shb-btn shb-btn-ico" data-brw-act="del" data-tip="Delete this saved button (Undo brings it back)">' + ico('trash', 13) + '</button>' : '') +
-          '</span>' +
-        '</div>' +
-      '</div>';
+  function brwNewGroup(withUid) {
+    var nid = '';
+    BRW.last = '';
+    BRW.lastTop = hbUndoPush('a new group');
+    nid = grpNew();
+    S.hbGroups[nid].keep = true;
+    hbBotAppend(['grp:' + nid]);
+    if (withUid && !/^grp:/.test(withUid)) grpPutIn(nid, withUid, '');
+    save();
+    BRW.saved = Date.now();
+    BRW.panel = null;
+    BRW.sel = { kind: 'group', id: 'grp:' + nid };
+    BRW.inspFor = '';
+    hbRedrawAll();
+    brwToast(S.hbGroups[nid].name + ' created', true);
+    /* named right away: its name is picked, ready to be typed over */
+    var inp = BRW.el && BRW.el.querySelector('[data-bed-name]');
+    if (inp) { try { inp.focus(); inp.select(); } catch (e) {} }
+    var lanes = BRW.el && BRW.el.querySelector('[data-bed-lanes]');
+    var box = lanes && lanes.querySelector('[data-bed-lanebox="' + cssEsc(nid) + '"]');
+    if (box && box.scrollIntoView) { try { box.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} }
+  }
+
+  /* A button goes to a lane (a group's, or 'loose': in no group), before `before` or at its end */
+  function brwMove(uid, lane, before) {
+    var from = brwInGroup()[uid] || 'loose', name = hbUidLabel(uid);
+    if (lane === 'new') { brwNewGroup(uid); return; }
+    if (lane !== 'loose' && !grpById(lane)) return;
+    if (from === lane) {
+      /* the very place it is in: nothing to do */
+      var list = lane === 'loose' ? brwLoose() : (grpById(lane).items || []);
+      var next = list[list.indexOf(uid) + 1] || '';
+      if (before === uid || (before || '') === next) return;
     }
+    var gName = lane === 'loose' ? 'Not in a group' : hbBtnName('grp:' + lane, grpById(lane).name);
+    brwCommit('move', (from === lane ? 'moving "' : 'putting "') + name + '" in "' + gName + '"', function () {
+      if (lane !== 'loose') { grpPutIn(lane, uid, before); return; }
+      if (from !== 'loose') {
+        var g = grpById(from);
+        grpTakeOut(from, uid);
+        /* here a group only goes with Delete group, so one left with a button or none stays */
+        if (g && (g.items || []).length < 2) g.keep = true;
+      }
+      /* among the ones in no group, the order is the bottom bar's */
+      if (before && before !== uid) {
+        var bar = brwBotUids();
+        if (bar.indexOf(uid) >= 0 && bar.indexOf(before) >= 0) {
+          bar.splice(bar.indexOf(uid), 1);
+          bar.splice(bar.indexOf(before), 0, uid);
+          S.customBotBar = bar;
+        }
+      }
+    }, from !== lane ? { msg: name + ' → ' + gName } : null);
+  }
 
-    function grpBox(gid) {
-      var g = S.hbGroups[gid] || {}, uid = 'grp:' + gid, name = hbBtnName(uid, g.name), items = g.items || [];
-      if (q && !hit(name) && !items.some(function (u) { return hit(hbUidLabel(u)); })) return '';
-      return '<div class="shb-brw-grp" data-brw-grp="' + esc(gid) + '"' + tintStyle(uid) + '>' +
-        '<div class="shb-brw-ghd" data-brw-uid="' + esc(uid) + '">' +
-          '<span class="shb-brw-ico">' + ico('folder', 16) + '</span><b>' + esc(name) + '</b>' + keyChip(uid) +
-          '<small>' + items.length + (items.length === 1 ? ' button' : ' buttons') + ' · ' + esc(brwWhere(uid)) + '</small>' +
-          '<span class="shb-brw-acts"><button type="button" class="shb-btn" data-brw-act="ungroup" data-tip="The group goes, and its buttons go back to the bar it sits in">Ungroup</button></span>' +
-        '</div>' +
-        '<div class="shb-brw-mems">' +
-          (items.length ? items.map(function (u) {
-            return '<span class="shb-brw-mem" data-brw-uid="' + esc(u) + '" data-brw-in="' + esc(gid) + '" data-brw-drag' + tintStyle(u) + '>' +
-              '<span class="shb-brw-ico">' + ico(/^tpl:/.test(u) ? 'sparkles' : (/^tool:/.test(u) ? 'tools' : 'plus'), 13) + '</span><span>' + esc(hbUidLabel(u)) + '</span>' + keyChip(u) +
-              '<i class="shb-brw-out" data-brw-act="out" data-tip="Take it out of the group">×</i>' +
-            '</span>';
-          }).join('') : '<span class="shb-brw-none">Empty · drag a button here</span>') +
-        '</div>' +
-      '</div>';
+  /* A button or a group of the bottom bar takes another place along it (before `before`, or last) */
+  function brwBarMove(uid, before) {
+    var bar = brwBotUids(), at = bar.indexOf(uid);
+    if (at < 0 || before === uid || (before || '') === (bar[at + 1] || '')) return;
+    brwCommit('order', 'moving "' + hbUidLabel(uid) + '" along the bar', function () {
+      bar.splice(at, 1);
+      var to = before ? bar.indexOf(before) : -1;
+      if (to < 0) bar.push(uid);
+      else bar.splice(to, 0, uid);
+      S.customBotBar = bar;
+    });
+  }
+
+  /* one step left or right among what is pinned (the actions keep the start of the bar) */
+  function brwBarStep(uid, dir) {
+    var bar = brwBotUids(), pins = bar.filter(function (u) { return !/^tool:/.test(u); }), i = pins.indexOf(uid), j = i + dir;
+    if (i < 0 || j < 0 || j >= pins.length) return;
+    brwCommit('order', 'moving "' + hbUidLabel(uid) + '" along the bar', function () {
+      var a = bar.indexOf(uid), b = bar.indexOf(pins[j]);
+      bar[a] = pins[j];
+      bar[b] = uid;
+      S.customBotBar = bar;
+    });
+  }
+
+  function brwSetPlace(gid, place) {
+    var uid = 'grp:' + gid, g = grpById(gid);
+    if (!g || place === 'other' || brwPlace(gid) === place) return;
+    brwCommit('place', (place === 'hidden' ? 'hiding "' : 'showing "') + hbBtnName(uid, g.name) + '"', function () {
+      if (place === 'hidden') {
+        /* a bar that was never customized gets its own list first, so the others in it stay as they are */
+        if (!Array.isArray(S.customBotBar)) S.customBotBar = brwBotUids();
+        hbBarLists().forEach(function (L) {
+          if (L.get().indexOf(uid) >= 0) L.set(L.get().filter(function (u) { return u !== uid; }));
+        });
+        g.keep = true;
+      } else {
+        hbBarLists().forEach(function (L) {
+          if (L.bar !== 'bot' && L.get().indexOf(uid) >= 0) L.set(L.get().filter(function (u) { return u !== uid; }));
+        });
+        hbBotAppend([uid]);
+      }
+    }, { msg: hbBtnName(uid, g.name) + (place === 'hidden' ? ' is hidden · its buttons are kept' : ' is in the bottom bar') });
+  }
+
+  function brwDuplicate(uid) {
+    var tp = tplById(uid.slice(4));
+    if (!tp || !tp.data) return;
+    var copy = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: hbBtnName(uid, tp.name) + ' copy',
+      count: tp.count, at: new Date().toISOString(), data: JSON.parse(JSON.stringify(tp.data)) };
+    var nu = 'tpl:' + copy.id, inG = brwInGroup()[uid] || '';
+    brwCommit('dup', 'duplicating "' + hbBtnName(uid, tp.name) + '"', function () {
+      if (!Array.isArray(S.templates)) S.templates = [];
+      var at = S.templates.indexOf(tp);
+      S.templates.splice(at >= 0 ? at + 1 : S.templates.length, 0, copy);
+      ['customColors', 'customFill', 'customIcons'].forEach(function (k) {
+        if (S[k] && S[k][uid] !== undefined) S[k][nu] = S[k][uid];
+      });
+      if (inG) {
+        var items = grpById(inG).items, gi = items.indexOf(uid);
+        items.splice(gi >= 0 ? gi + 1 : items.length, 0, nu);
+      } else if (Array.isArray(S.customBotBar)) {
+        var bi = S.customBotBar.indexOf(uid);
+        if (bi >= 0) S.customBotBar.splice(bi + 1, 0, nu);
+        else S.customBotBar.push(nu);
+      }
+      BRW.sel = { kind: 'button', id: nu };
+      BRW.inspFor = '';
+    }, { msg: 'Duplicated “' + hbBtnName(uid, tp.name) + '”' });
+  }
+
+  function brwDeleteSel() {
+    var sel = BRW.sel;
+    if (!sel) return;
+    var uid = sel.id, name = hbUidLabel(uid);
+    if (sel.kind === 'group') {
+      var gid = uid.slice(4);
+      if (!grpById(gid)) return;
+      BRW.sel = null;
+      brwCommit('delg', 'deleting the group "' + name + '"', function () { grpUngroup(gid); }, { msg: 'Deleted ' + name + ' · buttons kept' });
+      return;
     }
+    if (!brwCanEdit(uid)) {
+      /* a tool, a node or a read-only library's button is not yours to delete: it leaves its group */
+      if (brwInGroup()[uid]) brwMove(uid, 'loose', '');
+      return;
+    }
+    BRW.sel = null;
+    BRW.last = '';
+    tplDelete(uid.slice(4));
+    BRW.saved = Date.now();
+    hbRedrawAll();
+    brwToast('Deleted “' + name + '”', true);
+  }
 
-    var groupsHTML = gids.map(grpBox).join('');
-    var ownHTML = (Array.isArray(S.templates) ? S.templates : []).map(tplCard).join('');
-    var sharedHTML = LIB.list.map(function (l) {
-      var cards = (l.buttons || []).map(tplCard).join('');
-      return cards ? '<div class="shb-brw-sec">' + esc(l.label) + '<small>shared library' + (libWritable(l) ? '' : ' · read-only') + '</small></div><div class="shb-brw-grid">' + cards + '</div>' : '';
-    }).join('');
-    body.innerHTML =
-      '<div class="shb-brw-sec">Groups<small>drop a button on a group to put it in</small></div>' +
-      (groupsHTML ? '<div class="shb-brw-grps">' + groupsHTML + '</div>'
-        : '<div class="shb-sb-empty">' + (q ? 'No group matches.' : 'No groups yet. New Group makes one; in edit mode, resting one bar button on another makes one too.') + '</div>') +
-      '<div class="shb-brw-sec">Saved buttons<small>the sets of nodes you saved with X (Save as Button)</small></div>' +
-      (ownHTML ? '<div class="shb-brw-grid">' + ownHTML + '</div>'
-        : '<div class="shb-sb-empty">' + (q ? 'No saved button matches.' : 'Nothing saved yet. Select some nodes and press X (Save as Button) in the hotbox.') + '</div>') +
-      sharedHTML;
+  function brwGrabEnd() {
+    if (HB.keyGrab === BRW.grab) HB.keyGrab = null;
+    BRW.grab = null;
+  }
+
+  /* the key of the picked button: the next key pressed is it (Esc keeps what it had, Backspace clears it) */
+  function brwGrabKey() {
+    var sel = BRW.sel;
+    if (!sel || sel.kind !== 'button') return;
+    if (BRW.grab) { brwGrabEnd(); brwRender(); return; }
+    var uid = sel.id;
+    BRW.keyNote = '';
+    BRW.grab = function (ev) {
+      var k = String(ev.key || ''), kl = k.toLowerCase();
+      if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(k)) return;
+      brwGrabEnd();
+      var set = null;
+      if (k === 'Backspace' || k === 'Delete') set = '';
+      else if (k === 'Escape') set = null;
+      else if (ev.ctrlKey || ev.altKey || ev.metaKey || !((kl.length === 1 && kl !== ' ') || /^f([1-9]|1[0-2])$/.test(kl))) {
+        BRW.keyNote = 'One key on its own, without Ctrl or Alt: a letter, a number, a sign or F1–F12.';
+      } else if (hbIsKey(ev) && !S.hbMods) BRW.keyNote = hbKeyName(kl) + ' opens and closes the hotbox: pick another key.';
+      else set = kl;
+      if (set === null || set === hbKeyFor(uid)) { brwRender(); return; }
+      brwCommit('key', 'the key of "' + hbUidLabel(uid) + '"', function () {
+        if (!S.customKeys || typeof S.customKeys !== 'object') S.customKeys = {};
+        if (set) {
+          Object.keys(S.customKeys).forEach(function (u) { if (S.customKeys[u] === set) delete S.customKeys[u]; });
+          S.customKeys[uid] = set;
+        } else delete S.customKeys[uid];
+      });
+    };
+    HB.keyGrab = BRW.grab;
+    brwRender();
+  }
+
+  function brwRename(uid, val) {
+    val = String(val || '').replace(/\s+/g, ' ');
+    var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null, grp = /^grp:/.test(uid) ? grpById(uid.slice(4)) : null;
+    brwCommit('rename:' + uid, 'renaming "' + hbUidLabel(uid) + '"', function () {
+      if (!S.customLabels || typeof S.customLabels !== 'object') S.customLabels = {};
+      var v = val.trim();
+      /* a saved button of your own and a group carry their name themselves; anything else keeps the one you gave it */
+      if (tp && !tp.lib) { if (v) tp.name = val; delete S.customLabels[uid]; }
+      else if (grp) { if (v) grp.name = val; delete S.customLabels[uid]; }
+      else if (v) S.customLabels[uid] = val;
+      else delete S.customLabels[uid];
+    });
+  }
+
+  function brwInput(ev) {
+    var t = ev.target;
+    if (!t || !t.hasAttribute) return;
+    if (t.hasAttribute('data-bed-q')) {
+      BRW.q = t.value;
+      brwRender();
+    } else if (t.hasAttribute('data-bed-name') && BRW.sel) {
+      brwRename(BRW.sel.id, t.value);
+    } else if (t.hasAttribute('data-bed-paste')) {
+      brwPasteRead(t.value);
+    }
   }
 
   function brwClick(ev) {
     if (Date.now() < BRW.noClick) return;
     var t = ev.target;
     if (!t || !t.closest) return;
-    var actEl = t.closest('[data-brw-act]');
-    var act = actEl ? actEl.getAttribute('data-brw-act') : '';
-    var holder = t.closest('[data-brw-uid]');
-    var uid = holder ? holder.getAttribute('data-brw-uid') : '';
-    var gBox = t.closest('[data-brw-grp]');
-    var gid = gBox ? gBox.getAttribute('data-brw-grp') : '';
+    var sel = BRW.sel, uid = sel ? sel.id : '';
+    var actEl = t.closest('[data-bed-act]');
+    var act = actEl && !actEl.disabled ? actEl.getAttribute('data-bed-act') : '';
     if (act === 'close') { brwClose(); return; }
-    if (act === 'undo') { hbUndo(); return; }
-    if (act === 'newgrp') {
-      hbUndoPush('a new group');
-      var nid = grpNew();
-      S.hbGroups[nid].keep = true;
-      hbBotAppend(['grp:' + nid]);
-      save();
-      hbRedrawAll();
-      setStatus('ok', 'New group "' + S.hbGroups[nid].name + '" in the bottom bar · drag buttons onto it · click it to name it');
+    if (act === 'undo') { if (hbUndo()) brwToast('Undone', false); return; }
+    if (act === 'redo') { if (hbRedo()) brwToast('Redone', false); return; }
+    if (act === 'newgrp') { brwNewGroup(''); return; }
+    if (act === 'paste') { BRW.panel = { kind: 'paste', pack: null }; BRW.inspFor = ''; brwRender(); var ta = BRW.el.querySelector('[data-bed-paste]'); if (ta) { try { ta.focus(); } catch (e) {} } return; }
+    if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
+    if (act === 'pasteadd') { brwPasteAdd(); return; }
+    var tg = t.closest('[data-bed-target]');
+    if (tg && BRW.panel && BRW.panel.kind === 'send') { brwSendTo(BRW.panel.targets[+tg.getAttribute('data-bed-target')]); return; }
+    if (sel) {
+      if (act === 'key') { brwGrabKey(); return; }
+      if (act === 'nodes' && brwCanEdit(uid)) { tplEditOpen(uid.slice(4)); return; }
+      if (act === 'dup') { brwDuplicate(uid); return; }
+      if (act === 'del') { brwDeleteSel(); return; }
+      if (act === 'left' || act === 'right') { brwBarStep(uid, act === 'left' ? -1 : 1); return; }
+      if (act === 'send') { brwSendOpen(uid); return; }
+      if (act === 'copy') { brwCopyShare(uid); return; }
+      if (act === 'fill') {
+        brwCommit('fill', 'painting "' + hbUidLabel(uid) + '"', function () {
+          if (!S.customFill || typeof S.customFill !== 'object') S.customFill = {};
+          if (S.customFill[uid]) delete S.customFill[uid];
+          else S.customFill[uid] = true;
+        });
+        return;
+      }
+      var sw = t.closest('[data-bed-sw]');
+      if (sw) {
+        var col = sw.getAttribute('data-bed-sw');
+        if (col === ((S.customColors && S.customColors[uid]) || '')) return;
+        brwCommit('color', 'the color of "' + hbUidLabel(uid) + '"', function () {
+          if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
+          if (col) S.customColors[uid] = col;
+          else { delete S.customColors[uid]; if (S.customFill) delete S.customFill[uid]; }
+        });
+        return;
+      }
+      var gl = t.closest('[data-bed-glyph]');
+      if (gl) {
+        var sign = gl.getAttribute('data-bed-glyph');
+        if (sign === (hbGlyphOf(uid) || BRW_GLYPHS[0])) return;
+        brwCommit('icon', 'the icon of "' + hbUidLabel(uid) + '"', function () {
+          if (!S.customIcons || typeof S.customIcons !== 'object') S.customIcons = {};
+          if (sign === BRW_GLYPHS[0]) delete S.customIcons[uid];
+          else S.customIcons[uid] = sign;
+        });
+        return;
+      }
+      var chip = t.closest('[data-bed-chip]');
+      if (chip && sel.kind === 'button') { brwMove(uid, chip.getAttribute('data-bed-chip'), ''); return; }
+      var pl = t.closest('[data-bed-place]');
+      if (pl && sel.kind === 'group') { brwSetPlace(uid.slice(4), pl.getAttribute('data-bed-place')); return; }
+    }
+    var card = t.closest('[data-bed-card]');
+    if (card) { brwSelect('button', card.getAttribute('data-bed-card')); return; }
+    var pill = t.closest('[data-bed-pill]');
+    if (pill) {
+      var pu = pill.getAttribute('data-bed-pill');
+      brwSelect(/^grp:/.test(pu) ? 'group' : 'button', pu);
       return;
     }
-    if (act === 'ungroup' && gid) {
-      var gName = hbBtnName('grp:' + gid, (grpById(gid) || {}).name);
-      hbUndoPush('ungrouping "' + gName + '"');
-      grpUngroup(gid);
-      save();
-      hbRedrawAll();
-      setStatus('ok', 'Ungrouped "' + gName + '" · its buttons are back in the bar');
-      return;
-    }
-    if (act === 'out' && uid && holder.getAttribute('data-brw-in')) {
-      brwTakeOut(holder.getAttribute('data-brw-in'), uid);
-      return;
-    }
-    if (act === 'nodes' && uid) { tplEditOpen(uid.slice(4)); return; }
-    if (act === 'del' && uid) {
-      var dName = hbUidLabel(uid);
-      tplDelete(uid.slice(4));
-      hbRedrawAll();
-      setStatus('ok', 'Deleted the saved button "' + dName + '" · Undo (Ctrl+Z) brings it back');
-      return;
-    }
-    if (uid) promptRenameBarItem(uid, HB.node, null);
+    var gh = t.closest('[data-bed-group]');
+    if (gh) { brwSelect('group', 'grp:' + gh.getAttribute('data-bed-group')); return; }
   }
 
-  function brwTakeOut(gid, uid) {
-    var g = grpById(gid);
-    if (!g) return;
-    var name = hbUidLabel(uid), gName = hbBtnName('grp:' + gid, g.name);
-    hbUndoPush('taking "' + name + '" out of "' + gName + '"');
-    grpTakeOut(gid, uid);
-    /* here a group only goes with Ungroup, so one left with a button or none stays */
-    if ((g.items || []).length < 2) g.keep = true;
-    save();
-    hbRedrawAll();
-    setStatus('ok', 'Took "' + name + '" out of "' + gName + '" · it is back in the bar');
+  /* The keys of the editor (the window's key listener hands them over while it is the window on top).
+     true: the key was the editor's */
+  function brwKey(e) {
+    var k = String(e.key || ''), kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    var a = document.activeElement, typing = hbTyping();
+    if (typing) {
+      if (k === 'Escape' || k === 'Enter') {
+        if (a && a.hasAttribute && a.hasAttribute('data-bed-paste') && k === 'Enter') return false;
+        hbEat(e);
+        try { a.blur(); } catch (x) {}
+        brwRender();
+        return true;
+      }
+      /* in the name field Ctrl+Z takes the whole rename back; anywhere else it is the field's own */
+      if (!(mod && !e.altKey && (kl === 'z' || kl === 'y') && a && a.hasAttribute && a.hasAttribute('data-bed-name'))) return false;
+    }
+    if (mod && !e.altKey && (kl === 'z' || kl === 'y')) {
+      hbEat(e);
+      if (e.repeat) return true;
+      if (typing) { try { a.blur(); } catch (x) {} }
+      if (kl === 'y' || e.shiftKey) { if (hbRedo()) brwToast('Redone', false); }
+      else if (hbUndo()) brwToast('Undone', false);
+      return true;
+    }
+    if (mod || e.altKey) return false;
+    if (k === '/') {
+      hbEat(e);
+      var q = BRW.el.querySelector('[data-bed-q]');
+      if (q) { try { q.focus(); q.select(); } catch (x) {} }
+      return true;
+    }
+    if (kl === 'g') {
+      hbEat(e);
+      if (!e.repeat) brwNewGroup(BRW.sel && BRW.sel.kind === 'button' ? BRW.sel.id : '');
+      return true;
+    }
+    if (k === 'Delete' || k === 'Backspace') {
+      hbEat(e);
+      if (!e.repeat) brwDeleteSel();
+      return true;
+    }
+    if (k === 'Escape' && (BRW.panel || BRW.sel)) {
+      hbEat(e);
+      if (BRW.panel) { BRW.panel = null; brwRender(); }
+      else brwSelect('', '');
+      return true;
+    }
+    return false;
   }
 
-  /* Dragging in the browser: a card or a group's button onto a group puts it in (at the place it is dropped);
-     a group's button dropped anywhere else comes out of its group */
+  /* ---- dragging in the editor: a card to a place in a lane, onto a group of the bar or onto New group; a
+     pill of the bar to another place along it. The card stays where it is, dimmed, a copy follows the pointer
+     and an amber line marks the place ---- */
   function brwDown(ev) {
     if (ev.button !== 0) return;
     var t = ev.target;
-    var d = t && t.closest ? t.closest('[data-brw-drag]') : null;
-    if (!d || t.closest('[data-brw-act]')) return;
-    BRW.drag = { uid: d.getAttribute('data-brw-uid'), from: d.getAttribute('data-brw-in') || '', el: d, x0: ev.clientX, y0: ev.clientY, active: false, over: '', before: '' };
+    if (!t || !t.closest || t.closest('input,textarea')) return;
+    var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]');
+    var el = c || p;
+    if (!el) return;
+    BRW.drag = { uid: el.getAttribute(c ? 'data-bed-card' : 'data-bed-pill'), pill: !c, el: el, x0: ev.clientX, y0: ev.clientY, active: false, to: null, ghost: null };
+  }
+
+  function brwLine(r) {
+    var ln = BRW.el && BRW.el.querySelector('[data-bed-line]');
+    if (!ln) return;
+    if (!r) { ln.classList.remove('shb-on'); return; }
+    ln.style.width = r.w + 'px';
+    ln.style.height = r.h + 'px';
+    ln.style.transform = 'translate3d(' + r.x + 'px,' + r.y + 'px,0)';
+    ln.classList.add('shb-on');
+  }
+
+  function brwHot(el) {
+    if (!BRW.el) return;
+    Array.prototype.forEach.call(BRW.el.querySelectorAll('.shb-hot'), function (x) { if (x !== el) x.classList.remove('shb-hot'); });
+    if (el) el.classList.add('shb-hot');
+  }
+
+  function brwDragEnd() {
+    var d = BRW.drag;
+    BRW.drag = null;
+    if (d && d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+    if (d && d.el) d.el.classList.remove('shb-bed-src');
+    brwLine(null);
+    brwHot(null);
+    try { document.documentElement.classList.remove('shb-grabbing'); } catch (e) {}
   }
 
   listen(document, 'pointermove', function (e) {
     var d = BRW.drag;
     if (!d || !BRW.el) return;
     if (!d.active) {
-      if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return;
+      if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+      if (e.buttons === 0) { brwDragEnd(); return; }
       d.active = true;
-      d.el.classList.add('shb-brw-dragging');
       tipHide();
-      ghostShow(hbUidLabel(d.uid), e.clientX, e.clientY);
+      var r0 = d.el.getBoundingClientRect();
+      d.gx = d.x0 - r0.left;
+      d.gy = d.y0 - r0.top;
+      d.ghost = owns(d.el.cloneNode(true));
+      d.ghost.className += ' shb-bed-ghost';
+      d.ghost.style.width = r0.width + 'px';
+      d.ghost.style.height = r0.height + 'px';
+      BRW.el.appendChild(d.ghost);
+      d.el.classList.add('shb-bed-src');
+      try { document.documentElement.classList.add('shb-grabbing'); } catch (err) {}
     }
+    if (e.buttons === 0) { brwDragEnd(); return; }
     e.preventDefault();
+    var x = e.clientX, y = e.clientY;
+    d.ghost.style.transform = 'translate3d(' + (x - d.gx) + 'px,' + (y - d.gy) + 'px,0)';
     var under = null;
-    try { under = document.elementFromPoint(e.clientX, e.clientY); } catch (err) { under = null; }
-    var g = under && under.closest ? under.closest('[data-brw-grp]') : null;
-    var mem = under && under.closest ? under.closest('.shb-brw-mem') : null;
-    Array.prototype.forEach.call(BRW.el.querySelectorAll('.shb-brw-hot'), function (x) { if (x !== g) x.classList.remove('shb-brw-hot'); });
-    if (g) g.classList.add('shb-brw-hot');
-    d.over = g ? g.getAttribute('data-brw-grp') : '';
-    d.before = '';
-    if (g && mem && mem !== d.el) {
-      var r = mem.getBoundingClientRect();
-      var ref = e.clientX < r.left + r.width / 2 ? mem : mem.nextElementSibling;
-      d.before = (ref && ref !== d.el && ref.getAttribute) ? (ref.getAttribute('data-brw-uid') || '') : '';
+    try { under = document.elementFromPoint(x, y); } catch (err) { under = null; }
+    d.to = null;
+    if (!under || !under.closest) { brwLine(null); brwHot(null); return; }
+    var bar = under.closest('[data-bed-bar]');
+    if (d.pill) {
+      /* a pill of the bar: only along the bar, among what is pinned */
+      if (!bar) { brwLine(null); brwHot(null); return; }
+      var best = null, bd = 1e9;
+      Array.prototype.forEach.call(bar.querySelectorAll('[data-bed-pill]'), function (pl) {
+        if (pl === d.el) return;
+        var r = pl.getBoundingClientRect();
+        var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0), dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+        /* the row the pointer is on counts first */
+        var dist = Math.hypot(dx, dy * 4);
+        if (dist < bd) { bd = dist; best = pl; }
+      });
+      brwHot(null);
+      if (!best) { brwLine(null); return; }
+      var br = best.getBoundingClientRect(), isA = x < br.left + br.width / 2;
+      var nx = isA ? best : best.nextElementSibling;
+      while (nx && (nx === d.el || !nx.hasAttribute('data-bed-pill'))) nx = nx.nextElementSibling;
+      d.to = { bar: true, before: nx ? nx.getAttribute('data-bed-pill') : '' };
+      brwLine({ x: (isA ? br.left - 3 : br.right + 3) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 });
+      return;
     }
-    var gName = d.over ? hbBtnName('grp:' + d.over, (grpById(d.over) || {}).name) : '';
-    ghostMove(e.clientX, e.clientY, d.over ? (d.over === d.from ? 'Release to move it here' : 'Release to put it in ' + gName)
-      : (d.from ? 'Release to take it out of the group' : 'Drag it onto a group'), d.over ? 'over' : '');
+    var gp = under.closest('[data-bed-pill^="grp:"]');
+    if (gp) {
+      /* onto a group of the bar: it goes into it, last */
+      d.to = { lane: gp.getAttribute('data-bed-pill').slice(4), before: '' };
+      brwLine(null);
+      brwHot(gp);
+      return;
+    }
+    var box = under.closest('[data-bed-lanebox]');
+    if (!box) { brwLine(null); brwHot(null); return; }
+    var lane = box.getAttribute('data-bed-lanebox');
+    brwHot(box);
+    if (lane === 'new') { d.to = { lane: 'new', before: '' }; brwLine(null); return; }
+    var cards = Array.prototype.filter.call(box.querySelectorAll('[data-bed-card]'), function (c) { return c !== d.el; });
+    var before = null;
+    for (var i = 0; i < cards.length; i++) {
+      var cr = cards[i].getBoundingClientRect();
+      if (y < cr.top + cr.height / 2) { before = cards[i]; break; }
+    }
+    d.to = { lane: lane, before: before ? before.getAttribute('data-bed-card') : '' };
+    var body = box.querySelector('.shb-bed-lbody'), bb = body.getBoundingClientRect();
+    var ly;
+    if (before) ly = before.getBoundingClientRect().top - 4.5;
+    else if (cards.length) ly = cards[cards.length - 1].getBoundingClientRect().bottom + 1.5;
+    else ly = bb.top + 8;
+    /* the line stays inside the list (a long one scrolls) */
+    ly = Math.max(bb.top + 2, Math.min(bb.bottom - 5, ly));
+    brwLine({ x: bb.left + 8, y: ly, w: bb.width - 16, h: 3 });
   }, true);
 
   listen(document, 'pointerup', function () {
     var d = BRW.drag;
     if (!d) return;
-    BRW.drag = null;
-    if (!d.active) return;
-    ghostHide();
+    var to = d.to, uid = d.uid, pill = d.pill, was = d.active;
+    brwDragEnd();
+    if (!was) return;
     BRW.noClick = Date.now() + 250;
-    if (!BRW.el) return;
-    if (d.over && grpById(d.over)) {
-      var name = hbUidLabel(d.uid), gName = hbBtnName('grp:' + d.over, grpById(d.over).name);
-      hbUndoPush((d.over === d.from ? 'moving "' : 'putting "') + name + '" in "' + gName + '"');
-      grpPutIn(d.over, d.uid, d.before);
-      save();
-      hbRedrawAll();
-      setStatus('ok', d.over === d.from ? 'Moved "' + name + '" in "' + gName + '"' : 'Put "' + name + '" in "' + gName + '"');
-    } else if (d.from) brwTakeOut(d.from, d.uid);
-    else brwRender();
+    if (!BRW.el || !to) return;
+    if (pill) { if (to.bar) brwBarMove(uid, to.before); return; }
+    if (!BRW.sel || BRW.sel.id !== uid) { BRW.sel = { kind: 'button', id: uid }; BRW.panel = null; BRW.inspFor = ''; }
+    brwMove(uid, to.lane, to.before);
+    if (BRW.el) brwRender();
   }, true);
 
   listen(document, 'pointercancel', function () {
-    if (!BRW.drag) return;
-    if (BRW.drag.active) ghostHide();
-    BRW.drag = null;
-    if (BRW.el) brwRender();
+    if (BRW.drag) brwDragEnd();
   }, true);
+
+  /* ---------------------------------------------------------------------
+   * 14e. SENDING A BUTTON OR A GROUP TO SOMEONE. Off unless something turns it on, since who gets it, and how,
+   * is not Hotbox's to know:
+   *  - a page that has people to send to (a studio's panel) gives Hotbox a sender: window.__hotbox.sendVia({
+   *    label, targets(), send(pack, target, info) }). The button editor then shows "Send…" on a button and on
+   *    a group, lists the targets and hands the pack over. On the other side that page calls
+   *    window.__hotbox.offer(pack, { from }): a card asks before anything is added.
+   *  - with no pipeline at all, the preference hbShare (window.__hotbox.share(true)) shows "Copy to share" and
+   *    "Paste…": the pack travels as a line of text through any chat or mail (hbPackToText / hbPackFromText).
+   * Either way what arrives is added with hbAddPack: as the next version, the one before left as it was.
+   * --------------------------------------------------------------------- */
+  var HB_SENDER = null;
+
+  function hbSendVia(sender) {
+    HB_SENDER = (sender && typeof sender === 'object' && typeof sender.send === 'function') ? sender : null;
+    if (BRW.el) { BRW.inspFor = ''; brwRender(); }
+    return !!HB_SENDER;
+  }
+
+  function hbShareOn(on) {
+    if (on !== undefined && !!on !== !!S.hbShare) {
+      S.hbShare = !!on;
+      save();
+      if (BRW.el) { BRW.inspFor = ''; brwRender(); }
+    }
+    return !!S.hbShare;
+  }
+
+  /* what a pack holds, in a line: "LoRA Stack · 4 nodes", "Group 1 · 3 buttons" */
+  function hbPackLabel(pack) {
+    var tpls = (pack && Array.isArray(pack.templates)) ? pack.templates : [], grps = (pack && Array.isArray(pack.groups)) ? pack.groups : [];
+    if (grps.length === 1) return (grps[0].name || 'Group') + ' · ' + (grps[0].items || []).length + ((grps[0].items || []).length === 1 ? ' button' : ' buttons');
+    if (!grps.length && tpls.length === 1) return (tpls[0].name || 'Button') + ' · ' + tpls[0].count + (tpls[0].count === 1 ? ' node' : ' nodes');
+    return (grps.length ? grps.length + (grps.length === 1 ? ' group' : ' groups') + ' · ' : '') + tpls.length + (tpls.length === 1 ? ' button' : ' buttons');
+  }
+
+  function hbB64(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function hbUnB64(s) {
+    s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function hbPipe(bytes, Stream) {
+    var st = new Stream('deflate-raw');
+    var w = st.writable.getWriter();
+    w.write(bytes);
+    w.close();
+    return new Response(st.readable).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+
+  /* A pack as text to paste anywhere: a line that says what it is, then the pack itself, squeezed
+     (HOTBOX1Z.….) or, in a browser that cannot squeeze, as it is (HOTBOX1J.….) */
+  function hbPackToText(pack) {
+    var raw = new TextEncoder().encode(JSON.stringify(pack));
+    var head = 'Hotbox buttons: ' + hbPackLabel(pack) + ' — copy this whole message and paste it in Hotbox → Settings → Saved Buttons → Browse → Paste\n';
+    function plain() { return head + 'HOTBOX1J.' + hbB64(raw) + '.'; }
+    if (typeof CompressionStream !== 'function') return Promise.resolve(plain());
+    try {
+      return hbPipe(raw, CompressionStream).then(function (z) { return head + 'HOTBOX1Z.' + hbB64(z) + '.'; }, plain);
+    } catch (e) { return Promise.resolve(plain()); }
+  }
+
+  function hbPackFromText(text) {
+    return new Promise(function (resolve, reject) {
+      var s = String(text || '');
+      function take(p) {
+        if (!p || typeof p !== 'object' || !p.hotbox_pack) throw new Error('that text holds no Hotbox buttons');
+        resolve(p);
+      }
+      /* a chat may have folded the long line: whatever is between the mark and its closing dot is the pack */
+      var m = s.match(/HOTBOX1([JZ])\.([A-Za-z0-9_\-\s]+)\./);
+      try {
+        if (!m && /HOTBOX1[JZ]\./.test(s)) { reject(new Error('the text is cut short or changed: copy the whole message again')); return; }
+        if (!m) { take(JSON.parse(s)); return; }
+        var bytes = hbUnB64(m[2].replace(/\s+/g, ''));
+        var read = function (b) { take(JSON.parse(new TextDecoder().decode(b))); };
+        if (m[1] === 'J') { read(bytes); return; }
+        if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot open it: ask for it again from a newer one');
+        hbPipe(bytes, DecompressionStream).then(read).catch(function () { reject(new Error('the text is cut short or changed: copy the whole message again')); });
+      } catch (e) {
+        reject(m ? (e instanceof Error && /browser|holds no/.test(e.message) ? e : new Error('the text is cut short or changed: copy the whole message again'))
+          : new Error('that text holds no Hotbox buttons'));
+      }
+    });
+  }
+
+  function brwPackOf(uid) {
+    var pack = hbPack([uid]);
+    return (pack.templates.length || pack.groups.length) ? pack : null;
+  }
+
+  function brwSendOpen(uid) {
+    var S0 = HB_SENDER, pack = brwPackOf(uid);
+    if (!S0) return;
+    if (!pack) { brwToast('Nothing to send in “' + hbUidLabel(uid) + '”', false); return; }
+    var P = { kind: 'send', uid: uid, name: hbUidLabel(uid), what: hbPackLabel(pack), pack: pack, targets: [], loading: false, err: '' };
+    if (typeof S0.targets !== 'function') { BRW.panel = P; brwSendTo(null); return; }
+    P.loading = true;
+    BRW.panel = P;
+    BRW.inspFor = '';
+    brwRender();
+    Promise.resolve().then(function () { return S0.targets({ uid: uid, name: P.name, kind: /^grp:/.test(uid) ? 'group' : 'button' }); }).then(function (list) {
+      P.targets = (Array.isArray(list) ? list : []).map(function (t) {
+        return (t && typeof t === 'object') ? { id: t.id, label: String(t.label || t.name || t.id || ''), hint: t.hint ? String(t.hint) : '', raw: t } : { id: t, label: String(t), hint: '', raw: t };
+      }).filter(function (t) { return t.label; });
+    }, function (err) { P.err = msgOf(err); }).then(function () {
+      P.loading = false;
+      if (BRW.panel === P && BRW.el) { BRW.inspFor = ''; brwRender(); }
+    });
+  }
+
+  function brwSendTo(target) {
+    var P = BRW.panel, S0 = HB_SENDER;
+    if (!P || P.kind !== 'send' || !S0) return;
+    BRW.panel = null;
+    BRW.inspFor = '';
+    if (BRW.el) brwRender();
+    var info = { uid: P.uid, name: P.name, kind: /^grp:/.test(P.uid) ? 'group' : 'button', label: P.what };
+    Promise.resolve().then(function () { return S0.send(P.pack, target ? target.raw : null, info); }).then(function () {
+      brwToast('Sent “' + P.name + '”' + (target ? ' to ' + target.label : ''), false);
+      setStatus('ok', '➤ Sent "' + P.name + '"' + (target ? ' to ' + target.label : ''));
+    }, function (err) {
+      brwToast('Could not send “' + P.name + '”: ' + msgOf(err), false);
+      setStatus('error', 'Could not send "' + P.name + '": ' + msgOf(err));
+    });
+  }
+
+  function brwCopyShare(uid) {
+    var pack = brwPackOf(uid), name = hbUidLabel(uid);
+    if (!pack) { brwToast('Nothing to copy in “' + name + '”', false); return; }
+    hbPackToText(pack).then(function (text) { return hbClipText(text); }).then(function () {
+      brwToast('Copied “' + name + '” · paste it into a chat', false);
+    }, function (err) {
+      brwToast('Could not copy: ' + msgOf(err), false);
+    });
+  }
+
+  function brwPasteRead(text) {
+    var P = BRW.panel;
+    if (!P || P.kind !== 'paste' || !BRW.el) return;
+    var info = BRW.el.querySelector('[data-bed-pasteinfo]'), add = BRW.el.querySelector('[data-bed-act="pasteadd"]');
+    P.pack = null;
+    if (add) add.disabled = true;
+    if (!String(text || '').trim()) { if (info) info.innerHTML = ''; return; }
+    hbPackFromText(text).then(function (pack) {
+      if (BRW.panel !== P) return;
+      P.pack = pack;
+      var names = (pack.groups || []).map(function (g) { return g.name; }).concat((pack.templates || []).map(function (t) { return t.name; }));
+      if (info) info.innerHTML = '<div class="shb-bed-lab"><span>It holds</span><em>' + esc(hbPackLabel(pack)) + '</em></div><div class="shb-bed-nodes">' +
+        names.slice(0, 7).map(function (n) { return '<div><i style="background:oklch(0.78 0.12 300)"></i>' + esc(n) + '</div>'; }).join('') +
+        (names.length > 7 ? '<div class="shb-more">+' + (names.length - 7) + ' more</div>' : '') + '</div>';
+      if (add) add.disabled = false;
+    }, function (err) {
+      if (BRW.panel === P && info) info.innerHTML = '<div class="shb-bed-warn">⚠ ' + esc(msgOf(err)) + '</div>';
+    });
+  }
+
+  function brwPasteAdd() {
+    var P = BRW.panel;
+    if (!P || P.kind !== 'paste' || !P.pack) return;
+    var label = hbPackLabel(P.pack);
+    hbAddPack(P.pack, { from: 'a pasted message' }).then(function (res) {
+      BRW.panel = null;
+      BRW.inspFor = '';
+      if (BRW.el) { brwRender(); brwToast('Added ' + label + ' · now ' + res.version, false); }
+    }, function (err) {
+      var info = BRW.el && BRW.el.querySelector('[data-bed-pasteinfo]');
+      if (info) info.innerHTML = '<div class="shb-bed-warn">⚠ Could not add it: ' + esc(msgOf(err)) + '</div>';
+    });
+  }
+
+  /* Someone sent buttons: a card asks before anything is added. Resolves with { accepted, result } */
+  function hbOffer(pack, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      if (!pack || typeof pack !== 'object' || !pack.hotbox_pack) { reject(new Error('this is not a Hotbox pack')); return; }
+      var names = (pack.groups || []).map(function (g) { return g.name; }).concat((pack.templates || []).map(function (t) { return t.name; }));
+      var card = owns(document.createElement('div'));
+      card.className = 'shb-offer';
+      card.innerHTML =
+        '<div class="shb-offer-t"><span class="shb-bed-mark"></span><b>' + esc(opts.from ? opts.from + ' sent you buttons' : 'Buttons for your Hotbox') + '</b></div>' +
+        '<div class="shb-offer-b">' + esc(hbPackLabel(pack)) + (names.length > 1 ? '<small>' + esc(names.slice(0, 5).join(' · ') + (names.length > 5 ? ' +' + (names.length - 5) : '')) + '</small>' : '') +
+          (opts.note ? '<small>“' + esc(opts.note) + '”</small>' : '') + '</div>' +
+        '<div class="shb-offer-a"><button type="button" data-of="no">Not now</button><button type="button" class="shb-pri" data-of="yes">Add to my buttons</button></div>';
+      /* cards stack: a new one sits above the ones already waiting */
+      var others = document.querySelectorAll('.shb-offer').length;
+      card.style.bottom = (18 + others * 12) + 'px';
+      card.style.right = (18 + others * 12) + 'px';
+      document.body.appendChild(card);
+      var done = false;
+      function shut() { if (card.parentNode) card.parentNode.removeChild(card); }
+      card.addEventListener('click', function (ev) {
+        var b = ev.target && ev.target.closest ? ev.target.closest('[data-of]') : null;
+        if (!b || done) return;
+        done = true;
+        if (b.getAttribute('data-of') === 'no') { shut(); resolve({ accepted: false }); return; }
+        card.querySelector('.shb-offer-a').innerHTML = '<span>Adding…</span>';
+        hbAddPack(pack, { from: opts.from || '' }).then(function (res) {
+          card.querySelector('.shb-offer-a').innerHTML = '<span>✓ Added · now ' + esc(res.version) + '</span>';
+          setTimeout(shut, 2200);
+          resolve({ accepted: true, result: res });
+        }, function (err) {
+          /* nothing was added: the card says why and stays until it is closed */
+          card.querySelector('.shb-offer-a').innerHTML = '<span class="shb-bed-warn">⚠ ' + esc(msgOf(err)) + '</span><button type="button" data-of="no">Close</button>';
+          done = false;
+          reject(err);
+        });
+      });
+    });
+  }
 
   /* ---------------------------------------------------------------------
    * 14c. THE NODES OF A SAVED BUTTON (the pencil on its card in the browser, or Edit Button → Edit its nodes):
@@ -12800,7 +13827,7 @@
     tipHide();
     box.innerHTML =
       '<div class="shb-modal-t">' +
-        '<span class="shb-brw-title"><span class="shb-tpl-ico">' + ico('sparkles', 16) + '</span><span>' + esc(hbBtnName('tpl:' + T.tpl.id, T.tpl.name)) + '</span>' +
+        '<span class="shb-brw-title">' + tplIcoHTML('tpl:' + T.tpl.id, 16) + '<span>' + esc(hbBtnName('tpl:' + T.tpl.id, T.tpl.name)) + '</span>' +
           '<small data-ted-note>' + esc(tedNote()) + '</small></span>' +
         '<span class="shb-brw-tools">' +
           (hist.length ? '<select class="shb-select shb-ted-hist" data-ted-hist data-tip="What this button held before. Pick one and it comes into the editor; it is kept once you save">' +
@@ -13032,13 +14059,14 @@
   }
 
   function hbPack(uids) {
-    var pack = { hotbox_pack: 1, hotbox: HB_VERSION, groups: [], templates: [], labels: {}, colors: {}, fill: {}, keys: {} };
+    var pack = { hotbox_pack: 1, hotbox: HB_VERSION, groups: [], templates: [], labels: {}, colors: {}, fill: {}, keys: {}, icons: {} };
     var done = {};
     function meta(from, to, named) {
       if (!named && S.customLabels && S.customLabels[from]) pack.labels[to] = S.customLabels[from];
       if (S.customColors && S.customColors[from]) pack.colors[to] = S.customColors[from];
       if (S.customFill && S.customFill[from]) pack.fill[to] = true;
       if (S.customKeys && S.customKeys[from]) pack.keys[to] = S.customKeys[from];
+      if (S.customIcons && S.customIcons[from]) pack.icons[to] = S.customIcons[from];
     }
     /* a saved button travels with its nodes; one from a shared library becomes a button of one's own, since
        whoever gets it may not have that library */
@@ -13139,7 +14167,7 @@
         if (Array.isArray(S.customBotBar)) toBar.forEach(function (u) { if (S.customBotBar.indexOf(u) < 0) S.customBotBar.push(u); });
         /* names, colors and keys: a saved button's and a group's come with it; for a tool or a node, the ones
            you gave it yourself stay */
-        [['labels', 'customLabels'], ['colors', 'customColors'], ['fill', 'customFill'], ['keys', 'customKeys']].forEach(function (p) {
+        [['labels', 'customLabels'], ['colors', 'customColors'], ['fill', 'customFill'], ['keys', 'customKeys'], ['icons', 'customIcons']].forEach(function (p) {
           var src = pack[p[0]];
           if (!src || typeof src !== 'object') return;
           if (!S[p[1]] || typeof S[p[1]] !== 'object') S[p[1]] = {};
@@ -13796,7 +14824,7 @@
         return '<div class="shb-pt-row" data-st-ptuid="' + esc(sbUid) + '"' + (sbTint ? ' style="--shb-tint:' + esc(sbTint) + '"' : '') +
           ' data-tip="' + esc(tp.count + (tp.count === 1 ? ' node' : ' nodes') + ': ' + tplSummary(tp) + (when ? ' · saved ' + new Date(when).toLocaleString() : '')) + '">' +
           '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
-          '<span class="shb-tpl-ico">' + ico('sparkles', 15) + '</span>' +
+          tplIcoHTML(sbUid, 15) +
           '<span class="shb-pt-name">' + esc(hbBtnName(sbUid, tp.name)) + '<small>' + esc(tplSummary(tp)) + '</small></span>' +
           (sbKey ? '<span class="shb-pt-key">' + esc(sbKey) + '</span>' : '') +
           '<span class="shb-tpl-n">' + esc(tp.count) + '</span>' +
@@ -13825,7 +14853,7 @@
           '<span class="shb-ptmenu-v">' + list.length + ' saved' + (gids.length ? ' · ' + gids.length + (gids.length === 1 ? ' group' : ' groups') : '') + (shared.length ? ' · ' + shared.length + ' shared' : '') + '</span>' +
           ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
         '</button>' +
-        '<button type="button" class="shb-btn shb-btn-on" data-st-browse data-tip="Every saved button and group on big cards: rename, color, key, put into groups, edit the nodes a button holds, delete (with Undo)">' + ico('search', 13) + '<span>Browse…</span></button>' +
+        '<button type="button" class="shb-btn shb-btn-on" data-st-browse data-tip="The button editor: your bottom bar as it is, a lane for every group, and the name, color, icon, key and nodes of each button. Drag to move; every change saves itself, with Undo and Redo">' + ico('search', 13) + '<span>Browse…</span></button>' +
         '</div>' +
         (sbOpen ? '<div class="shb-pt">' +
           (list.length || shared.length || gids.length ? '<div class="shb-sb-list">' + list.map(sbRow).join('') + groupsHTML + sharedHTML + '</div>'
@@ -14128,6 +15156,7 @@
         rstBarsBtn.onclick = function () {
           hbUndoPush('Reset Bars');
           S.customKeys = {};
+          S.customIcons = {};
           S.customAddBar = null;
           S.customAddBySig = {};
           S.customToolsBar = {};
@@ -14241,9 +15270,11 @@
 
     var undoKey = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && String(e.key || '').toLowerCase() === 'z';
 
-    /* A Hotbox window is on top (the button browser, the node editor, Edit Button): Esc closes the top one,
+    /* A Hotbox window is on top (the button editor, the node editor, Edit Button): Esc closes the top one,
        Ctrl+Z takes back the last change, and nothing else reaches the hotbox or the canvas behind it */
     if (HB_MODALS.length) {
+      /* the button editor has keys of its own (/ finds, G groups, Del deletes, Ctrl+Shift+Z does again) */
+      if (BRW.el && HB_MODALS[HB_MODALS.length - 1] === BRW.shut && brwKey(e)) return;
       if (e.key === 'Escape') {
         hbEat(e);
         if (!e.repeat) HB_MODALS[HB_MODALS.length - 1]();
@@ -14459,7 +15490,14 @@
     shareable: hbShareable,
     pack: hbPack,
     addPack: hbAddPack,
-    /* the button browser, and the nodes of one saved button (its id) */
+    /* Sending a button or a group to someone: off until a page gives a sender (sendVia) or the preference
+       hbShare is on (share(true)). offer(pack, { from, note }) asks before adding what someone sent */
+    sendVia: hbSendVia,
+    offer: hbOffer,
+    share: hbShareOn,
+    packToText: hbPackToText,
+    packFromText: hbPackFromText,
+    /* the button editor, and the nodes of one saved button (its id) */
     browseButtons: brwOpen,
     editButton: tplEditOpen,
     isOpen: function () { return !!HB.el; },
