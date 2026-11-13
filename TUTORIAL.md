@@ -140,7 +140,7 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 1. Pick a saved button or a group in the button editor (or right-click it in the hotbox) and press **Copy to share**. It is on your clipboard as text, nodes and all.
 2. Paste it into any chat or mail.
 3. Whoever gets it copies the whole message and presses <kbd>Ctrl</kbd>+<kbd>V</kbd> anywhere in ComfyUI. A card shows what it holds; **Add to my buttons** puts it at the end of their bottom bar.
-4. Nothing they have is overwritten: what arrives is kept as the next version of their preferences. (In the recording one ComfyUI plays both sides: the button is deleted in between.)
+4. Nothing they have is overwritten: what arrives is kept as the next version of their preferences. A group they already have keeps the buttons they put in it, and the new ones go after them. (In the recording one ComfyUI plays both sides: the button is deleted in between.)
 
 ## 13. A key of its own, and new nodes for the same button
 

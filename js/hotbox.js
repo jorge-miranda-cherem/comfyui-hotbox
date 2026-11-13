@@ -14207,9 +14207,14 @@
           var items = g.items.map(String).filter(function (u, i, all) {
             return all.indexOf(u) === i && !/^grp:/.test(u) && (!/^tpl:/.test(u) || tplById(u.slice(4)));
           });
-          if (S.hbGroups[gid]) {
-            S.hbGroups[gid].name = String(g.name || S.hbGroups[gid].name);
-            S.hbGroups[gid].items = items;
+          var mine = S.hbGroups[gid];
+          if (mine) {
+            /* a group you already have: its list stays as you left it, in your order, and what the sender has
+               that you do not goes after it. Nothing of yours leaves the group, not even what the sender took
+               out of theirs, and what was in it is not checked again (a shared library may not be read yet) */
+            var have = Array.isArray(mine.items) ? mine.items : [];
+            mine.name = String(g.name || mine.name);
+            mine.items = have.concat(items.filter(function (u) { return have.indexOf(u) < 0; }));
             replaced.groups++;
           } else {
             S.hbGroups[gid] = { name: String(g.name || 'Group'), items: items, keep: true };
