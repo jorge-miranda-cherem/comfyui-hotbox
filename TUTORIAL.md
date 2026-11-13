@@ -125,10 +125,10 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 
 ## 11. The button editor
 
-![Name, color, icon and key for a button; drag it into a group; a new group; its place in the bar; Undo and Redo](docs/tutorial/11-button-editor.gif)
+![Name, color, icon and key for a button; drag it into a group; a new group; its place in the bar; Undo and Redo; then the Dock picked on the map: two models put on the swap bar, one moved to the front, one taken off](docs/tutorial/11-button-editor.gif)
 
 1. **Settings → Saved Buttons → Browse…** (the **H** in ComfyUI's top bar opens Settings).
-2. On top, a small **map of the hotbox** and, beside it, the bar picked on it: at first **your bottom bar**, as the hotbox shows it. Under them, a lane for every group and one for the buttons in no group. (The recording was made before the map: the bar is the same, the map is new.)
+2. On top, a small **map of the hotbox** and, beside it, the bar picked on it: at first **your bottom bar**, as the hotbox shows it. Under them, a lane for every group and one for the buttons in no group.
 3. **Click a button**: its name, color, icon and hotkey are on the right, with the group it is in and the nodes it adds. The hotkey warns when the key already does something.
 4. **Drag** a card to any place in a lane, onto a group in the bar, or onto **New group** (<kbd>G</kbd> makes one too). Drag a group or a button along the bar to move it there.
 5. Every change saves itself. <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes it back, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again, <kbd>/</kbd> finds a button by its name or by a node in it, <kbd>Del</kbd> deletes what is picked.

@@ -71,7 +71,7 @@ A saved button can change and stay the same button: select the nodes and choose 
 nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: a map of the hotbox to pick a bar (the bottom bar, the dock, the swap bar of an API node),
 a lane for every group, and each button's name, color, icon, key and nodes.
 
-<img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, and a new group moves along the bar" width="100%">
+<img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, a new group moves along the bar, and the Dock picked on the map gets two models on its swap bar" width="100%">
 
 **Send a button to anyone**
 
