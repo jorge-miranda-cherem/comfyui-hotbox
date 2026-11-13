@@ -1088,9 +1088,15 @@
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
       /* The button editor (Settings → Saved Buttons → Browse…): the look of the studio tools it sits beside —
          neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
-      '.shb-modal.shb-bed{position:relative;width:var(--shb-bed-w,min(1360px,96vw));height:var(--shb-bed-h,min(820px,92vh));min-width:min(900px,98vw);min-height:min(520px,96vh);max-width:98vw;max-height:96vh;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
-      /* its size is yours: the corner stretches it, the arrows beside Done fill the screen */
-      '.shb-modal.shb-bed.shb-bed-max{width:98vw;height:96vh}',
+      '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(820px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
+      /* its size is yours: the corner stretches it, the arrows beside Done fill the screen, and the four A's
+         make everything in it larger (--shb-bed-z: the window is laid out that much smaller and scaled up, so
+         what is measured on screen and where the pointer is stay in the same pixels) */
+      '.shb-modal.shb-bed.shb-bed-max{width:calc(98vw/var(--shb-bed-z,1));height:calc(96vh/var(--shb-bed-z,1))}',
+      '.shb-bed-zs{flex:none;display:flex;align-items:center;gap:1px;height:26px;padding:2px;border-radius:5px;background:oklch(0.2 0 0);border:1px solid oklch(0.29 0 0)}',
+      '.shb-bed-zs button{width:22px;height:20px;padding:0;border:0;border-radius:3px;background:transparent;color:oklch(0.55 0 0);font-weight:600;line-height:1;display:grid;place-items:center}',
+      '.shb-bed-zs button:hover{background:oklch(0.27 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-zs button.shb-on{background:oklch(0.3 0.03 78);color:oklch(0.87 0.12 78)}',
       '.shb-modal.shb-bed.shb-bed-sizing{transition:none}',
       '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0 0);cursor:nwse-resize;touch-action:none;transition:color .12s}',
       '.shb-bed-grip:hover,.shb-bed-sizing .shb-bed-grip{color:oklch(0.82 0.13 78)}',
@@ -1107,9 +1113,14 @@
       '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0 0)}',
       '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0 0)}',
       '.shb-bed-t2{color:oklch(0.8 0 0)}',
-      '.shb-bed-sum{font-size:12px;color:oklch(0.5 0 0);margin-left:4px;white-space:nowrap}',
+      /* a narrow window (or large text in it): the count goes first, then the search box gets shorter, then
+         the title; the buttons never do */
+      '.shb-bed-hd > b,.shb-bed-t2{flex:0 .001 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-bed-hd > button,.shb-bed-hd > .shb-bed-two,.shb-bed-hd > [data-bed-extra]{flex:none}',
+      '.shb-bed-hd button{white-space:nowrap}',
+      '.shb-bed-sum{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:oklch(0.5 0 0);margin-left:4px;white-space:nowrap}',
       '.shb-bed-sp{flex:1}',
-      '.shb-bed-find{height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0 0);border-radius:5px;background:oklch(0.2 0 0);color:oklch(0.5 0 0);cursor:text}',
+      '.shb-bed-find{flex:0 10 260px;min-width:64px;height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0 0);border-radius:5px;background:oklch(0.2 0 0);color:oklch(0.5 0 0);cursor:text}',
       '.shb-bed-find:focus-within{border-color:oklch(0.55 0.09 78)}',
       '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0 0);font:inherit;user-select:text}',
       '.shb-bed-find input::placeholder{color:oklch(0.5 0 0)}',
@@ -1182,7 +1193,7 @@
       '.shb-bed-line{position:fixed;left:0;top:0;z-index:5;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
       '.shb-bed-line.shb-on{opacity:1}',
       '.shb-bed-ghost,.shb-bed-ghost *{box-sizing:border-box}',
-      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
+      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
       '.shb-bed-insp{width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
       '.shb-bed-ibody{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}',
       '.shb-bed-f{display:flex;flex-direction:column;gap:8px}',
@@ -8610,6 +8621,11 @@
         });
       });
 
+      /* a group's list that is open under the pointer (not kept open with its arrow: those are drawn open) */
+      var openLists = Array.prototype.map.call(el.querySelectorAll('.shb-grp.shb-grp-show:not(.shb-grp-pin)[data-hb-gkey]'), function (w) {
+        return w._closing ? '' : w.getAttribute('data-hb-gkey');
+      }).filter(Boolean);
+
       el.className = 'shb-wrap ' + hbThemeCls() + (HB.editMode ? ' shb-editing' : '');
       hbPaintPro(el, node, tools, addItems, toolItems, botItems, isAdd, isPair, sel, S.hbStyle === 'classic');
       hbFitSliders(el);
@@ -8617,6 +8633,24 @@
 
       hbPlace();
       hbSyncEditAnim();
+      /* ...is still open after the bars are drawn again, with no flicker: holding a button inside a group to
+         edit it (the hold draws the bars for edit mode) must not take that button from under the pointer. It
+         closes as always once the pointer is no longer on it */
+      openLists.forEach(function (gid) {
+        var w = el.querySelector('.shb-grp[data-hb-gkey="' + cssEsc(gid) + '"]');
+        var drop = w && w.querySelector(':scope > .shb-gdrop');
+        if (!drop || !drop.children.length || w.classList.contains('shb-grp-show')) return;
+        w.classList.add('shb-grp-show');
+        hbDropFit(drop);
+        clearTimeout(w._hideT);
+        w._hideT = setTimeout(function () {
+          if (!w.isConnected || HB.grpOpen[gid] || hbDragging() || w.matches(':hover')) return;
+          /* a pointer that has not moved since may not count as over the new copy yet: ask what is under it */
+          var under = null;
+          try { under = document.elementFromPoint(HB_MX, HB_MY); } catch (e) { under = null; }
+          if (!(under && w.contains(under))) hbDropHide(w);
+        }, 700);
+      });
       var qIn = el.querySelector('[data-hb-q]');
       if (qIn && document.activeElement !== qIn) {
         try { qIn.focus(); qIn.setSelectionRange(qIn.value.length, qIn.value.length); } catch (e) {}
@@ -12530,8 +12564,8 @@
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
    * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
-  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false } };
-  var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 };
+  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 } };
+  var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 }, BRW_WIN_ZS = [1, 1.25, 1.5, 2];
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
 
@@ -12625,6 +12659,11 @@
             '<button type="button" class="shb-bed-hb" data-bed-act="undo" title="Undo (Ctrl+Z)">↶ Undo</button>' +
             '<button type="button" class="shb-bed-hb" data-bed-act="redo" title="Redo (Ctrl+Shift+Z)">↷</button>' +
           '</span>' +
+          '<span class="shb-bed-zs">' +
+            BRW_WIN_ZS.map(function (z, i) {
+              return '<button type="button" data-bed-z="' + z + '" style="font-size:' + [9, 10.5, 12, 13.5][i] + 'px" title="Text and buttons at ' + Math.round(z * 100) + '%">A</button>';
+            }).join('') +
+          '</span>' +
           '<button type="button" class="shb-bed-hb shb-bed-ib" data-bed-act="max"></button>' +
           '<button type="button" class="shb-bed-done" data-bed-act="close">Done</button>' +
         '</div>' +
@@ -12656,7 +12695,7 @@
     brwWinApply();
     var grip = bg.querySelector('[data-bed-grip]');
     grip.addEventListener('pointerdown', brwWinDown);
-    grip.addEventListener('dblclick', function () { BRW.win = { w: 0, h: 0, max: false }; brwWinSave(); brwWinApply(); });
+    grip.addEventListener('dblclick', function () { BRW.win = { w: 0, h: 0, max: false, z: BRW.win.z || 1 }; brwWinSave(); brwWinApply(); });
     BRW.q = '';
     BRW.sel = null;
     BRW.panel = null;
@@ -12684,19 +12723,20 @@
     }, 260);
   }
 
-  /* ---- the size of the editor's window. The corner at the bottom right stretches it, the arrows beside Done
-     fill the screen and give the size back. It is this screen's, so it is kept in this browser and not in the
-     preferences, which a team may share ---- */
+  /* ---- the size of the editor's window, and of what is in it. The corner at the bottom right stretches the
+     window, the arrows beside Done fill the screen and give the size back, and the four A's make its text and
+     buttons larger (a 4K screen wants them larger). All of it is this screen's, so it is kept in this browser
+     and not in the preferences, which a team may share. The sizes kept are the ones seen on screen ---- */
   function brwWinRead() {
     var w = null;
     try { w = JSON.parse(localStorage.getItem(BRW_WIN_KEY) || 'null'); } catch (e) { w = null; }
-    var ww = Math.round(+(w && w.w)) || 0, hh = Math.round(+(w && w.h)) || 0;
-    return { w: ww > 0 && hh > 0 ? ww : 0, h: ww > 0 && hh > 0 ? hh : 0, max: !!(w && w.max) };
+    var ww = Math.round(+(w && w.w)) || 0, hh = Math.round(+(w && w.h)) || 0, z = +(w && w.z) || 1;
+    return { w: ww > 0 && hh > 0 ? ww : 0, h: ww > 0 && hh > 0 ? hh : 0, max: !!(w && w.max), z: BRW_WIN_ZS.indexOf(z) >= 0 ? z : 1 };
   }
 
   function brwWinSave() {
     try {
-      if (BRW.win.w || BRW.win.max) localStorage.setItem(BRW_WIN_KEY, JSON.stringify(BRW.win));
+      if (BRW.win.w || BRW.win.max || BRW.win.z !== 1) localStorage.setItem(BRW_WIN_KEY, JSON.stringify(BRW.win));
       else localStorage.removeItem(BRW_WIN_KEY);
     } catch (e) {}
   }
@@ -12713,6 +12753,11 @@
       box.style.removeProperty('--shb-bed-w');
       box.style.removeProperty('--shb-bed-h');
     }
+    if (win.z !== 1) box.style.setProperty('--shb-bed-z', String(win.z));
+    else box.style.removeProperty('--shb-bed-z');
+    Array.prototype.forEach.call(box.querySelectorAll('[data-bed-z]'), function (zb) {
+      zb.classList.toggle('shb-on', +zb.getAttribute('data-bed-z') === win.z);
+    });
     var b = box.querySelector('[data-bed-act="max"]');
     if (b && b.getAttribute('data-on') !== (win.max ? '1' : '0')) {
       b.setAttribute('data-on', win.max ? '1' : '0');
@@ -12721,26 +12766,40 @@
     }
   }
 
+  /* Larger or smaller text and buttons. The window keeps the size it has on screen when that is one you gave
+     it; its usual size grows with them. No sliding from one to the other: it is simply that size */
+  function brwWinZoom(z) {
+    var box = BRW.el && BRW.el.querySelector('.shb-bed');
+    if (!box || BRW_WIN_ZS.indexOf(z) < 0 || z === BRW.win.z) return;
+    brwDragEnd();
+    BRW.win.z = z;
+    brwWinSave();
+    box.classList.add('shb-bed-sizing');
+    brwWinApply();
+    void box.offsetWidth;
+    box.classList.remove('shb-bed-sizing');
+  }
+
   function brwWinDown(ev) {
     if (ev.button !== 0) return;
     var box = BRW.el && BRW.el.querySelector('.shb-bed');
     if (!box) return;
     ev.preventDefault();
     ev.stopPropagation();
-    var grip = ev.currentTarget, r = box.getBoundingClientRect(), moved = false;
+    var grip = ev.currentTarget, r = box.getBoundingClientRect(), moved = false, z = BRW.win.z || 1;
     /* the window sits in the middle of the screen and grows both ways: twice the pointer's way from the middle
        keeps the corner under it */
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2, ox = r.right - ev.clientX, oy = r.bottom - ev.clientY;
     try { grip.setPointerCapture(ev.pointerId); } catch (e) {}
     function move(e) {
       var maxW = Math.floor(window.innerWidth * 0.98), maxH = Math.floor(window.innerHeight * 0.96);
-      var w = Math.max(Math.min(BRW_WIN_MIN.w, maxW), Math.min(Math.round(2 * (e.clientX + ox - cx)), maxW));
-      var h = Math.max(Math.min(BRW_WIN_MIN.h, maxH), Math.min(Math.round(2 * (e.clientY + oy - cy)), maxH));
+      var w = Math.max(Math.min(Math.round(BRW_WIN_MIN.w * z), maxW), Math.min(Math.round(2 * (e.clientX + ox - cx)), maxW));
+      var h = Math.max(Math.min(Math.round(BRW_WIN_MIN.h * z), maxH), Math.min(Math.round(2 * (e.clientY + oy - cy)), maxH));
       /* a click on the corner is not a new size */
       if (!moved && Math.abs(w - r.width) < 3 && Math.abs(h - r.height) < 3) return;
       if (!moved) box.classList.add('shb-bed-sizing');
       moved = true;
-      BRW.win = { w: w, h: h, max: false };
+      BRW.win = { w: w, h: h, max: false, z: z };
       brwWinApply();
     }
     function up() {
@@ -13266,6 +13325,8 @@
     if (act === 'newgrp') { brwNewGroup(''); return; }
     if (act === 'paste') { brwPasteOpen(); return; }
     if (act === 'max') { BRW.win.max = !BRW.win.max; brwWinSave(); brwWinApply(); return; }
+    var zb = t.closest('[data-bed-z]');
+    if (zb) { brwWinZoom(+zb.getAttribute('data-bed-z')); return; }
     if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
     if (act === 'pasteadd') { brwPasteAdd(); return; }
     var tg = t.closest('[data-bed-target]');
@@ -13425,18 +13486,21 @@
       var r0 = d.el.getBoundingClientRect();
       d.gx = d.x0 - r0.left;
       d.gy = d.y0 - r0.top;
+      /* the copy lives outside the window, which may be scaled up (the four A's): it gets the card's own
+         size and that same scale, measured, so it is the card as it looks */
+      d.z = (d.el.offsetWidth && r0.width / d.el.offsetWidth) || 1;
       d.ghost = owns(d.el.cloneNode(true));
       d.ghost.className += ' shb-bed-ghost';
-      d.ghost.style.width = r0.width + 'px';
-      d.ghost.style.height = r0.height + 'px';
+      d.ghost.style.width = (r0.width / d.z) + 'px';
+      d.ghost.style.height = (r0.height / d.z) + 'px';
       BRW.el.appendChild(d.ghost);
       d.el.classList.add('shb-bed-src');
       try { document.documentElement.classList.add('shb-grabbing'); } catch (err) {}
     }
     if (e.buttons === 0) { brwDragEnd(); return; }
     e.preventDefault();
-    var x = e.clientX, y = e.clientY;
-    d.ghost.style.transform = 'translate3d(' + (x - d.gx) + 'px,' + (y - d.gy) + 'px,0)';
+    var x = e.clientX, y = e.clientY, z = d.z || 1;
+    d.ghost.style.transform = 'translate3d(' + (x - d.gx) + 'px,' + (y - d.gy) + 'px,0)' + (Math.abs(z - 1) > 0.01 ? ' scale(' + z + ')' : '');
     var under = null;
     try { under = document.elementFromPoint(x, y); } catch (err) { under = null; }
     d.to = null;
@@ -13460,7 +13524,7 @@
       var nx = isA ? best : best.nextElementSibling;
       while (nx && (nx === d.el || !nx.hasAttribute('data-bed-pill'))) nx = nx.nextElementSibling;
       d.to = { bar: true, before: nx ? nx.getAttribute('data-bed-pill') : '' };
-      brwLine({ x: (isA ? br.left - 3 : br.right + 3) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 });
+      brwLine({ x: (isA ? br.left - 3 * z : br.right + 3 * z) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 });
       return;
     }
     var gp = under.closest('[data-bed-pill^="grp:"]');
@@ -13485,12 +13549,13 @@
     d.to = { lane: lane, before: before ? before.getAttribute('data-bed-card') : '' };
     var body = box.querySelector('.shb-bed-lbody'), bb = body.getBoundingClientRect();
     var ly;
-    if (before) ly = before.getBoundingClientRect().top - 4.5;
-    else if (cards.length) ly = cards[cards.length - 1].getBoundingClientRect().bottom + 1.5;
-    else ly = bb.top + 8;
+    /* in the middle of the gap between two cards (6px, times the window's scale) */
+    if (before) ly = before.getBoundingClientRect().top - 3 * z - 1.5;
+    else if (cards.length) ly = cards[cards.length - 1].getBoundingClientRect().bottom + 3 * z - 1.5;
+    else ly = bb.top + 8 * z;
     /* the line stays inside the list (a long one scrolls) */
     ly = Math.max(bb.top + 2, Math.min(bb.bottom - 5, ly));
-    brwLine({ x: bb.left + 8, y: ly, w: bb.width - 16, h: 3 });
+    brwLine({ x: bb.left + 8 * z, y: ly, w: bb.width - 16 * z, h: 3 });
   }, true);
 
   listen(document, 'pointerup', function () {

@@ -132,7 +132,7 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 3. **Click a button**: its name, color, icon and hotkey are on the right, with the group it is in and the nodes it adds. The hotkey warns when the key already does something.
 4. **Drag** a card to any place in a lane, onto a group in the bar, or onto **New group** (<kbd>G</kbd> makes one too). Drag a group or a button along the bar to move it there.
 5. Every change saves itself. <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes it back, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again, <kbd>/</kbd> finds a button by its name or by a node in it, <kbd>Del</kbd> deletes what is picked.
-6. **A larger window**: the arrows beside **Done** fill the screen, and the corner at the bottom right stretches the window to any size (double-click it for the usual one). The size is kept in this browser.
+6. **A larger window**: the arrows beside **Done** fill the screen, and the corner at the bottom right stretches the window to any size (double-click it for the usual one). The four **A**'s beside them make its text and buttons larger, up to 200% for a 4K screen. Both are kept in this browser.
 
 ## 12. Send a button to someone
 
