@@ -714,6 +714,7 @@
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
     wand: '<path d="M21.6 3.6 20.4 2.4a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.3 1.3a1.2 1.2 0 0 0 1.7 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/>'
   };
 
@@ -1087,7 +1088,13 @@
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
       /* The button editor (Settings → Saved Buttons → Browse…): the look of the studio tools it sits beside —
          neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
-      '.shb-modal.shb-bed{position:relative;width:min(1360px,96vw);height:min(820px,92vh);max-height:92vh;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none}',
+      '.shb-modal.shb-bed{position:relative;width:var(--shb-bed-w,min(1360px,96vw));height:var(--shb-bed-h,min(820px,92vh));min-width:min(900px,98vw);min-height:min(520px,96vh);max-width:98vw;max-height:96vh;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
+      /* its size is yours: the corner stretches it, the arrows beside Done fill the screen */
+      '.shb-modal.shb-bed.shb-bed-max{width:98vw;height:96vh}',
+      '.shb-modal.shb-bed.shb-bed-sizing{transition:none}',
+      '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0 0);cursor:nwse-resize;touch-action:none;transition:color .12s}',
+      '.shb-bed-grip:hover,.shb-bed-sizing .shb-bed-grip{color:oklch(0.82 0.13 78)}',
+      '.shb-bed-grip svg{display:block}',
       '.shb-bed *{box-sizing:border-box}',
       '.shb-bed ::-webkit-scrollbar{width:8px;height:8px}',
       '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0 0);border-radius:4px}',
@@ -1110,6 +1117,8 @@
       '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0 0);font-size:12.5px}',
       '.shb-bed-hb:hover{background:oklch(0.28 0 0)}',
       '.shb-bed-hb:disabled{color:oklch(0.42 0 0);background:transparent}',
+      '.shb-bed-hb.shb-bed-ib{width:30px;padding:0;display:grid;place-items:center;color:oklch(0.66 0 0)}',
+      '.shb-bed-hb.shb-bed-ib:hover{color:oklch(0.95 0 0)}',
       '.shb-bed-done{height:30px;padding:0 16px;border:0;border-radius:4px;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-size:12.5px;font-weight:600}',
       '.shb-bed-done:hover{background:oklch(0.87 0.12 78)}',
       '.shb-bed-mid{flex:1;min-height:0;display:flex}',
@@ -12521,7 +12530,8 @@
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
    * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
-  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '' };
+  var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false } };
+  var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 };
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
 
@@ -12615,6 +12625,7 @@
             '<button type="button" class="shb-bed-hb" data-bed-act="undo" title="Undo (Ctrl+Z)">↶ Undo</button>' +
             '<button type="button" class="shb-bed-hb" data-bed-act="redo" title="Redo (Ctrl+Shift+Z)">↷</button>' +
           '</span>' +
+          '<button type="button" class="shb-bed-hb shb-bed-ib" data-bed-act="max"></button>' +
           '<button type="button" class="shb-bed-done" data-bed-act="close">Done</button>' +
         '</div>' +
         '<div class="shb-bed-mid">' +
@@ -12634,10 +12645,18 @@
           '<span class="shb-bed-sp"></span><span class="shb-bed-saved"><i></i><span data-bed-saved></span></span>' +
         '</div>' +
         '<div data-bed-toast></div>' +
+        '<div class="shb-bed-grip" data-bed-grip title="Drag to make the window larger or smaller · double-click for its usual size">' +
+          '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M10 3 3 10M10 7 7 10"/></svg>' +
+        '</div>' +
       '</div>' +
       '<div class="shb-bed-line" data-bed-line></div>';
     document.body.appendChild(bg);
     BRW.el = bg;
+    BRW.win = brwWinRead();
+    brwWinApply();
+    var grip = bg.querySelector('[data-bed-grip]');
+    grip.addEventListener('pointerdown', brwWinDown);
+    grip.addEventListener('dblclick', function () { BRW.win = { w: 0, h: 0, max: false }; brwWinSave(); brwWinApply(); });
     BRW.q = '';
     BRW.sel = null;
     BRW.panel = null;
@@ -12663,6 +12682,78 @@
       var box = BRW.el && BRW.el.querySelector('.shb-bed');
       if (box) box.classList.remove('shb-bed-fresh');
     }, 260);
+  }
+
+  /* ---- the size of the editor's window. The corner at the bottom right stretches it, the arrows beside Done
+     fill the screen and give the size back. It is this screen's, so it is kept in this browser and not in the
+     preferences, which a team may share ---- */
+  function brwWinRead() {
+    var w = null;
+    try { w = JSON.parse(localStorage.getItem(BRW_WIN_KEY) || 'null'); } catch (e) { w = null; }
+    var ww = Math.round(+(w && w.w)) || 0, hh = Math.round(+(w && w.h)) || 0;
+    return { w: ww > 0 && hh > 0 ? ww : 0, h: ww > 0 && hh > 0 ? hh : 0, max: !!(w && w.max) };
+  }
+
+  function brwWinSave() {
+    try {
+      if (BRW.win.w || BRW.win.max) localStorage.setItem(BRW_WIN_KEY, JSON.stringify(BRW.win));
+      else localStorage.removeItem(BRW_WIN_KEY);
+    } catch (e) {}
+  }
+
+  function brwWinApply() {
+    var box = BRW.el && BRW.el.querySelector('.shb-bed'), win = BRW.win;
+    if (!box || !win) return;
+    box.classList.toggle('shb-bed-max', !!win.max);
+    /* a size of your own; the screen still bounds it (max-width, max-height), also when it gets smaller later */
+    if (win.w) {
+      box.style.setProperty('--shb-bed-w', win.w + 'px');
+      box.style.setProperty('--shb-bed-h', win.h + 'px');
+    } else {
+      box.style.removeProperty('--shb-bed-w');
+      box.style.removeProperty('--shb-bed-h');
+    }
+    var b = box.querySelector('[data-bed-act="max"]');
+    if (b && b.getAttribute('data-on') !== (win.max ? '1' : '0')) {
+      b.setAttribute('data-on', win.max ? '1' : '0');
+      b.innerHTML = ico(win.max ? 'collapse' : 'expand', 14);
+      b.title = win.max ? 'Back to the size it had' : 'Fill the screen';
+    }
+  }
+
+  function brwWinDown(ev) {
+    if (ev.button !== 0) return;
+    var box = BRW.el && BRW.el.querySelector('.shb-bed');
+    if (!box) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var grip = ev.currentTarget, r = box.getBoundingClientRect(), moved = false;
+    /* the window sits in the middle of the screen and grows both ways: twice the pointer's way from the middle
+       keeps the corner under it */
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2, ox = r.right - ev.clientX, oy = r.bottom - ev.clientY;
+    try { grip.setPointerCapture(ev.pointerId); } catch (e) {}
+    function move(e) {
+      var maxW = Math.floor(window.innerWidth * 0.98), maxH = Math.floor(window.innerHeight * 0.96);
+      var w = Math.max(Math.min(BRW_WIN_MIN.w, maxW), Math.min(Math.round(2 * (e.clientX + ox - cx)), maxW));
+      var h = Math.max(Math.min(BRW_WIN_MIN.h, maxH), Math.min(Math.round(2 * (e.clientY + oy - cy)), maxH));
+      /* a click on the corner is not a new size */
+      if (!moved && Math.abs(w - r.width) < 3 && Math.abs(h - r.height) < 3) return;
+      if (!moved) box.classList.add('shb-bed-sizing');
+      moved = true;
+      BRW.win = { w: w, h: h, max: false };
+      brwWinApply();
+    }
+    function up() {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', up, true);
+      document.removeEventListener('pointercancel', up, true);
+      try { grip.releasePointerCapture(ev.pointerId); } catch (e) {}
+      box.classList.remove('shb-bed-sizing');
+      if (moved) brwWinSave();
+    }
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('pointercancel', up, true);
   }
 
   function brwClose() {
@@ -13174,6 +13265,7 @@
     if (act === 'redo') { if (hbRedo()) brwToast('Redone', false); return; }
     if (act === 'newgrp') { brwNewGroup(''); return; }
     if (act === 'paste') { brwPasteOpen(); return; }
+    if (act === 'max') { BRW.win.max = !BRW.win.max; brwWinSave(); brwWinApply(); return; }
     if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
     if (act === 'pasteadd') { brwPasteAdd(); return; }
     var tg = t.closest('[data-bed-target]');
