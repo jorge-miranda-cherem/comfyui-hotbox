@@ -15682,6 +15682,15 @@
     return '/extensions/comfyui-hotbox/';
   })();
 
+  /* A tool's clip. A page that carries Hotbox without its folder (baked into a studio panel, where there are no
+     files beside it) hands the clips over as text: window.__hotboxClips = { lupa: 'data:video/webm;base64,…', … }.
+     extras/hotbox_clips.js is exactly that, made from js/clips by tools/clips_base64.py. It may be set before or
+     after Hotbox loads: it is read when a clip is shown */
+  function ptbClipSrc(id) {
+    var c = window.__hotboxClips;
+    return (c && typeof c[id] === 'string' && c[id]) || (HB_BASE + 'clips/' + id + '.webm');
+  }
+
   /* the setting that switches a power tool off (Alt+Z is one switch for the Magnifier, Visual Crop and Paint Studio) */
   function ptbSetKey(uid) { return POWER_TOOL_OF[String(uid || '').slice(5)] || ''; }
   function ptbIsOn(uid) { var k = ptbSetKey(uid); return !k || S[k] !== false; }
@@ -15798,11 +15807,15 @@
       PTB.clipFor = PTB.sel;
       clip.classList.remove('shb-ptb-noclip');
       clip.innerHTML = pt
-        ? '<video src="' + esc(HB_BASE + 'clips/' + pt.uid.slice(5) + '.webm') + '" autoplay loop muted playsinline aria-label="' + esc(pt.name + ' at work') + '"></video>' +
+        ? '<video autoplay loop muted playsinline aria-label="' + esc(pt.name + ' at work') + '"></video>' +
           '<div class="shb-ptb-nc">' + ico(pt.icon, 44) + '<span>No clip for this tool yet</span></div>'
         : '';
       var vid = clip.querySelector('video');
-      if (vid) vid.addEventListener('error', function () { clip.classList.add('shb-ptb-noclip'); });
+      if (vid) {
+        vid.addEventListener('error', function () { clip.classList.add('shb-ptb-noclip'); });
+        /* set as a property: a clip handed over as text is a long address, better kept out of the markup */
+        vid.src = ptbClipSrc(pt.uid.slice(5));
+      }
     }
     if (!pt) { info.innerHTML = ''; return; }
     var on = ptbIsOn(pt.uid), inBot = ptbInBot(pt.uid);

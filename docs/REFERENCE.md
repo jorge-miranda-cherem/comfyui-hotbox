@@ -115,6 +115,8 @@ Magnifier / Visual Crop / Paint Studio, Label Studio, Load in Canvas, Render Sel
 
 **Browse…** there opens the **power tools browser**, a window in the button editor's look: the twelve tools in a list, each with its icon, what it does and its key; and, for the one you pick, a **clip** of it at work, the full explanation, an **On / Off** switch (off, its buttons leave every bar and its key does nothing) and **Add to the bottom bar** (pressed again, it takes the tool off). Drag a tool out of the list and the window steps aside, so it can go onto any bar of the hotbox. <kbd>/</kbd> finds a tool by name, key or what it does, the arrow keys step through the list, and **Icons Only** is in its header too. The window has the size and the text scale you gave the button editor.
 
+The clips are the files in `js/clips`. A page that carries Hotbox **without its folder** (Hotbox baked into a studio panel) gets them as text instead: `extras/hotbox_clips.js` holds the twelve clips as base64 and sets `window.__hotboxClips` (`{ lupa: 'data:video/webm;base64,…', … }`), which Hotbox reads when it shows a clip, so the script can run before or after Hotbox. `python tools/clips_base64.py` writes that file again when a clip changes (`--check` says whether it is up to date), and `--one-file FILE` writes `hotbox.js` with the clips after it, for a baker that takes a single file. Without either, the panel says a tool has no clip yet and everything else works.
+
 ---
 
 ## ⚙️ Settings
