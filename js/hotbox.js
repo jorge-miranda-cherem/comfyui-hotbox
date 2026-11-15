@@ -48,6 +48,10 @@
     useKillApi: true,       /* [K] Bypass All APIs: bypass / re-enable every API node */
     dotZoom: true,          /* . frame the selection, press again to go back */
     useArrange: true,       /* L arrange the selection along its wires, as Nuke's L does */
+    useSwap: true,          /* [W] Swap Nodes: two selected nodes trade places and wires */
+    useMagic: true,         /* [X] Save as Button: a copy of the selection becomes a button */
+    useCopyWf: true,        /* Copy Workflow: the whole workflow to the clipboard */
+    useReplicate: true,     /* Replicate: copies of the selection, each with its own letter */
     lupaSize: 1,
     lupaBox: 1,
     lupaWH: '',
@@ -1405,6 +1409,45 @@
       /* A button that leads with an icon (22px, larger than its name): the name sits a step back and half a point
          smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
          tall as they were. A tool's row in a card reads the same way */
+      /* The power tools browser (Settings → Power Tools → Browse…): the button editor's window, with its own list and panel */
+      '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0 0);overflow-y:auto}',
+      '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0 0);text-align:left;cursor:grab;touch-action:none;user-select:none}',
+      '.shb-ptb-row:hover{background:oklch(0.26 0 0)}',
+      '.shb-ptb-row.shb-on{background:oklch(0.3 0.03 78);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
+      '.shb-ptb-row.shb-off{opacity:.5}',
+      '.shb-ptb-row > .shb-ico{flex:none;color:oklch(0.94 0 0)}',
+      '.shb-ptb-nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
+      '.shb-ptb-nm b{font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-nm small{font-size:11.5px;color:oklch(0.7 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-key{flex:none;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:oklch(0.84 0 0);background:oklch(0.26 0 0);border:1px solid oklch(0.33 0 0);border-radius:4px;padding:4px 6px;white-space:nowrap}',
+      '.shb-ptb-none{padding:18px 12px;color:oklch(0.62 0 0)}',
+      '.shb-ptb-det{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 26px;overflow-y:auto}',
+      '.shb-ptb-clip{flex:0 1 400px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid oklch(0.27 0 0);border-radius:10px;background:oklch(0.16 0 0)}',
+      '.shb-ptb-clip video{width:100%;height:100%;object-fit:contain;display:block}',
+      '.shb-ptb-nc{display:none;flex-direction:column;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.62 0 0)}',
+      '.shb-ptb-nc .shb-ico{color:oklch(0.5 0 0)}',
+      '.shb-ptb-noclip video{display:none}',
+      '.shb-ptb-noclip .shb-ptb-nc{display:flex}',
+      '.shb-ptb-info{flex:none;display:flex;flex-direction:column;gap:12px}',
+      '.shb-ptb-top{display:flex;align-items:center;gap:12px}',
+      '.shb-ptb-top > .shb-ico{flex:none;color:oklch(0.96 0 0)}',
+      '.shb-ptb-top > b{min-width:0;font-size:20px;font-weight:600;color:oklch(0.96 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-top .shb-ptb-key{font-size:12px;padding:5px 8px}',
+      '.shb-ptb-sw,.shb-ptb-add{flex:none;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid oklch(0.33 0 0);border-radius:5px;background:oklch(0.26 0 0);color:oklch(0.72 0 0);font-size:12.5px;font-weight:600;white-space:nowrap}',
+      '.shb-ptb-sw{min-width:56px}',
+      '.shb-ptb-sw.shb-on{border-color:oklch(0.6 0.08 150);background:oklch(0.29 0.04 150);color:oklch(0.88 0.09 150)}',
+      '.shb-ptb-add{color:oklch(0.94 0 0)}',
+      '.shb-ptb-add.shb-on{border-color:oklch(0.55 0.09 78);color:oklch(0.9 0.08 78)}',
+      '.shb-ptb-add .shb-ico{color:inherit}',
+      '.shb-ptb-sw:hover,.shb-ptb-add:hover{filter:brightness(1.15)}',
+      '.shb-ptb-add:disabled{opacity:.45;pointer-events:none}',
+      '.shb-ptb-desc{font-size:14px;color:oklch(0.9 0 0)}',
+      '.shb-ptb-tip{font-size:13px;line-height:1.55;color:oklch(0.76 0 0);user-select:text}',
+      '.shb-bed-hb.shb-ptb-io{display:inline-flex;align-items:center;gap:7px;border:1px solid oklch(0.3 0 0);background:oklch(0.2 0 0);font-weight:600}',
+      '.shb-bed-hb.shb-ptb-io.shb-on{border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.03 78);color:oklch(0.9 0.08 78)}',
+      '.shb-ptb-io .shb-ico{color:inherit}',
+      /* a tool dragged out of its list: the window and its dim step aside, so every bar of the hotbox is a target */
+      '.shb-ptb-bg.shb-st-dragging{background:transparent;pointer-events:none}',
       /* Icons Only: a tool is its icon alone */
       '.shb-ionly > .shb-lbl,.shb-ionly > .shb-key{display:none !important}',
       '.shb-fluid .shb-btn.shb-ionly{padding-left:9px;padding-right:9px}',
@@ -6317,7 +6360,11 @@
     stitch: 'useStitch', stitchupd: 'useStitch',
     apibypass: 'useKillApi',
     zoom: 'dotZoom',
-    arrange: 'useArrange'
+    arrange: 'useArrange',
+    swappair: 'useSwap',
+    magic: 'useMagic',
+    copywf: 'useCopyWf',
+    replicate: 'useReplicate'
   };
 
   function hbToolOn(tid) {
@@ -8303,6 +8350,7 @@
     if (HB.el) hbPaint();
     if (document.getElementById(PANEL_ID + '-settings') && openSettingsModal._rerender) openSettingsModal._rerender();
     if (BRW.el) brwRender();
+    if (PTB.el) ptbRender();
   }
 
   /* Hotbox windows on top of the page (the button editor, the node editor, Edit Button): Esc closes the top
@@ -8682,8 +8730,8 @@
       if (hbToolOn('apibypass')) HB.keyMap['k'] = function () { hbClose(); actBypassApi(); };
       if (hbToolOn('lupa')) HB.keyMap['z'] = function () { hbClose(); actAltZ(node); };
       if (hbToolOn('zoom')) HB.keyMap['.'] = function () { hbClose(); actDotZoom(node); };
-      if (sel.length === 2) HB.keyMap['w'] = function () { hbClose(); actSwapPair(); };
-      if (sel.length || node) HB.keyMap['x'] = function () { actMagic(node); };
+      if (sel.length === 2 && hbToolOn('swappair')) HB.keyMap['w'] = function () { hbClose(); actSwapPair(); };
+      if ((sel.length || node) && hbToolOn('magic')) HB.keyMap['x'] = function () { actMagic(node); };
       if (toolItems[0] && toolItems[0].run && !toolItems[0].off) {
         HB.keyMap['c'] = function () {
           if (!toolItems[0].stayOpen) hbClose();
@@ -13039,7 +13087,7 @@
     libRefresh(true).then(function () { if (BRW.el) brwRender(); });
     brwRender();
     setTimeout(function () {
-      var box = BRW.el && BRW.el.querySelector('.shb-bed');
+      var box = brwBox();
       if (box) box.classList.remove('shb-bed-fresh');
     }, 260);
   }
@@ -13048,6 +13096,12 @@
      window, the arrows beside Done fill the screen and give the size back, and the four A's make its text and
      buttons larger (a 4K screen wants them larger). All of it is this screen's, so it is kept in this browser
      and not in the preferences, which a team may share. The sizes kept are the ones seen on screen ---- */
+  /* the window these sizes are for: the power tools browser while it is open (it opens over the editor), else the editor */
+  function brwBox() {
+    var bg = PTB.el || BRW.el;
+    return bg ? bg.querySelector('.shb-bed') : null;
+  }
+
   function brwWinRead() {
     var w = null;
     try { w = JSON.parse(localStorage.getItem(BRW_WIN_KEY) || 'null'); } catch (e) { w = null; }
@@ -13063,7 +13117,7 @@
   }
 
   function brwWinApply() {
-    var box = BRW.el && BRW.el.querySelector('.shb-bed'), win = BRW.win;
+    var box = brwBox(), win = BRW.win;
     if (!box || !win) return;
     box.classList.toggle('shb-bed-max', !!win.max);
     /* a size of your own; the screen still bounds it (max-width, max-height), also when it gets smaller later */
@@ -13090,7 +13144,7 @@
   /* Larger or smaller text and buttons. The window keeps the size it has on screen when that is one you gave
      it; its usual size grows with them. No sliding from one to the other: it is simply that size */
   function brwWinZoom(z) {
-    var box = BRW.el && BRW.el.querySelector('.shb-bed');
+    var box = brwBox();
     if (!box || BRW_WIN_ZS.indexOf(z) < 0 || z === BRW.win.z) return;
     brwDragEnd();
     BRW.win.z = z;
@@ -13103,7 +13157,7 @@
 
   function brwWinDown(ev) {
     if (ev.button !== 0) return;
-    var box = BRW.el && BRW.el.querySelector('.shb-bed');
+    var box = brwBox();
     if (!box) return;
     ev.preventDefault();
     ev.stopPropagation();
@@ -15613,6 +15667,267 @@
     if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) tipHide();
   }, true);
 
+  /* ---- THE POWER TOOLS BROWSER (Settings → Power Tools → Browse…). Every power tool in one window, in the
+     button editor's look: the list on the left, and on the right the picked tool with a clip of what it does,
+     its key, a switch that turns it off everywhere, and a button that puts it on the bottom bar. A tool dragged
+     out of the list goes onto any hotbox bar, as it does from Settings: the window steps aside while it moves ---- */
+  var PTB = { el: null, sel: '', q: '', shut: null, clipFor: '', down: null, hbMine: false };
+
+  /* where this file was loaded from: the clips sit beside it, in clips/ */
+  var HB_BASE = (function () {
+    try {
+      var m = /(https?:\/\/[^\s)]+?)\/[^\/\s)]+\.js/.exec(String(new Error().stack || ''));
+      if (m) return m[1] + '/';
+    } catch (e) {}
+    return '/extensions/comfyui-hotbox/';
+  })();
+
+  /* the setting that switches a power tool off (Alt+Z is one switch for the Magnifier, Visual Crop and Paint Studio) */
+  function ptbSetKey(uid) { return POWER_TOOL_OF[String(uid || '').slice(5)] || ''; }
+  function ptbIsOn(uid) { var k = ptbSetKey(uid); return !k || S[k] !== false; }
+  function ptbInBot(uid) { return brwBotUids().indexOf(uid) >= 0; }
+
+  function ptbShown() {
+    var q = String(PTB.q || '').trim().toLowerCase();
+    return POWER_TOOLS.filter(function (pt) {
+      return !q || (pt.name + ' ' + pt.desc + ' ' + pt.keys + ' ' + pt.tip).toLowerCase().indexOf(q) >= 0;
+    });
+  }
+
+  function ptbCur() {
+    for (var i = 0; i < POWER_TOOLS.length; i++) if (POWER_TOOLS[i].uid === PTB.sel) return POWER_TOOLS[i];
+    return null;
+  }
+
+  function ptbOpen(uid) {
+    if (uid) PTB.sel = uid;
+    if (PTB.el) { ptbRender(); return; }
+    var bg = owns(document.createElement('div'));
+    bg.className = 'shb-modal-bg shb-ptb-bg';
+    bg.innerHTML =
+      '<div class="shb-modal shb-bed shb-ptb">' +
+        '<div class="shb-bed-hd">' +
+          '<span class="shb-bed-mark"></span><b>Hotbox</b><i>/</i><span class="shb-bed-t2">Power Tools</span><span class="shb-bed-sum" data-ptb-sum></span>' +
+          '<span class="shb-bed-sp"></span>' +
+          '<label class="shb-bed-find"><span>⌕</span><input type="text" data-ptb-q spellcheck="false" placeholder="Find a tool or a key…"><span class="shb-bed-kc">/</span></label>' +
+          '<button type="button" class="shb-bed-hb shb-ptb-io" data-ptb-act="icons" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it">' + ico('layout', 13) + '<span>Icons Only</span></button>' +
+          '<span class="shb-bed-zs">' +
+            BRW_WIN_ZS.map(function (z, i) {
+              return '<button type="button" data-bed-z="' + z + '" style="font-size:' + [9, 10.5, 12, 13.5][i] + 'px" title="Text and buttons at ' + Math.round(z * 100) + '%">A</button>';
+            }).join('') +
+          '</span>' +
+          '<button type="button" class="shb-bed-hb shb-bed-ib" data-bed-act="max"></button>' +
+          '<button type="button" class="shb-bed-done" data-ptb-act="close">Done</button>' +
+        '</div>' +
+        '<div class="shb-bed-mid">' +
+          '<div class="shb-ptb-list" data-ptb-list></div>' +
+          '<div class="shb-ptb-det">' +
+            '<div class="shb-ptb-clip" data-ptb-clip></div>' +
+            '<div class="shb-ptb-info" data-ptb-info></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="shb-bed-ft">' +
+          [['drag', 'onto any hotbox bar'], ['↑ ↓', 'next tool'], ['/', 'find']].map(function (h) {
+            return '<span><kbd>' + h[0] + '</kbd>' + h[1] + '</span>';
+          }).join('') +
+          '<span class="shb-bed-sp"></span><span>A tool put on a bar stays there, dimmed where it does not work</span>' +
+        '</div>' +
+        '<div class="shb-bed-grip" data-bed-grip title="Drag to make the window larger or smaller · double-click for its usual size">' +
+          '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M10 3 3 10M10 7 7 10"/></svg>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bg);
+    PTB.el = bg;
+    PTB.q = '';
+    PTB.clipFor = '';
+    PTB.hbMine = false;
+    /* the same size and text scale as the button editor: they are one screen's choice */
+    BRW.win = brwWinRead();
+    brwWinApply();
+    var grip = bg.querySelector('[data-bed-grip]');
+    grip.addEventListener('pointerdown', brwWinDown);
+    grip.addEventListener('dblclick', function () { BRW.win = { w: 0, h: 0, max: false, z: BRW.win.z || 1 }; brwWinSave(); brwWinApply(); });
+    PTB.shut = modalOpen(function () { ptbClose(); });
+    bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) ptbClose(); });
+    bg.addEventListener('click', ptbClick);
+    bg.addEventListener('input', function (ev) {
+      if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-ptb-q')) { PTB.q = ev.target.value; ptbRender(); }
+    });
+    bg.addEventListener('pointerdown', ptbDown);
+    ptbRender();
+  }
+
+  function ptbClose() {
+    var bg = PTB.el;
+    if (!bg) return;
+    ptbDragOff();
+    PTB.el = null;
+    modalShut(PTB.shut);
+    tipHide();
+    if (bg.parentNode) bg.parentNode.removeChild(bg);
+    /* a hotbox this window opened for a drag goes with it */
+    if (PTB.hbMine && HB.el && !document.getElementById(PANEL_ID + '-settings')) hbClose();
+    PTB.hbMine = false;
+    /* the editor under it, if there is one, gets its window back */
+    if (BRW.el) brwWinApply();
+  }
+
+  function ptbRowHTML(pt) {
+    return '<button type="button" class="shb-ptb-row' + (pt.uid === PTB.sel ? ' shb-on' : '') + (ptbIsOn(pt.uid) ? '' : ' shb-off') + '" data-ptb-row="' + esc(pt.uid) + '">' +
+      ico(pt.icon, 24) +
+      '<span class="shb-ptb-nm"><b>' + esc(pt.name) + '</b><small>' + esc(pt.desc) + '</small></span>' +
+      '<span class="shb-ptb-key">' + esc(pt.keys) + '</span>' +
+    '</button>';
+  }
+
+  function ptbRender() {
+    var bg = PTB.el;
+    if (!bg) return;
+    var shown = ptbShown();
+    if (!shown.some(function (pt) { return pt.uid === PTB.sel; })) PTB.sel = shown.length ? shown[0].uid : '';
+    var nOn = POWER_TOOLS.filter(function (pt) { return ptbIsOn(pt.uid); }).length;
+    bg.querySelector('[data-ptb-sum]').textContent = POWER_TOOLS.length + ' tools · ' + nOn + ' on';
+    var io = bg.querySelector('[data-ptb-act="icons"]');
+    io.classList.toggle('shb-on', !!S.hbIconsOnly);
+    io.setAttribute('aria-pressed', S.hbIconsOnly ? 'true' : 'false');
+    bg.querySelector('[data-ptb-list]').innerHTML = shown.length ? shown.map(ptbRowHTML).join('')
+      : '<div class="shb-ptb-none">No power tool matches “' + esc(String(PTB.q).trim()) + '”.</div>';
+    var pt = ptbCur(), clip = bg.querySelector('[data-ptb-clip]'), info = bg.querySelector('[data-ptb-info]');
+    /* the clip is only loaded again when another tool is picked: a switch flipped does not start it over */
+    if (PTB.clipFor !== PTB.sel) {
+      PTB.clipFor = PTB.sel;
+      clip.classList.remove('shb-ptb-noclip');
+      clip.innerHTML = pt
+        ? '<video src="' + esc(HB_BASE + 'clips/' + pt.uid.slice(5) + '.webm') + '" autoplay loop muted playsinline aria-label="' + esc(pt.name + ' at work') + '"></video>' +
+          '<div class="shb-ptb-nc">' + ico(pt.icon, 44) + '<span>No clip for this tool yet</span></div>'
+        : '';
+      var vid = clip.querySelector('video');
+      if (vid) vid.addEventListener('error', function () { clip.classList.add('shb-ptb-noclip'); });
+    }
+    if (!pt) { info.innerHTML = ''; return; }
+    var on = ptbIsOn(pt.uid), inBot = ptbInBot(pt.uid);
+    info.innerHTML =
+      '<div class="shb-ptb-top">' +
+        ico(pt.icon, 28) + '<b>' + esc(pt.name) + '</b><span class="shb-ptb-key">' + esc(pt.keys) + '</span>' +
+        '<span class="shb-bed-sp"></span>' +
+        '<button type="button" class="shb-ptb-sw' + (on ? ' shb-on' : '') + '" data-ptb-act="onoff" aria-pressed="' + (on ? 'true' : 'false') + '" data-tip="' + (on ? 'On. Switch it off and its buttons leave every bar and its key does nothing' : 'Off: its buttons are in no bar and its key does nothing. Switch it on to bring them back') + '">' + (on ? 'On' : 'Off') + '</button>' +
+        '<button type="button" class="shb-ptb-add' + (inBot ? ' shb-on' : '') + '" data-ptb-act="bot"' + (on ? '' : ' disabled') + ' data-tip="' + (inBot ? 'It is on your bottom bar. Click to take it off' : 'Puts it at the end of your bottom bar, where it stays') + '">' +
+          ico(inBot ? 'check' : 'plus', 13) + '<span>' + (inBot ? 'On the bottom bar' : 'Add to the bottom bar') + '</span></button>' +
+      '</div>' +
+      '<div class="shb-ptb-desc">' + esc(pt.desc) + '</div>' +
+      '<div class="shb-ptb-tip">' + esc(pt.tip) + '</div>';
+  }
+
+  function ptbBotToggle(uid) {
+    var list = brwBotUids(), at = list.indexOf(uid), name = hbUidLabel(uid);
+    hbUndoPush(at >= 0 ? 'taking "' + name + '" off the bottom bar' : 'putting "' + name + '" on the bottom bar');
+    if (at >= 0) list.splice(at, 1);
+    else list.push(uid);
+    S.customBotBar = list;
+    /* a tool put there by hand stays there, dimmed where it does not apply */
+    if (at >= 0) hbForgetIfGone(uid);
+    else hbKeepUid(uid, 'bot');
+    save();
+    hbRedrawAll();
+    setStatus('ok', at >= 0 ? name + ' is off the bottom bar' : name + ' is on the bottom bar');
+  }
+
+  function ptbClick(ev) {
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var z = t.closest('[data-bed-z]');
+    if (z) { brwWinZoom(+z.getAttribute('data-bed-z')); return; }
+    if (t.closest('[data-bed-act="max"]')) { BRW.win.max = !BRW.win.max; brwWinSave(); brwWinApply(); return; }
+    var row = t.closest('[data-ptb-row]');
+    if (row) { PTB.sel = row.getAttribute('data-ptb-row'); ptbRender(); return; }
+    var a = t.closest('[data-ptb-act]');
+    if (!a) return;
+    var act = a.getAttribute('data-ptb-act'), pt = ptbCur();
+    if (act === 'close') { ptbClose(); return; }
+    if (act === 'icons') {
+      S.hbIconsOnly = !S.hbIconsOnly;
+      save();
+      hbRedrawAll();
+      return;
+    }
+    if (!pt) return;
+    if (act === 'onoff') {
+      var k = ptbSetKey(pt.uid);
+      if (!k) return;
+      S[k] = S[k] === false;
+      save();
+      tipHide();
+      hbRedrawAll();
+      setStatus('ok', pt.name + (S[k] === false ? ' is off: its buttons left the bars' : ' is on'));
+    } else if (act === 'bot') {
+      tipHide();
+      ptbBotToggle(pt.uid);
+    }
+  }
+
+  /* / finds and the arrows step through the list; every other key is the window's (Esc closes it) */
+  function ptbKey(e) {
+    if (!PTB.el || e.ctrlKey || e.metaKey || e.altKey) return false;
+    var q = PTB.el.querySelector('[data-ptb-q]');
+    if (e.key === '/' && document.activeElement !== q) {
+      hbEat(e);
+      try { q.focus(); q.select(); } catch (err) {}
+      return true;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      hbEat(e);
+      var shown = ptbShown(), at = -1;
+      shown.forEach(function (pt, i) { if (pt.uid === PTB.sel) at = i; });
+      if (!shown.length) return true;
+      at = Math.max(0, Math.min(shown.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)));
+      PTB.sel = shown[at].uid;
+      ptbRender();
+      var on = PTB.el.querySelector('.shb-ptb-row.shb-on');
+      if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+    return false;
+  }
+
+  /* A row dragged out of the list: once it has moved, the hotbox opens (if it was not) and the drag is handed to
+     the one Settings uses, with this window as the panel that turns see-through until the tool is dropped */
+  function ptbDown(ev) {
+    var row = (ev.button === 0 && ev.target && ev.target.closest) ? ev.target.closest('[data-ptb-row]') : null;
+    if (!row) return;
+    ptbDragOff();
+    var d = PTB.down = { uid: row.getAttribute('data-ptb-row'), x0: ev.clientX, y0: ev.clientY };
+    d.move = function (e) {
+      if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+      /* from here on the hotbox's own drag has it; this one only waits for the button to come up */
+      document.removeEventListener('pointermove', d.move, true);
+      if (!ptbIsOn(d.uid)) { setStatus('error', hbUidLabel(d.uid) + ' is off: switch it on to put it on a bar'); return; }
+      if (!HB.el) { hbOpen(); PTB.hbMine = true; }
+      clearDrawerDrag();
+      DRAWER_DRAG = { uid: d.uid, x0: d.x0, y0: d.y0, active: false, inBar: false, wrap: null, loose: true, st: PTB.el };
+      /* Settings, under this window, steps aside with it: it would cover the end of a long bar */
+      d.stw = document.getElementById(PANEL_ID + '-settings');
+      if (d.stw) d.stw.classList.add('shb-st-dragging');
+    };
+    d.up = function () {
+      ptbDragOff();
+      /* dropped (or not): the bar may hold it now */
+      setTimeout(function () { if (PTB.el) ptbRender(); }, 60);
+    };
+    document.addEventListener('pointermove', d.move, true);
+    document.addEventListener('pointerup', d.up, true);
+    document.addEventListener('pointercancel', d.up, true);
+  }
+
+  function ptbDragOff() {
+    var d = PTB.down;
+    if (!d) return;
+    PTB.down = null;
+    if (d.stw) d.stw.classList.remove('shb-st-dragging');
+    document.removeEventListener('pointermove', d.move, true);
+    document.removeEventListener('pointerup', d.up, true);
+    document.removeEventListener('pointercancel', d.up, true);
+  }
+
   function openSettingsModal(anchorBtn) {
     var old = document.getElementById(PANEL_ID + '-settings');
     if (old && old.parentNode) old.parentNode.removeChild(old);
@@ -15832,6 +16147,7 @@
                   '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
                   ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
                 '</button>' +
+                '<button type="button" class="shb-btn shb-btn-on" data-st-ptb data-tip="The power tools browser: every tool with a clip of what it does, its key, a switch that turns it off and a button that puts it on your bottom bar">' + ico('search', 13) + '<span>Browse…</span></button>' +
                 '<button type="button" class="shb-btn ' + (S.hbIconsOnly ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbIconsOnly" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it. Saved buttons, groups and nodes keep their name, because each kind shares one icon">' + ico('layout', 13) + '<span>Icons Only</span></button>' +
               '</div>' +
               (ptOpen ? '<div class="shb-pt">' +
@@ -15948,6 +16264,8 @@
       }
       var brwBtn = wrap.querySelector('[data-st-browse]');
       if (brwBtn) brwBtn.onclick = function () { brwOpen(); };
+      var ptbBtn = wrap.querySelector('[data-st-ptb]');
+      if (ptbBtn) ptbBtn.onclick = function () { ptbOpen(); };
       var pasteBtn = wrap.querySelector('[data-st-paste]');
       if (pasteBtn) pasteBtn.onclick = function () { brwOpen(); brwPasteOpen(); };
       var dirB = wrap.querySelector('[data-st-dir]');
@@ -16225,6 +16543,8 @@
     if (HB_MODALS.length) {
       /* the button editor has keys of its own (/ finds, G groups, Del deletes, Ctrl+Shift+Z does again) */
       if (BRW.el && HB_MODALS[HB_MODALS.length - 1] === BRW.shut && brwKey(e)) return;
+      /* and so has the power tools browser (/ finds, the arrows step through the tools) */
+      if (PTB.el && HB_MODALS[HB_MODALS.length - 1] === PTB.shut && ptbKey(e)) return;
       if (e.key === 'Escape') {
         hbEat(e);
         if (!e.repeat) HB_MODALS[HB_MODALS.length - 1]();
