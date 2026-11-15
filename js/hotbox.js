@@ -15686,11 +15686,17 @@
   })();
 
   /* A tool's clip. A page that carries Hotbox without its folder (baked into a studio panel, where there are no
-     files beside it) hands the clips over as text: window.__hotboxClips = { lupa: 'data:video/webm;base64,…', … }.
-     extras/hotbox_clips.js is exactly that, made from js/clips by tools/clips_base64.py. It may be set before or
-     after Hotbox loads: it is read when a clip is shown */
+     files beside it) says where the clips are, in window.__hotboxClips:
+       { lupa: '<address>', … }   an address for each tool. It may be the clip itself as text
+                                  ('data:video/webm;base64,…'): extras/hotbox_clips.js is exactly that, made
+                                  from js/clips by tools/clips_base64.py
+       '<address with {id}>'      one address for all, with {id} where the tool's name goes, for clips kept as
+                                  files in a folder the page can reach (extras/hotbox_clips_to_folder.py puts
+                                  them there)
+     It may be set before or after Hotbox loads: it is read when a clip is shown */
   function ptbClipText(id) {
     var c = window.__hotboxClips;
+    if (typeof c === 'string') return c.indexOf('{id}') >= 0 ? c.split('{id}').join(id) : '';
     return (c && typeof c[id] === 'string' && c[id]) || '';
   }
   /* '' when there is nowhere to take it from: a guessed folder that turned out not to be there is not asked again */
