@@ -13,9 +13,11 @@ standard library only.
                     hotbox_clips_to_folder.write_clips('/some/folder')
 
 The folder is FOLDER below; left empty it is hotbox_clips in your home folder. A clip that is already
-there and identical is left alone; only <tool>.webm files of these names are ever written.
+there and identical is left alone. Only <tool>.webm files of these names and clips.json, the list of
+them for whoever reads the folder, are ever written; all are left readable by everyone.
 """
 import base64
+import json
 import os
 import sys
 
@@ -9197,25 +9199,42 @@ def default_folder():
 
 
 def write_clips(folder=None):
-    """Writes every clip into `folder`, made if it is missing. Returns (folder, written, unchanged)."""
+    """Writes every clip into `folder`, made if it is missing, and clips.json, the list of them:
+    {"hotbox_clips": 1, "clips": [{"id": "lupa", "file": "lupa.webm", "bytes": 106300}, ...]}.
+    Returns (folder, written, unchanged), the last two being lists of clip names."""
     folder = os.path.abspath(os.path.expanduser(folder)) if folder else default_folder()
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    written, unchanged = [], []
+        _readable(folder, 0o055)
+    written, unchanged, listed = [], [], []
     for name in sorted(CLIPS):
         data = base64.b64decode(''.join(CLIPS[name].split()).encode('ascii'))
-        path = os.path.join(folder, name + '.webm')
-        old = None
-        if os.path.isfile(path):
-            with open(path, 'rb') as f:
-                old = f.read()
-        if old == data:
-            unchanged.append(name)
-            continue
+        listed.append({'id': name, 'file': name + '.webm', 'bytes': len(data)})
+        (written if _put(os.path.join(folder, name + '.webm'), data) else unchanged).append(name)
+    index = json.dumps({'hotbox_clips': 1, 'clips': listed}, indent=1, sort_keys=True) + '\n'
+    _put(os.path.join(folder, 'clips.json'), index.encode('ascii'))
+    return folder, written, unchanged
+
+
+def _put(path, data):
+    """Writes the file unless it already holds exactly this. True when it was written."""
+    old = None
+    if os.path.isfile(path):
+        with open(path, 'rb') as f:
+            old = f.read()
+    if old != data:
         with open(path, 'wb') as f:
             f.write(data)
-        written.append(name)
-    return folder, written, unchanged
+    _readable(path, 0o044)
+    return old != data
+
+
+def _readable(path, bits):
+    """Others on a shared disk can read what was written, whatever this session's umask is."""
+    try:
+        os.chmod(path, os.stat(path).st_mode | bits)
+    except OSError:
+        pass
 
 
 def main():

@@ -15,6 +15,9 @@ another page and has no folder (a studio panel), the clips get there as text, by
     python tools/clips_base64.py --check         say whether both are up to date (exit 1 if not)
     python tools/clips_base64.py --one-file F    write F: hotbox.js with the clips after it, for a baker
                                                  that takes a single file
+    python tools/clips_base64.py --folder-script F --folder /a/place
+                                                 write F: the folder script with its folder already set,
+                                                 a copy for one place (keep it out of the repository)
 
 Only the Python standard library; the same on Windows and Linux.
 """
@@ -77,13 +80,15 @@ standard library only.
                     hotbox_clips_to_folder.write_clips('/some/folder')
 
 The folder is FOLDER below; left empty it is hotbox_clips in your home folder. A clip that is already
-there and identical is left alone; only <tool>.webm files of these names are ever written.
+there and identical is left alone. Only <tool>.webm files of these names and clips.json, the list of
+them for whoever reads the folder, are ever written; all are left readable by everyone.
 """
 import base64
+import json
 import os
 import sys
 
-FOLDER = ''
+FOLDER = %(folder)r
 
 CLIPS = {
 '''
@@ -96,25 +101,42 @@ def default_folder():
 
 
 def write_clips(folder=None):
-    """Writes every clip into `folder`, made if it is missing. Returns (folder, written, unchanged)."""
+    """Writes every clip into `folder`, made if it is missing, and clips.json, the list of them:
+    {"hotbox_clips": 1, "clips": [{"id": "lupa", "file": "lupa.webm", "bytes": 106300}, ...]}.
+    Returns (folder, written, unchanged), the last two being lists of clip names."""
     folder = os.path.abspath(os.path.expanduser(folder)) if folder else default_folder()
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    written, unchanged = [], []
+        _readable(folder, 0o055)
+    written, unchanged, listed = [], [], []
     for name in sorted(CLIPS):
         data = base64.b64decode(''.join(CLIPS[name].split()).encode('ascii'))
-        path = os.path.join(folder, name + '.webm')
-        old = None
-        if os.path.isfile(path):
-            with open(path, 'rb') as f:
-                old = f.read()
-        if old == data:
-            unchanged.append(name)
-            continue
+        listed.append({'id': name, 'file': name + '.webm', 'bytes': len(data)})
+        (written if _put(os.path.join(folder, name + '.webm'), data) else unchanged).append(name)
+    index = json.dumps({'hotbox_clips': 1, 'clips': listed}, indent=1, sort_keys=True) + '\\n'
+    _put(os.path.join(folder, 'clips.json'), index.encode('ascii'))
+    return folder, written, unchanged
+
+
+def _put(path, data):
+    """Writes the file unless it already holds exactly this. True when it was written."""
+    old = None
+    if os.path.isfile(path):
+        with open(path, 'rb') as f:
+            old = f.read()
+    if old != data:
         with open(path, 'wb') as f:
             f.write(data)
-        written.append(name)
-    return folder, written, unchanged
+    _readable(path, 0o044)
+    return old != data
+
+
+def _readable(path, bits):
+    """Others on a shared disk can read what was written, whatever this session's umask is."""
+    try:
+        os.chmod(path, os.stat(path).st_mode | bits)
+    except OSError:
+        pass
 
 
 def main():
@@ -146,8 +168,8 @@ if __name__ == '__main__' or '__file__' not in globals():
 '''
 
 
-def clips_py(found):
-    parts = [PY_HEAD % {"count": len(found)}]
+def clips_py(found, folder=""):
+    parts = [PY_HEAD % {"count": len(found), "folder": str(folder or "")}]
     for name, _size, rows in found:
         parts.append("%r: '''\n%s\n''',\n" % (str(name), "\n".join(rows)))
     parts.append(PY_TAIL)
@@ -158,6 +180,8 @@ def main():
     ap = argparse.ArgumentParser(description="The power tools browser's clips as base64 text.")
     ap.add_argument("--check", action="store_true", help="only say whether the files in extras are up to date")
     ap.add_argument("--one-file", metavar="FILE", help="write hotbox.js with the clips after it to FILE")
+    ap.add_argument("--folder-script", metavar="FILE", help="write the folder script to FILE, with --folder as its folder")
+    ap.add_argument("--folder", metavar="PATH", default="", help="the folder the script of --folder-script writes into")
     args = ap.parse_args()
     found = clips()
     total = sum(size for _name, size, _rows in found)
@@ -178,6 +202,13 @@ def main():
         with io.open(args.one_file, "wb") as f:
             f.write(body + b"\r\n" + data)
         print("wrote %s: hotbox.js (%d bytes) + %d clips as text (%d bytes)" % (args.one_file, len(body), len(found), len(data)))
+        return 0
+
+    if args.folder_script:
+        text = clips_py(found, args.folder).encode("ascii")
+        with io.open(args.folder_script, "wb") as f:
+            f.write(text)
+        print("wrote %s: %d clips as text (%d bytes), for the folder %s" % (args.folder_script, len(found), len(text), args.folder or "(asked for)"))
         return 0
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
