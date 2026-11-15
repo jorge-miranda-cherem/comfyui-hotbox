@@ -15671,14 +15671,17 @@
      button editor's look: the list on the left, and on the right the picked tool with a clip of what it does,
      its key, a switch that turns it off everywhere, and a button that puts it on the bottom bar. A tool dragged
      out of the list goes onto any hotbox bar, as it does from Settings: the window steps aside while it moves ---- */
-  var PTB = { el: null, sel: '', q: '', shut: null, clipFor: '', down: null, hbMine: false };
+  var PTB = { el: null, sel: '', q: '', shut: null, clipFor: '', clipSrc: '', noFolder: false, down: null, hbMine: false };
 
-  /* where this file was loaded from: the clips sit beside it, in clips/ */
+  /* where this file was loaded from: the clips sit beside it, in clips/. Run with no address of its own
+     (baked into a panel) the folder is only a guess: HB_BASE_GUESS */
+  var HB_BASE_GUESS = false;
   var HB_BASE = (function () {
     try {
       var m = /(https?:\/\/[^\s)]+?)\/[^\/\s)]+\.js/.exec(String(new Error().stack || ''));
       if (m) return m[1] + '/';
     } catch (e) {}
+    HB_BASE_GUESS = true;
     return '/extensions/comfyui-hotbox/';
   })();
 
@@ -15686,9 +15689,13 @@
      files beside it) hands the clips over as text: window.__hotboxClips = { lupa: 'data:video/webm;base64,…', … }.
      extras/hotbox_clips.js is exactly that, made from js/clips by tools/clips_base64.py. It may be set before or
      after Hotbox loads: it is read when a clip is shown */
-  function ptbClipSrc(id) {
+  function ptbClipText(id) {
     var c = window.__hotboxClips;
-    return (c && typeof c[id] === 'string' && c[id]) || (HB_BASE + 'clips/' + id + '.webm');
+    return (c && typeof c[id] === 'string' && c[id]) || '';
+  }
+  /* '' when there is nowhere to take it from: a guessed folder that turned out not to be there is not asked again */
+  function ptbClipSrc(id) {
+    return ptbClipText(id) || (PTB.noFolder ? '' : HB_BASE + 'clips/' + id + '.webm');
   }
 
   /* the setting that switches a power tool off (Alt+Z is one switch for the Magnifier, Visual Crop and Paint Studio) */
@@ -15802,19 +15809,26 @@
     bg.querySelector('[data-ptb-list]').innerHTML = shown.length ? shown.map(ptbRowHTML).join('')
       : '<div class="shb-ptb-none">No power tool matches “' + esc(String(PTB.q).trim()) + '”.</div>';
     var pt = ptbCur(), clip = bg.querySelector('[data-ptb-clip]'), info = bg.querySelector('[data-ptb-info]');
-    /* the clip is only loaded again when another tool is picked: a switch flipped does not start it over */
-    if (PTB.clipFor !== PTB.sel) {
+    var clipId = pt ? pt.uid.slice(5) : '', src = pt ? ptbClipSrc(clipId) : '';
+    /* the clip is only loaded again when another tool is picked, or when its clip turns up (a page may hand the
+       clips over after the window is open): a switch flipped does not start it over */
+    if (PTB.clipFor !== PTB.sel || PTB.clipSrc !== src) {
       PTB.clipFor = PTB.sel;
-      clip.classList.remove('shb-ptb-noclip');
+      PTB.clipSrc = src;
+      clip.classList.toggle('shb-ptb-noclip', !!pt && !src);
       clip.innerHTML = pt
         ? '<video autoplay loop muted playsinline aria-label="' + esc(pt.name + ' at work') + '"></video>' +
           '<div class="shb-ptb-nc">' + ico(pt.icon, 44) + '<span>No clip for this tool yet</span></div>'
         : '';
       var vid = clip.querySelector('video');
-      if (vid) {
-        vid.addEventListener('error', function () { clip.classList.add('shb-ptb-noclip'); });
+      if (vid && src) {
+        var filed = !ptbClipText(clipId);
+        vid.addEventListener('error', function () {
+          clip.classList.add('shb-ptb-noclip');
+          if (filed && HB_BASE_GUESS) PTB.noFolder = true;
+        });
         /* set as a property: a clip handed over as text is a long address, better kept out of the markup */
-        vid.src = ptbClipSrc(pt.uid.slice(5));
+        vid.src = src;
       }
     }
     if (!pt) { info.innerHTML = ''; return; }
