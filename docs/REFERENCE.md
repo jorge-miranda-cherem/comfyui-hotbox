@@ -60,6 +60,8 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
 
 A button **leads with its icon**: a tool, a saved button's sign, a group's folder and a node's plus are larger than the name and at full strength, and the name sits a step back and a little smaller, so an open hotbox reads by its icons first. The name comes forward under the pointer and while a tool is on. A color you gave a button still colors its icon. In Fluid and Quiet the tools of the left card read the same way. A button that leads with a number (the dock) or a dot (a pinned node) has no icon, so its name stays in front.
 
+**Icons Only** (Settings → Power Tools) takes a tool's name and key out of the bars: the icon alone, with the name and the key in a small tip as soon as the pointer is on it. The bars get much shorter. Saved buttons, groups and nodes keep their name (each kind shares one icon), and so do a tool inside a group's list and the Seed mode button, whose name says what a press will do.
+
 ---
 
 ## 🧠 Context-aware behavior

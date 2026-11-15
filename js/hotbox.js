@@ -35,6 +35,7 @@
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
     hbBlur: true,           /* Fluid & Compact: frosted glass behind bars and cards (costly without a GPU: off = plain panels) */
     hbLeaders: false,       /* Quiet: hairlines from the cursor to each zone (off: they cover the node) */
+    hbIconsOnly: false,     /* in the bars a tool shows its icon alone; its name and key show under the pointer */
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
@@ -1404,6 +1405,10 @@
       /* A button that leads with an icon (22px, larger than its name): the name sits a step back and half a point
          smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
          tall as they were. A tool's row in a card reads the same way */
+      /* Icons Only: a tool is its icon alone */
+      '.shb-ionly > .shb-lbl,.shb-ionly > .shb-key{display:none !important}',
+      '.shb-fluid .shb-btn.shb-ionly{padding-left:9px;padding-right:9px}',
+      '.shb-quiet .shb-btn.shb-ionly{padding-left:7px;padding-right:7px}',
       '.shb-fluid .shb-btn.shb-lead{padding-top:6px;padding-bottom:6px}',
       '.shb-fluid .shb-tool.shb-lead{padding-top:5px;padding-bottom:5px}',
       '.shb-fluid .shb-lead > .shb-lbl,.shb-fluid .shb-lead > .shb-row-l{color:var(--shb-t2);font-size:12.5px}',
@@ -7455,14 +7460,24 @@
        is no icon: those buttons keep their name in front */
     var isLead = !numKey && (isTpl || !isPin);
     if (isLead) btnCls += ' shb-lead';
+    /* Icons Only (Settings → Power Tools): a tool is its icon alone, and its name and key show under the pointer.
+       Not in a group's list, which reads as a list, and not where the name says what a press will do (Seed: fixed,
+       a Get's bus, a crop ratio). Saved buttons, groups and nodes share one icon each, so they keep their name */
+    var iconOnly = !!S.hbIconsOnly && isLead && item.kind === 'tool' && !grpId && !/^(seedtoggle$|get_|ar_)/.test(item.id);
+    if (iconOnly) btnCls += ' shb-ionly';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
       : (isTpl ? tplIcoHTML(item.uid, hbLeadSz())
         : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbLeadSz())));
     var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
       : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
     var tint = barTintAttrs(item.uid);
+    /* an icon alone says its name at once (the hotbox's own tip), not after the browser's wait. The tip goes where
+       it covers no other bar: under a context-bar button, over a bottom-bar or a dock one */
+    var says = iconOnly
+      ? ' data-tip="' + esc(item.label + (kbdStr ? '  ·  ' + kbdStr : '') + (item.off ? '  ·  ' + item.off : '')) + '" data-tip-at="' + (barName === 'tools' ? 'down' : 'up') + '"'
+      : ' title="' + esc(item.title + ' (' + hint + ')') + '"';
     return '<span class="shb-item-wrap" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '">' +
-      '<button type="button" class="' + btnCls + tint.cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title + ' (' + hint + ')') + '">' +
+      '<button type="button" class="' + btnCls + tint.cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '"' + says + '>' +
         lead +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         (isTpl ? '<span class="shb-tpl-n">' + esc(item.count) + '</span>' : '') +
@@ -10422,6 +10437,7 @@
     HB.el = null; HB.node = null; HB.rect = null; HB.drawer = ''; HB.drawerAnchor = null; HB.editMode = false; HB.q = ''; HB.keyMap = {}; HB.catMenu = false; HB.wItems = []; HB.wMenu = null;
     if (old) {
       old.removeAttribute('id');
+      tipHide();
       hbAnimateClose(old, cx, cy);
       hbEmit('close', null);
     }
@@ -15580,12 +15596,18 @@
     TIP.style.left = '0px';
     TIP.style.top = '0px';
     var r = t.getBoundingClientRect(), tr = TIP.getBoundingClientRect();
+    /* data-tip-at (a hotbox button): centered on it, over it ('up') or under it */
+    var at = t.getAttribute('data-tip-at');
     var y = r.bottom + 6;
-    if (y + tr.height > (window.innerHeight || 900) - 10) y = r.top - tr.height - 6;
-    TIP.style.left = Math.max(10, Math.min((window.innerWidth || 1600) - tr.width - 10, r.left)) + 'px';
+    if (at === 'up' || y + tr.height > (window.innerHeight || 900) - 10) y = r.top - tr.height - 6;
+    if (y < 10) y = r.bottom + 6;
+    var x = at ? r.left + r.width / 2 - tr.width / 2 : r.left;
+    TIP.style.left = Math.max(10, Math.min((window.innerWidth || 1600) - tr.width - 10, x)) + 'px';
     TIP.style.top = Math.max(10, y) + 'px';
     TIP.classList.add('shb-tip-on');
   }, true);
+  /* a press takes the tip away, and so does the hotbox when it closes (hbClose): its button may be gone */
+  listen(document, 'pointerdown', tipHide, true);
   listen(document, 'mouseout', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
     if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) tipHide();
@@ -15805,10 +15827,13 @@
             '</div>' +
             setLabel('tools', 'Power Tools', true) +
             '<div>' +
-              '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does)">' +
-                '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
-                ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
-              '</button>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+                '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does)">' +
+                  '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
+                  ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
+                '</button>' +
+                '<button type="button" class="shb-btn ' + (S.hbIconsOnly ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbIconsOnly" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it. Saved buttons, groups and nodes keep their name, because each kind shares one icon">' + ico('layout', 13) + '<span>Icons Only</span></button>' +
+              '</div>' +
               (ptOpen ? '<div class="shb-pt">' +
                 POWER_TOOLS.map(function (pt) {
                   return '<div class="shb-pt-row" data-st-ptuid="' + esc(pt.uid) + '" data-tip="' + esc(pt.tip) + '">' +
