@@ -31,7 +31,9 @@ Restart ComfyUI and press <kbd>`</kbd> over any node.
 
 It ranks like ComfyUI's own search: ComfyUI's nodes first, a check on the ones that fit the node's output,
 the pack's name beside a custom node. Typos and short forms (`previw`, `load img`, `ckpt`) still find it.
-<kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired.
+<kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired. It learns as you go: the nodes
+you add most and the ones you usually add after the node you are on come up, and a star
+(<kbd>Ctrl</kbd>+<kbd>Enter</kbd>) puts a node first.
 
 **Swap the model, keep the prompt**
 

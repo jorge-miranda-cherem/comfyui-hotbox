@@ -76,6 +76,7 @@
     repN: 3,                /* Replicate: copies last asked for */
     repDir: 'down',         /* Replicate: 'down' (stacked below) or 'right' */
     repColors: true,        /* Replicate: each copy's groups and labels take its letter's color */
+    nodeMem: { fav: [], use: {}, last: {}, after: {} },   /* what the node search remembers: the nodes you starred, how often you added each, when, and what you added after what */
     cfgRev: 0,              /* config migrations already applied */
     lbLast: null
   };
@@ -839,6 +840,15 @@
       '.shb-src{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 10px/1 Inter,system-ui,sans-serif;color:#8a8a8a;opacity:.85}',
       '.shb-inbar{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:6px;font:700 11px/1 Inter,system-ui,sans-serif;color:#64a8f0;background:rgba(100,168,240,.14)}',
       '.shb-drawer-sec{padding:6px 10px 4px;font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;color:#64a8f0}',
+      /* the node search's memory: a bar for how much you add a node, a star to put it first */
+      '.shb-drawer .shb-btn-row{position:relative}',
+      '.shb-use{position:absolute;left:2px;top:50%;transform:translateY(-50%);width:3px;min-height:6px;border-radius:2px;background:#f0a23c;opacity:.9;pointer-events:none}',
+      '.shb-star{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;color:#8a8a8a;opacity:0;cursor:pointer}',
+      '.shb-drawer .shb-btn-row .shb-star .shb-ico{color:inherit}',
+      '.shb-btn-row:hover .shb-star,.shb-btn-row.shb-qsel .shb-star{opacity:.75}',
+      '.shb-btn-row .shb-star:hover{opacity:1;color:#f5c04e;background:rgba(245,192,78,.14)}',
+      '.shb-btn-row.shb-fav .shb-star{opacity:1;color:#f5c04e}',
+      '.shb-btn-row.shb-fav .shb-star .shb-ico{fill:currentColor}',
       '.shb-drawer-hint{padding:1px 4px 2px;font:500 10.5px/1.2 Inter,system-ui,sans-serif;color:#8e8e8e}',
 
       /* Bar items: × badges, removal collapse, drag source & edit-mode outline */
@@ -2082,6 +2092,191 @@
     return tier <= 1 ? tier : (tier <= 5 ? 2 : 3);
   }
 
+  /* ---------------------------------------------------------------------
+   * WHAT THE NODE SEARCH REMEMBERS (S.nodeMem: it is in hotbox.json, so it follows you)
+   *   fav    the nodes you starred
+   *   use    how many times you added each node from the list; last: when
+   *   after  what you added after a node of each type, counted only when the new node ended up wired to it
+   * and what the list does with it: a starred node, one you add often, and one that follows the node the
+   * hotbox is on (by your own habit, and by what the open graph already wires after nodes of its type) come
+   * up. Bounded: the most used and the most recent stay.
+   * --------------------------------------------------------------------- */
+  function nmMem() {
+    var m = S.nodeMem;
+    function obj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }
+    if (!m || typeof m !== 'object' || Array.isArray(m)) m = S.nodeMem = {};
+    if (!Array.isArray(m.fav)) m.fav = [];
+    m.use = obj(m.use);
+    m.last = obj(m.last);
+    m.after = obj(m.after);
+    return m;
+  }
+
+  function nmTypeOf(node) {
+    return node ? String(node.type || node.comfyClass || '') : '';
+  }
+
+  function nmTypeName(type) {
+    return String((SRV.types && SRV.types[type] && SRV.types[type].display_name) || type || '');
+  }
+
+  function nmNodeName(node) {
+    return String((node && node.title) || nmTypeName(nmTypeOf(node)) || 'this node');
+  }
+
+  /* true: it is starred now */
+  function nmStar(type) {
+    var m = nmMem(), i = m.fav.indexOf(type);
+    if (i >= 0) m.fav.splice(i, 1);
+    else m.fav.push(type);
+    save();
+    return i < 0;
+  }
+
+  function nmPrune(m) {
+    function keep(o, n) {
+      var k = Object.keys(o);
+      if (k.length <= n) return;
+      k.sort(function (a, b) { return ((+o[b] || 0) - (+o[a] || 0)) || ((+m.last[b] || 0) - (+m.last[a] || 0)); })
+        .slice(n).forEach(function (x) { delete o[x]; });
+    }
+    keep(m.use, 400);
+    Object.keys(m.last).forEach(function (x) { if (!(x in m.use)) delete m.last[x]; });
+    var total = {};
+    Object.keys(m.after).forEach(function (s) {
+      var a = m.after[s];
+      if (!a || typeof a !== 'object') { delete m.after[s]; return; }
+      keep(a, 12);
+      total[s] = 0;
+      Object.keys(a).forEach(function (x) { total[s] += (+a[x] || 0); });
+    });
+    keep(total, 250);
+    Object.keys(m.after).forEach(function (s) { if (!(s in total)) delete m.after[s]; });
+  }
+
+  function nmUsed(type) {
+    var m = nmMem();
+    m.use[type] = (+m.use[type] || 0) + 1;
+    m.last[type] = Date.now();
+    nmPrune(m);
+    save();
+  }
+
+  function nmPair(src, type) {
+    var m = nmMem();
+    var a = m.after[src] = (m.after[src] && typeof m.after[src] === 'object') ? m.after[src] : {};
+    a[type] = (+a[type] || 0) + 1;
+    nmPrune(m);
+    save();
+  }
+
+  function nmLinkedFrom(made, src) {
+    var g = (made && made.graph) || getGraph();
+    return !!(made && src) && (made.inputs || []).some(function (inp) {
+      if (!inp || inp.link == null) return false;
+      var l = linkById(g, inp.link);
+      return !!l && String(l.origin_id) === String(src.id);
+    });
+  }
+
+  /* A node was added from the list. It counts as used; and as what follows `src` only if it ended up wired to
+     it: a node that takes nothing from it was only born beside it. The wiring may finish a moment later */
+  function nmLearn(type, src, made) {
+    if (!made) return;
+    nmUsed(type);
+    var st = nmTypeOf(src);
+    if (!st) return;
+    if (nmLinkedFrom(made, src)) { nmPair(st, type); return; }
+    setTimeout(function () {
+      try { if (nmLinkedFrom(made, src)) nmPair(st, type); } catch (e) {}
+    }, 1300);
+  }
+
+  /* What follows a node of this type: what you added after one counts double, each node the open graph wires
+     after one counts once (a Reroute is nobody's next node) */
+  function nmContext(node) {
+    var out = {}, src = nmTypeOf(node);
+    if (!src) return out;
+    var mine = nmMem().after[src];
+    if (mine && typeof mine === 'object') {
+      Object.keys(mine).forEach(function (x) { out[x] = (out[x] || 0) + 2 * (+mine[x] || 0); });
+    }
+    try {
+      var g = (node && node.graph) || getGraph();
+      allNodes(g).forEach(function (n) {
+        if (!n || !n.type || !n.inputs || /reroute/i.test(n.type)) return;
+        for (var i = 0; i < n.inputs.length; i++) {
+          var inp = n.inputs[i];
+          if (!inp || inp.link == null) continue;
+          var l = linkById(g, inp.link);
+          var o = l && g.getNodeById ? g.getNodeById(l.origin_id) : null;
+          if (o && nmTypeOf(o) === src) { out[n.type] = (out[n.type] || 0) + 1; break; }
+        }
+      });
+    } catch (e) {}
+    return out;
+  }
+
+  /* What one search, or one drawing of the list, reads from the memory and the open graph */
+  function nmState(node) {
+    var m = nmMem(), fav = {}, inGraph = {};
+    m.fav.forEach(function (x) { fav[x] = 1; });
+    try { allNodes((node && node.graph) || getGraph()).forEach(function (n) { if (n && n.type) inGraph[n.type] = 1; }); } catch (e) {}
+    return { m: m, fav: fav, ctx: nmContext(node), inGraph: inGraph };
+  }
+
+  /* How far a node comes up: a star, how often you add it, how often it follows this node, and a little for
+     being in the graph already */
+  function nmBoost(type, st) {
+    var b = 0, u = +st.m.use[type] || 0, c = +st.ctx[type] || 0;
+    if (st.fav[type]) b += 420;
+    if (u) b += 85 * Math.log(1 + u) / Math.LN2;
+    if (c) b += 120 * Math.log(1 + c) / Math.LN2;
+    if (st.inGraph[type]) b += 30;
+    return b;
+  }
+
+  /* With nothing typed: what follows this node (six), every starred node, the eight you add most. `have` is
+     the set of nodes this ComfyUI has */
+  function nmSuggest(st, have) {
+    var m = st.m;
+    function use(x) { return +m.use[x] || 0; }
+    function known(x) { return !!have[x]; }
+    return {
+      after: Object.keys(st.ctx).filter(known)
+        .sort(function (a, b) { return (st.ctx[b] - st.ctx[a]) || (use(b) - use(a)) || (a < b ? -1 : 1); }).slice(0, 6),
+      fav: m.fav.filter(known).sort(function (a, b) { return use(b) - use(a); }),
+      used: Object.keys(m.use).filter(known)
+        .sort(function (a, b) { return (use(b) - use(a)) || ((+m.last[b] || 0) - (+m.last[a] || 0)); }).slice(0, 8)
+    };
+  }
+
+  /* Stars the node of a row, or takes its star off. The list is drawn again where it was, and the row in hand
+     (the one the arrows are on) stays in hand at its new place */
+  function nmStarRow(type) {
+    if (!type) return;
+    var held = (HB.el && (HB.q || HB.qMoved)) ? hbQRows()[HB.qi || 0] : null;
+    var heldType = held ? held.getAttribute('data-hb-create') : '';
+    var on = nmStar(type);
+    if (HB.el) {
+      var list = HB.el.querySelector('.shb-drawer .shb-list'), top = list ? list.scrollTop : 0;
+      hbPaint();
+      list = HB.el && HB.el.querySelector('.shb-drawer .shb-list');
+      if (list) list.scrollTop = top;
+      if (heldType) {
+        var rows = hbQRows();
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].getAttribute('data-hb-create') === heldType) { HB.qi = i; hbQMark(type === heldType); break; }
+        }
+      }
+    }
+    setStatus('ok', on ? '★ ' + nmTypeName(type) + ' is starred: it comes first in the node search' : nmTypeName(type) + ' is no longer starred');
+  }
+
+  /* the ground a match stands on, by how well the name matches (nsBand): the whole name, its start, a word
+     of it, anything looser */
+  var NM_BASE = [1000, 700, 450, 150];
+
   /* All the nodes that match `q`, best first: [{ t, disp, tier, fits }]. The display name and the internal
      name grade a node; its search aliases (PreviewImage: "show image") find it too, three tiers lower, since
      ComfyUI's own search box finds by them but never ranks by them */
@@ -2093,7 +2288,7 @@
     var outs = {};
     nodeOutputSlotTypes(node).forEach(function (o) { outs[o] = 1; });
     function better(r, best) { return r && (!best || r[0] < best[0] || (r[0] === best[0] && r[1] < best[1])); }
-    var hits = [];
+    var hits = [], mem = nmState(node);
     nsIndex().forEach(function (e) {
       if (e.old && !withOld) return;
       var best = null, r, i;
@@ -2116,10 +2311,19 @@
       }
       if (!best) return;
       var fits = Object.keys(outs).some(function (o) { return e.ins[o]; });
-      hits.push({ t: e.t, disp: e.disp, tier: best[0], pos: best[1], len: best[2], core: e.core, fits: fits, freq: e.freq });
+      /* how well the name matches is the ground; a star, your own use and what follows this node lift it.
+         A loose match gets a quarter of the lift, so a favorite never passes a node that is really called that */
+      var band = nsBand(best[0]), lift = nmBoost(e.t, mem);
+      hits.push({ t: e.t, disp: e.disp, tier: best[0], pos: best[1], len: best[2], core: e.core, fits: fits, freq: e.freq,
+        score: NM_BASE[band] + (band <= 2 ? lift : lift * 0.25) });
     });
+    var last = mem.m.last;
     hits.sort(function (a, b) {
-      return (nsBand(a.tier) - nsBand(b.tier))
+      /* the whole name typed is first whatever else; with nothing remembered the score is the band alone, and
+         the order is the one below, as it always was */
+      return ((a.tier ? 1 : 0) - (b.tier ? 1 : 0))
+        || (b.score - a.score)
+        || ((+last[b.t] || 0) - (+last[a.t] || 0))
         || ((b.core ? 1 : 0) - (a.core ? 1 : 0))
         || (a.tier - b.tier)
         || ((b.fits ? 1 : 0) - (a.fits ? 1 : 0))
@@ -7665,51 +7869,64 @@
     }
 
     if (d === 'search') {
-      var sugUids = (!q && node) ? suggestNodesFor(node, 12) : [];
-      var sugTypes = [];
-      sugUids.forEach(function (u) {
-        if (u.indexOf('node:') === 0) sugTypes.push(u.slice(5));
-        else if (u.indexOf('model:') === 0) sugTypes.push(u.slice(6));
-      });
-      /* with a search: every node, best match first (nodeSearch); without one: the suggestions, then A to Z */
+      var mem = nmState(node), shown = {};
+      var take = function (list) {
+        return list.filter(function (x) { if (shown[x]) return false; shown[x] = 1; return true; });
+      };
+      /* with a search: every node, best match first (nodeSearch). Without one: what follows this node, the
+         nodes you starred, the ones you add most, the suggestions for what this node gives, then A to Z */
       var hits = q ? nodeSearch(q, node) : null;
-      var types = hits ? hits.slice(0, 80).map(function (h) { return h.t; }) : allTypes().filter(function (t) {
-        return !isOldVersion(t) && sugTypes.indexOf(t) < 0;
-      }).slice(0, 70);
-      var outSlotsLabel = nodeOutputSlotTypes(node).join(', ');
+      var secs = [];
+      if (hits) secs.push({ name: '', types: hits.slice(0, 80).map(function (h) { return h.t; }) });
+      else {
+        var installed = allTypes().filter(function (x) { return !isOldVersion(x); }), have = {};
+        installed.forEach(function (x) { have[x] = 1; });
+        var mine = nmSuggest(mem, have), sugTypes = [];
+        (node ? suggestNodesFor(node, 12) : []).forEach(function (u) {
+          if (u.indexOf('node:') === 0) sugTypes.push(u.slice(5));
+          else if (u.indexOf('model:') === 0) sugTypes.push(u.slice(6));
+        });
+        secs.push({ name: 'After ' + nmNodeName(node), types: take(mine.after), sug: true });
+        secs.push({ name: 'Favorites', types: take(mine.fav) });
+        secs.push({ name: 'Most used', types: take(mine.used) });
+        secs.push({ name: 'Suggested for ' + (nodeOutputSlotTypes(node).join(', ') || 'Node'), types: take(sugTypes), sug: true });
+        secs.push({ name: 'All Installed Nodes', dim: true, types: take(installed).slice(0, 70) });
+        secs = secs.filter(function (s) { return s.types.length; });
+        /* nothing of your own and nothing suggested: the plain list needs no heading */
+        if (secs.length === 1 && secs[0].dim) secs[0].name = '';
+      }
+      var total = 0, maxUse = 1;
+      secs.forEach(function (s) { total += s.types.length; });
+      Object.keys(mem.m.use).forEach(function (x) { maxUse = Math.max(maxUse, +mem.m.use[x] || 0); });
+      var row = function (x, sug) {
+        var uid = ((sug && SRV.api && SRV.api[x]) ? 'model:' : 'node:') + x;
+        var inBar = allPinned.indexOf(uid) >= 0 || allPinned.indexOf('node:' + x) >= 0;
+        var disp = nmTypeName(x);
+        var pack = packLabel(x);
+        var mSlots = (sug || q) && node ? matchingSlotsDesc(node, x) : '';
+        var fav = !!mem.fav[x], use = +mem.m.use[x] || 0;
+        return '<button type="button" class="shb-btn shb-btn-row' + (fav ? ' shb-fav' : '') + '" data-hb-create="' + esc(x) + '" data-drawer-uid="' + esc(uid) + '" title="' +
+            esc(disp + (pack ? ' · from ' + nodePack(x) : ' · ComfyUI') + (use ? ' · added ' + use + (use === 1 ? ' time' : ' times') : '') + ' · Drag to any bar to pin · Click (or Enter) to add') + '" style="cursor:grab">' +
+          /* how much you use it, against the one you use most */
+          (use ? '<i class="shb-use" style="height:' + Math.round(30 + 60 * Math.log(1 + use) / Math.log(1 + maxUse)) + '%"></i>' : '') +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(disp) + '</span>' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0">' +
+            (pack ? '<span class="shb-src">' + esc(pack) + '</span>' : '') +
+            (inBar ? '<span class="shb-inbar">✓</span>' : '') +
+            (mSlots ? '<span class="shb-kbd">' + esc(mSlots) + '</span>' : '') +
+            '<span class="shb-star" data-hb-star="' + esc(x) + '" title="' + (fav ? 'Starred: it comes first. Click to take the star off (Ctrl+Enter)' : 'Star it: starred nodes come first (Ctrl+Enter)') + '">' + ico('star', 13) + '</span>' +
+          '</span>' +
+        '</button>';
+      };
       return '<div class="shb-drawer">' +
-        '<div class="shb-card-hd"><span>Add Node (Drag to Bar)</span><span>' + (hits ? hits.length : sugTypes.length + types.length) + '</span></div>' +
+        '<div class="shb-card-hd"><span>Add Node (Drag to Bar)</span><span>' + (hits ? hits.length : total) + '</span></div>' +
         drawerTabsHTML +
         '<input class="shb-search" data-hb-q value="' + esc(HB.q) + '" placeholder="Search any ComfyUI node…">' +
         '<div class="shb-list">' +
-          (sugTypes.length ? '<div class="shb-drawer-sec">Suggested for ' + esc(outSlotsLabel || 'Node') + '</div>' +
-            sugTypes.map(function (t) {
-              var uid = (SRV.api && SRV.api[t]) ? ('model:' + t) : ('node:' + t);
-              var inBar = allPinned.indexOf(uid) >= 0 || allPinned.indexOf('node:' + t) >= 0;
-              var disp = (SRV.types && SRV.types[t] && SRV.types[t].display_name) || t;
-              var mSlots = matchingSlotsDesc(node, t);
-              return '<button type="button" class="shb-btn shb-btn-row" data-hb-create="' + esc(t) + '" data-drawer-uid="' + esc(uid) + '" title="Drag to any bar to pin · Click to add & auto-connect ' + esc(disp) + '" style="cursor:grab">' +
-                '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(disp) + '</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:4px">' +
-                  (inBar ? '<span class="shb-inbar">✓</span>' : '') +
-                  (mSlots ? '<span class="shb-kbd">' + esc(mSlots) + '</span>' : '') +
-                '</span>' +
-              '</button>';
-            }).join('') + '<div class="shb-sep"></div><div class="shb-drawer-sec" style="color:inherit;opacity:.6">All Installed Nodes</div>' : '') +
-          types.map(function (t) {
-            var uid = 'node:' + t;
-            var inBar = allPinned.indexOf(uid) >= 0;
-            var disp = (SRV.types && SRV.types[t] && SRV.types[t].display_name) || t;
-            var pack = packLabel(t);
-            var mSlots = q && node ? matchingSlotsDesc(node, t) : '';
-            return '<button type="button" class="shb-btn shb-btn-row" data-hb-create="' + esc(t) + '" data-drawer-uid="' + esc(uid) + '" title="' + esc(disp + (pack ? ' · from ' + nodePack(t) : ' · ComfyUI') + ' · Drag to any bar to pin · Click (or Enter) to add') + '" style="cursor:grab">' +
-              '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(disp) + '</span>' +
-              '<span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0">' +
-                (pack ? '<span class="shb-src">' + esc(pack) + '</span>' : '') +
-                (inBar ? '<span class="shb-inbar">✓</span>' : '') +
-                (mSlots ? '<span class="shb-kbd">' + esc(mSlots) + '</span>' : '') +
-              '</span>' +
-            '</button>';
+          secs.map(function (s, i) {
+            return (i ? '<div class="shb-sep"></div>' : '') +
+              (s.name ? '<div class="shb-drawer-sec"' + (s.dim ? ' style="color:inherit;opacity:.6"' : '') + '>' + esc(s.name) + '</div>' : '') +
+              s.types.map(function (x) { return row(x, s.sug); }).join('');
           }).join('') +
           (hits && !hits.length ? '<div style="padding:10px;color:#888888">No node matches “' + esc(HB.q) + '”</div>' : '') +
         '</div>' +
@@ -10943,12 +11160,18 @@
         return;
       }
 
+      var star = t.closest('[data-hb-star]');
+      if (star) {
+        nmStarRow(star.getAttribute('data-hb-star'));
+        return;
+      }
+
       var cr = t.closest('[data-hb-create]');
       if (cr) {
         var cType = cr.getAttribute('data-hb-create');
         var nC = HB.node;
         hbClose();
-        hbCreate(cType, nC);
+        nmLearn(cType, nC, hbCreate(cType, nC));
         return;
       }
 
@@ -16540,6 +16763,19 @@
   }
 
   /* Main Hotbox Trigger & In-Hotbox Quick Keys (window capture runs before every document-level listener) */
+  /* Ctrl+Enter in the node search stars the row in hand. ComfyUI runs the workflow on that key, from a text
+     box too, so it stops here */
+  listen(window, 'keydown', function (e) {
+    if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    var t = e.target;
+    if (!HB.el || !t || !t.hasAttribute || !t.hasAttribute('data-hb-q') || !HB.el.contains(t)) return;
+    if (HB.drawer !== 'search' && HB.drawer !== 'addcustom') return;
+    hbEat(e);
+    if (e.repeat) return;
+    var row = (HB.q || HB.qMoved) ? hbQRows()[HB.qi || 0] : null;
+    if (row && row.getAttribute('data-hb-create')) nmStarRow(row.getAttribute('data-hb-create'));
+  }, true);
+
   listen(window, 'keydown', function (e) {
     if (HB.binding) return;
 
