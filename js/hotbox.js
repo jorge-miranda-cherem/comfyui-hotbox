@@ -762,22 +762,22 @@
       '.shb-toast-busy{border-color:#8a6d3b;color:#f5d69b}',
       /* the bar that stays afloat while a saved button is changed on a canvas of its own (see cedStart): the
          look of the edit bar, above the canvas and under ComfyUI's own windows */
-      '.shb-cbar{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:10px;padding:5px 5px 5px 14px;border-radius:16px;background:rgba(38,38,42,.9);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);font:500 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#f2f2f5;white-space:nowrap;max-width:94vw;user-select:none;animation:shbCbarIn .2s cubic-bezier(.2,.9,.2,1)}',
+      '.shb-ced{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:10px;padding:5px 5px 5px 14px;border-radius:16px;background:rgba(38,38,42,.9);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);font:500 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#f2f2f5;white-space:nowrap;max-width:94vw;user-select:none;animation:shbCbarIn .2s cubic-bezier(.2,.9,.2,1)}',
       '@keyframes shbCbarIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}',
-      '.shb-cbar-tag{flex:none;display:inline-flex;align-items:center;gap:6px;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#9cc2f5}',
-      '.shb-cbar-tag i{width:6px;height:6px;border-radius:50%;background:#64a8f0}',
-      '.shb-cbar-name{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:280px}',
-      '.shb-cbar-name b{font-weight:600;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-cbar-note{min-width:0;overflow:hidden;text-overflow:ellipsis;color:rgba(235,235,245,.6);margin-right:4px}',
-      '.shb-cbar-note.shb-cbar-warn{color:#f5d69b}',
-      '.shb-cbar-note.shb-cbar-bad{color:#f2b8b5}',
-      '.shb-cbar-b{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:#f2f2f5}',
-      '.shb-cbar-b:hover{background:rgba(255,255,255,.1)}',
-      '.shb-cbar-b:disabled{opacity:.45;cursor:default;pointer-events:none}',
-      '.shb-cbar-save{background:#2f86e0;color:#fff;padding:8px 14px}',
-      '.shb-cbar-save:hover{background:#4294ea}',
-      '.shb-cbar.shb-quiet{border-radius:7px;padding:3px 3px 3px 10px;background:#1f1f1f;border-color:#303030;box-shadow:0 10px 26px rgba(0,0,0,.45);-webkit-backdrop-filter:none;backdrop-filter:none}',
-      '.shb-cbar.shb-quiet .shb-cbar-b{border-radius:5px;padding:6px 10px}',
+      '.shb-ced-tag{flex:none;display:inline-flex;align-items:center;gap:6px;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#9cc2f5}',
+      '.shb-ced-tag i{width:6px;height:6px;border-radius:50%;background:#64a8f0}',
+      '.shb-ced-name{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:280px}',
+      '.shb-ced-name b{font-weight:600;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ced-note{min-width:0;overflow:hidden;text-overflow:ellipsis;color:rgba(235,235,245,.6);margin-right:4px}',
+      '.shb-ced-note.shb-ced-warn{color:#f5d69b}',
+      '.shb-ced-note.shb-ced-bad{color:#f2b8b5}',
+      '.shb-ced-b{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:#f2f2f5}',
+      '.shb-ced-b:hover{background:rgba(255,255,255,.1)}',
+      '.shb-ced-b:disabled{opacity:.45;cursor:default;pointer-events:none}',
+      '.shb-ced-save{background:#2f86e0;color:#fff;padding:8px 14px}',
+      '.shb-ced-save:hover{background:#4294ea}',
+      '.shb-ced.shb-quiet{border-radius:7px;padding:3px 3px 3px 10px;background:#1f1f1f;border-color:#303030;box-shadow:0 10px 26px rgba(0,0,0,.45);-webkit-backdrop-filter:none;backdrop-filter:none}',
+      '.shb-ced.shb-quiet .shb-ced-b{border-radius:5px;padding:6px 10px}',
 
       /* Fullscreen Hotbox Overlay (pointer-events:none on backdrop so canvas/nodes are never blocked) */
       '.shb-wrap{position:fixed;inset:0;z-index:2147482500;pointer-events:none;user-select:none;font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg)}',
@@ -14805,35 +14805,35 @@
   }
 
   function cedNote(text, bad) {
-    var s = CED, e = s && s.el && s.el.querySelector('[data-cbar-note]');
+    var s = CED, e = s && s.el && s.el.querySelector('[data-ced-note]');
     if (!e) return;
     e.textContent = text;
-    e.className = 'shb-cbar-note ' + (bad ? 'shb-cbar-bad' : 'shb-cbar-warn');
+    e.className = 'shb-ced-note ' + (bad ? 'shb-ced-bad' : 'shb-ced-warn');
     s.noteUntil = Date.now() + 4000;
   }
 
   function cedCount() {
-    var s = CED, e = s && s.el && s.el.querySelector('[data-cbar-note]');
+    var s = CED, e = s && s.el && s.el.querySelector('[data-ced-note]');
     if (!e || Date.now() < s.noteUntil) return;
     var n = allNodes(cedRoot()).length, text = n + (n === 1 ? ' node' : ' nodes');
-    if (e.textContent !== text || e.className !== 'shb-cbar-note') { e.textContent = text; e.className = 'shb-cbar-note'; }
+    if (e.textContent !== text || e.className !== 'shb-ced-note') { e.textContent = text; e.className = 'shb-ced-note'; }
   }
 
   function cedBar() {
     var s = CED;
     if (!s) return;
     var el = owns(document.createElement('div'));
-    el.className = 'shb-cbar ' + hbThemeCls();
+    el.className = 'shb-ced ' + hbThemeCls();
     el.innerHTML =
-      '<span class="shb-cbar-tag"><i></i>Editing button</span>' +
-      '<span class="shb-cbar-name">' + tplIcoHTML('tpl:' + s.id, 14) + '<b>' + esc(s.name) + '</b></span>' +
-      '<span class="shb-cbar-note" data-cbar-note></span>' +
-      '<button type="button" class="shb-cbar-b" data-cbar="cancel" title="Close this tab and leave the button as it was">Cancel</button>' +
-      '<button type="button" class="shb-cbar-b shb-cbar-save" data-cbar="save" title="Keep the nodes of this tab in the button, which stays where it is, and close the tab">' + ico('save', 13) + '<span>Save button</span></button>';
+      '<span class="shb-ced-tag"><i></i>Editing button</span>' +
+      '<span class="shb-ced-name">' + tplIcoHTML('tpl:' + s.id, 14) + '<b>' + esc(s.name) + '</b></span>' +
+      '<span class="shb-ced-note" data-ced-note></span>' +
+      '<button type="button" class="shb-ced-b" data-ced="cancel" title="Close this tab and leave the button as it was">Cancel</button>' +
+      '<button type="button" class="shb-ced-b shb-ced-save" data-ced="save" title="Keep the nodes of this tab in the button, which stays where it is, and close the tab">' + ico('save', 13) + '<span>Save button</span></button>';
     el.addEventListener('click', function (ev) {
-      var b = ev.target && ev.target.closest ? ev.target.closest('[data-cbar]') : null;
+      var b = ev.target && ev.target.closest ? ev.target.closest('[data-ced]') : null;
       if (!b) return;
-      if (b.getAttribute('data-cbar') === 'save') cedSave();
+      if (b.getAttribute('data-ced') === 'save') cedSave();
       else cedCancel();
     });
     /* it floats over the canvas: nothing done on it reaches the canvas under it */
