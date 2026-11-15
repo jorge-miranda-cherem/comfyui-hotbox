@@ -87,6 +87,10 @@ presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI, and a card asks before adding i
 Drag a button from one bar to another, or a power tool straight out of Settings. It stays where you put it, and
 where it does not apply it is dimmed.
 
+**Settings → Power Tools → Browse…** lists every power tool with a short clip of what it does, its key, a switch
+that turns it off and a button that puts it on your bottom bar. **Icons Only**, beside it, leaves the tools in the
+bars as icons alone: the name shows when the pointer is on one.
+
 **One setup per project**
 
 <img src="docs/media/projects.png" alt="Settings: the Night Shift project, its hotbox.json, Set Project with Spring Ad and Brand Film under Recent, and Backup & Share" width="460">
