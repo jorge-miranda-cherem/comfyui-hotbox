@@ -1379,6 +1379,8 @@
       '.shb-fluid .shb-vsep{height:20px;background:rgba(255,255,255,.12)}',
       '.shb-fluid .shb-btn{gap:8px;padding:9px 13px;border:0;border-radius:13px;background:transparent;color:var(--shb-t1);font:500 13px/1 Inter,system-ui,sans-serif;transition:transform 45ms cubic-bezier(.34,1.56,.64,1),background 26ms}',
       '.shb-fluid .shb-btn .shb-ico{color:var(--shb-t2)}',
+      /* the icon a button leads with is at full strength (a button that swaps, a danger and a filled blue one keep theirs: their rules come later) */
+      '.shb-fluid .shb-lead > .shb-ico{color:var(--shb-t1)}',
       '.shb-fluid .shb-btn:hover{background:rgba(255,255,255,.1);color:#fff}',
       '.shb-fluid .shb-btn:hover .shb-ico{color:#fff}',
       '.shb-fluid .shb-btn:active{transform:scale(.95)}',
@@ -1399,12 +1401,13 @@
       '.shb-fluid .shb-act .shb-key{background:none;min-width:0;padding:0;height:auto;color:rgba(235,235,245,.45)}',
       '.shb-fluid .shb-act:active{transform:scale(.93)}',
       '.shb-fluid .shb-tool{padding:8px 11px;border-radius:11px;font-size:12.5px}',
-      /* A tool leads with its sign (19px, where the others have 15): less padding keeps the bar's height */
-      '.shb-fluid .shb-lead{padding-top:7px;padding-bottom:7px}',
-      '.shb-fluid .shb-tool.shb-lead{padding-top:6px;padding-bottom:6px}',
-      '.shb-fluid .shb-lead > .shb-ico{color:var(--shb-t1)}',
-      '.shb-fluid .shb-lead > .shb-lbl{color:var(--shb-t2)}',
-      '.shb-fluid .shb-lead:hover > .shb-lbl,.shb-fluid .shb-lead.shb-btn-on > .shb-lbl,.shb-fluid .shb-lead.shb-btn-primary > .shb-lbl,.shb-fluid .shb-lead.shb-filled > .shb-lbl{color:inherit}',
+      /* A button that leads with an icon (22px, larger than its name): the name sits a step back and half a point
+         smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
+         tall as they were. A tool's row in a card reads the same way */
+      '.shb-fluid .shb-btn.shb-lead{padding-top:6px;padding-bottom:6px}',
+      '.shb-fluid .shb-tool.shb-lead{padding-top:5px;padding-bottom:5px}',
+      '.shb-fluid .shb-lead > .shb-lbl,.shb-fluid .shb-lead > .shb-row-l{color:var(--shb-t2);font-size:12.5px}',
+      '.shb-fluid .shb-lead:hover > .shb-lbl,.shb-fluid .shb-lead.shb-btn-on > .shb-lbl,.shb-fluid .shb-lead.shb-btn-primary > .shb-lbl,.shb-fluid .shb-lead.shb-filled > .shb-lbl,.shb-fluid .shb-lead:hover > .shb-row-l,.shb-fluid .shb-lead.shb-active > .shb-row-l{color:inherit}',
       '.shb-fluid .shb-danger .shb-ico{color:var(--shb-danger)}',
       '.shb-fluid .shb-btn-primary,.shb-fluid .shb-btn-primary:hover{background:var(--shb-blue);color:#fff;padding:8px 10px 8px 12px;border-radius:11px;font-weight:600;font-size:12.5px}',
       '.shb-fluid .shb-btn-primary:hover{background:#3b92ea}',
@@ -1431,6 +1434,7 @@
       '.shb-fluid .shb-hl{border-radius:11px;background:rgba(255,255,255,.11);transition:transform 68ms cubic-bezier(.34,1.35,.64,1),opacity 30ms ease}',
       '.shb-fluid .shb-row{height:34px;gap:11px;padding:0 10px;border-radius:11px;font:500 13px/1 Inter,system-ui,sans-serif;color:var(--shb-t1)}',
       '.shb-fluid .shb-row .shb-ico{color:var(--shb-t2)}',
+      '.shb-fluid .shb-row.shb-lead > .shb-ico{color:var(--shb-t1)}',
       '.shb-fluid .shb-row.shb-active{background:rgba(90,162,240,.18);color:#fff}',
       '.shb-fluid .shb-sep{background:rgba(255,255,255,.08);margin:6px 8px}',
       '.shb-fluid .shb-colors{gap:8px;padding:6px 10px 4px}',
@@ -1520,13 +1524,14 @@
       '.shb-quiet .shb-bar-items{gap:1px}',
       '.shb-quiet .shb-btn{gap:7px;padding:7px 10px;border:0;border-radius:6px;background:transparent;color:#d6d6d6;font:500 12.5px/1 Inter,system-ui,sans-serif}',
       '.shb-quiet .shb-btn .shb-ico{color:#888}',
+      /* A button leads with its icon here too (19px): at full strength, the name a step back and half a point smaller.
+         :where keeps this rule as light as the ones after it, so a danger or a filled blue button keeps its own icon color */
+      '.shb-quiet .shb-lead:where(:not(.shb-swapi)) > .shb-ico{color:#d6d6d6}',
       '.shb-quiet .shb-btn:hover{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-btn:hover .shb-ico{color:#fff}',
-      /* A tool leads with its sign here too (17px, where the others have 13) */
-      '.shb-quiet .shb-lead{padding-top:5px;padding-bottom:5px}',
-      '.shb-quiet .shb-lead > .shb-ico{color:#d6d6d6}',
-      '.shb-quiet .shb-lead > .shb-lbl{color:#9e9e9e}',
-      '.shb-quiet .shb-lead:hover > .shb-lbl,.shb-quiet .shb-lead.shb-btn-on > .shb-lbl,.shb-quiet .shb-lead.shb-btn-primary > .shb-lbl,.shb-quiet .shb-lead.shb-filled > .shb-lbl{color:inherit}',
+      '.shb-quiet .shb-btn.shb-lead{padding-top:5px;padding-bottom:5px}',
+      '.shb-quiet .shb-lead > .shb-lbl,.shb-quiet .shb-lead > .shb-row-l{color:#9e9e9e;font-size:12px}',
+      '.shb-quiet .shb-lead:hover > .shb-lbl,.shb-quiet .shb-lead.shb-btn-on > .shb-lbl,.shb-quiet .shb-lead.shb-btn-primary > .shb-lbl,.shb-quiet .shb-lead.shb-filled > .shb-lbl,.shb-quiet .shb-lead:hover > .shb-row-l,.shb-quiet .shb-lead.shb-active > .shb-row-l{color:inherit}',
       '.shb-quiet .shb-btn-on{background:#24303d;color:#fff;box-shadow:inset 0 0 0 1px #3d5f86}',
       '.shb-quiet .shb-num,.shb-quiet .shb-key,.shb-quiet .shb-kbd{font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted);background:none;border:0;padding:0;min-width:0;height:auto}',
       '.shb-quiet .shb-models-btn{color:#9a9a9a;gap:5px}',
@@ -1553,6 +1558,7 @@
       '.shb-quiet .shb-hl{display:none}',
       '.shb-quiet .shb-row{height:30px;gap:9px;padding:0 9px;border-radius:5px;font:500 12.5px/1 Inter,system-ui,sans-serif;color:#d6d6d6}',
       '.shb-quiet .shb-row .shb-ico{color:#888}',
+      '.shb-quiet .shb-row.shb-lead > .shb-ico{color:#d6d6d6}',
       '.shb-quiet .shb-row:hover,.shb-quiet .shb-row.shb-active{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-sep{background:#2c2c2c;margin:4px 6px}',
       '.shb-quiet .shb-colors{gap:7px;padding:6px 9px 5px}',
@@ -7188,12 +7194,13 @@
 
   function renderGroupHTML(item, barName, numKey) {
     var pin = !!HB.grpOpen[item.id];
-    var isz = hbIsFluid() ? 15 : 13;
     var tint = barTintAttrs(item.uid);
-    var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn' + tint.cls;
+    /* its folder leads like any other icon; with a key of its own the key shows there, and the name stays in front */
+    var keyed = !!(numKey || hbKeyFor(item.uid));
+    var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn' + (keyed ? '' : ' shb-lead') + tint.cls;
     return '<span class="shb-item-wrap shb-grp' + (pin ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '" data-hb-gkey="' + esc(item.id) + '">' +
       '<button type="button" class="' + cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
-        (numKey || hbKeyFor(item.uid) ? '<span class="shb-num">' + esc(hbKeyName(hbKeyFor(item.uid)) || numKey) + '</span>' : ico('folder', isz)) +
+        (keyed ? '<span class="shb-num">' + esc(hbKeyName(hbKeyFor(item.uid)) || numKey) + '</span>' : ico('folder', hbLeadSz())) +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         '<span class="shb-w-badge">' + esc(item.count) + '</span>' +
         '<span class="shb-grp-chev" data-hb-grpchev title="Keep it open · click again to close it">' + ico('chevDown', 12) + '</span>' +
@@ -7443,13 +7450,14 @@
     if (item.id === 'apibypass') btnCls += ' shb-danger';
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
     if (item.off) btnCls += ' shb-na';
-    /* a tool leads with its sign: larger than its name and at full strength, the name a step back, so an open
-       hotbox reads by its signs. Not where the name is what tells one from the next (a Get's bus, a crop ratio) */
-    var isLead = item.kind === 'tool' && !numKey && !/^(get|ar)_/.test(item.id);
+    /* a button that leads with an icon (a tool, a saved button's sign, a node's plus) shows it larger than its
+       name and at full strength, the name a step back, so an open hotbox reads by its icons. A number or a dot
+       is no icon: those buttons keep their name in front */
+    var isLead = !numKey && (isTpl || !isPin);
     if (isLead) btnCls += ' shb-lead';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
-      : (isTpl ? tplIcoHTML(item.uid, hbIsFluid() ? 15 : 13)
-        : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', isLead ? (hbIsFluid() ? 19 : 17) : (hbIsFluid() ? 15 : 13))));
+      : (isTpl ? tplIcoHTML(item.uid, hbLeadSz())
+        : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbLeadSz())));
     var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
       : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
     var tint = barTintAttrs(item.uid);
@@ -7663,6 +7671,9 @@
   }
 
   function hbIsFluid() { return hbTheme() !== 'quiet'; }
+
+  /* The icon a button or a card's row leads with: larger than its name (which is 12.5px, and 12 in Quiet) */
+  function hbLeadSz() { return hbIsFluid() ? 22 : 19; }
 
   var HB_STYLE_NAMES = { pro: 'Fluid', quiet: 'Quiet', classic: 'Compact' };
   function hbCycleStyle() {
@@ -9389,9 +9400,10 @@
     var hasMagnifier = !!(node && hbToolOn('lupa') && (lupaWidget(node) || isCropNode(node) || isPainterNode(node)));
     var slidersHTML = compact ? '' : buildProSlidersHTML(node);
 
-    function rowHTML(attrs, icon, label, key, active) {
-      return '<button type="button" class="shb-row' + (active ? ' shb-active' : '') + '" ' + attrs + '>' +
-        ico(icon, icoSz) + '<span class="shb-row-l">' + esc(label) + '</span>' +
+    /* `lead`: a tool's row, which leads with its icon as a tool's button does (a menu's row does not) */
+    function rowHTML(attrs, icon, label, key, active, lead) {
+      return '<button type="button" class="shb-row' + (active ? ' shb-active' : '') + (lead ? ' shb-lead' : '') + '" ' + attrs + '>' +
+        ico(icon, lead ? hbLeadSz() : icoSz) + '<span class="shb-row-l">' + esc(label) + '</span>' +
         (key ? '<span class="shb-key">' + esc(key) + '</span>' : '') +
       '</button>';
     }
@@ -9460,18 +9472,18 @@
     var leftHTML = '';
     if (!compact) {
       var leftRows = [];
-      if (node) leftRows.push(rowHTML('data-hb-act="rename"', 'edit', 'Rename', 'F2'));
-      if (hbToolOn('label')) leftRows.push(rowHTML('data-hb-act="label"', 'label', 'Add Label', 'L'));
+      if (node) leftRows.push(rowHTML('data-hb-act="rename"', 'edit', 'Rename', 'F2', false, true));
+      if (hbToolOn('label')) leftRows.push(rowHTML('data-hb-act="label"', 'label', 'Add Label', 'L', false, true));
       if (hasMagnifier) {
         leftRows.push(rowHTML('data-hb-act="lupa"',
           isCropNode(node) ? 'crop' : (isPainterNode(node) ? 'paint' : 'lupa'),
-          isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Magnifier'), 'Z'));
+          isCropNode(node) ? 'Visual Crop' : (isPainterNode(node) ? 'Paint Studio' : 'Magnifier'), 'Z', false, true));
       }
       if (node) {
-        leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R'));
-        leftRows.push(rowHTML('data-hb-act="set"', 'set', 'Set / Get Bus', 'S'));
+        leftRows.push(rowHTML('data-hb-act="reroute"', 'reroute', 'Add Reroute', 'R', false, true));
+        leftRows.push(rowHTML('data-hb-act="set"', 'set', 'Set / Get Bus', 'S', false, true));
       }
-      if (node || sel.length) leftRows.push(rowHTML('data-hb-act="group"', 'group', sel.length > 1 ? 'Group ' + sel.length + ' Nodes' : 'Group', 'G'));
+      if (node || sel.length) leftRows.push(rowHTML('data-hb-act="group"', 'group', sel.length > 1 ? 'Group ' + sel.length + ' Nodes' : 'Group', 'G', false, true));
       /* On the bare canvas every Set bus offers its Get, dropped right where the hotbox opened */
       var getRows = node ? [] : setNames().map(function (nm) {
         var col = setBusColor(nm);
