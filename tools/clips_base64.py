@@ -81,7 +81,8 @@ standard library only.
 
 The folder is FOLDER below; left empty it is hotbox_clips in your home folder. A clip that is already
 there and identical is left alone. Only <tool>.webm files of these names and clips.json, the list of
-them for whoever reads the folder, are ever written; all are left readable by everyone.
+them for whoever reads the folder, are ever written (each one whole or not at all), and all are left
+readable by everyone.
 """
 import base64
 import json
@@ -119,14 +120,24 @@ def write_clips(folder=None):
 
 
 def _put(path, data):
-    """Writes the file unless it already holds exactly this. True when it was written."""
+    """Writes the file unless it already holds exactly this. It is written beside itself as <name>.part
+    and then moved over, so whoever reads the folder meanwhile never finds half a file. True when it
+    was written."""
     old = None
     if os.path.isfile(path):
         with open(path, 'rb') as f:
             old = f.read()
     if old != data:
-        with open(path, 'wb') as f:
+        part = path + '.part'
+        with open(part, 'wb') as f:
             f.write(data)
+        _readable(part, 0o044)
+        try:
+            getattr(os, 'replace', os.rename)(part, path)
+        except OSError:
+            # Python 2 on Windows cannot move a file over another
+            os.remove(path)
+            os.rename(part, path)
     _readable(path, 0o044)
     return old != data
 
@@ -150,7 +161,11 @@ def main():
         args = [a for a in sys.argv[1:] if not a.startswith('-')]
         folder = args[0] if args else None
     elif getattr(nuke, 'GUI', False):
-        folder = nuke.getInput('Folder for the Hotbox clips', default_folder())
+        try:
+            folder = nuke.getInput('Folder for the Hotbox clips', default_folder())
+        except Exception:
+            # a Nuke that cannot ask: the folder set above, said at the end
+            folder = default_folder()
         if not folder:
             sys.stdout.write('Hotbox clips: nothing written\\n')
             return None
