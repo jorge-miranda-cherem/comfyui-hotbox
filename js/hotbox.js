@@ -1399,6 +1399,12 @@
       '.shb-fluid .shb-act .shb-key{background:none;min-width:0;padding:0;height:auto;color:rgba(235,235,245,.45)}',
       '.shb-fluid .shb-act:active{transform:scale(.93)}',
       '.shb-fluid .shb-tool{padding:8px 11px;border-radius:11px;font-size:12.5px}',
+      /* A tool leads with its sign (19px, where the others have 15): less padding keeps the bar's height */
+      '.shb-fluid .shb-lead{padding-top:7px;padding-bottom:7px}',
+      '.shb-fluid .shb-tool.shb-lead{padding-top:6px;padding-bottom:6px}',
+      '.shb-fluid .shb-lead > .shb-ico{color:var(--shb-t1)}',
+      '.shb-fluid .shb-lead > .shb-lbl{color:var(--shb-t2)}',
+      '.shb-fluid .shb-lead:hover > .shb-lbl,.shb-fluid .shb-lead.shb-btn-on > .shb-lbl,.shb-fluid .shb-lead.shb-btn-primary > .shb-lbl,.shb-fluid .shb-lead.shb-filled > .shb-lbl{color:inherit}',
       '.shb-fluid .shb-danger .shb-ico{color:var(--shb-danger)}',
       '.shb-fluid .shb-btn-primary,.shb-fluid .shb-btn-primary:hover{background:var(--shb-blue);color:#fff;padding:8px 10px 8px 12px;border-radius:11px;font-weight:600;font-size:12.5px}',
       '.shb-fluid .shb-btn-primary:hover{background:#3b92ea}',
@@ -1516,6 +1522,11 @@
       '.shb-quiet .shb-btn .shb-ico{color:#888}',
       '.shb-quiet .shb-btn:hover{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-btn:hover .shb-ico{color:#fff}',
+      /* A tool leads with its sign here too (17px, where the others have 13) */
+      '.shb-quiet .shb-lead{padding-top:5px;padding-bottom:5px}',
+      '.shb-quiet .shb-lead > .shb-ico{color:#d6d6d6}',
+      '.shb-quiet .shb-lead > .shb-lbl{color:#9e9e9e}',
+      '.shb-quiet .shb-lead:hover > .shb-lbl,.shb-quiet .shb-lead.shb-btn-on > .shb-lbl,.shb-quiet .shb-lead.shb-btn-primary > .shb-lbl,.shb-quiet .shb-lead.shb-filled > .shb-lbl{color:inherit}',
       '.shb-quiet .shb-btn-on{background:#24303d;color:#fff;box-shadow:inset 0 0 0 1px #3d5f86}',
       '.shb-quiet .shb-num,.shb-quiet .shb-key,.shb-quiet .shb-kbd{font:500 10.5px/1 var(--shb-mono);color:var(--shb-qmuted);background:none;border:0;padding:0;min-width:0;height:auto}',
       '.shb-quiet .shb-models-btn{color:#9a9a9a;gap:5px}',
@@ -7432,9 +7443,13 @@
     if (item.id === 'apibypass') btnCls += ' shb-danger';
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
     if (item.off) btnCls += ' shb-na';
+    /* a tool leads with its sign: larger than its name and at full strength, the name a step back, so an open
+       hotbox reads by its signs. Not where the name is what tells one from the next (a Get's bus, a crop ratio) */
+    var isLead = item.kind === 'tool' && !numKey && !/^(get|ar)_/.test(item.id);
+    if (isLead) btnCls += ' shb-lead';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
       : (isTpl ? tplIcoHTML(item.uid, hbIsFluid() ? 15 : 13)
-        : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', hbIsFluid() ? 15 : 13)));
+        : (isPin ? '<i class="shb-pin-dot"></i>' : ico(item.icon || 'plus', isLead ? (hbIsFluid() ? 19 : 17) : (hbIsFluid() ? 15 : 13))));
     var hint = isTpl ? 'Drag onto the canvas to drop it there · Hold to edit'
       : (isPin ? 'Drag out of the bar to unpin · Hold to edit' : 'Hold to edit · Drag out of the bar to remove');
     var tint = barTintAttrs(item.uid);

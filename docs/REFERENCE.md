@@ -58,6 +58,8 @@ Everything Hotbox does, bar by bar. For a quick look start with the [README](../
 | **Custom Bar** | Controls other extensions hand to the hotbox, right above the bottom bar (see [Custom Bar](#-custom-bar-for-extension-authors)). Not there when nothing registered one. |
 | **Bottom bar** | `Load in Canvas V` (on Preview, Save Image and Save Video nodes) · `Preview T` · `Seed mode P` · `Bypass B` · `Zoom .` · `Bypass All APIs K` (when the workflow has API nodes) · `Swap Nodes W` (two nodes selected) · `Save as Button X` · `Render Selected ⇧R` + your pinned nodes and saved buttons, the edit and settings buttons, and the `+` with its category dial. |
 
+A tool in a bar **leads with its icon**: the icon is larger than the name and at full strength, and the name sits a step back, so an open hotbox reads by its icons first. The name comes forward under the pointer and while the tool is on. A color you gave the tool still colors its icon. Nodes, saved buttons and groups keep their name in front, because the name is what tells them apart.
+
 ---
 
 ## 🧠 Context-aware behavior
