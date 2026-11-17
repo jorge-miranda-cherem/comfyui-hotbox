@@ -2023,7 +2023,11 @@
       });
   }
 
-  /* `q` is made of the starts of the words, in order, one letter or more of each, words may be skipped */
+  /* `q` is made of the starts of the words, in order; words may be skipped. Of each word its first letters, up
+     to NS_RUN of them, or the whole word; of the last one as many as were typed ("loadlor" Load LoRA). More
+     letters than that of a word left unfinished, and then another word, is a slip of the finger and not
+     initials: "ksamplr" is KSampler with a letter missing, not K-Sampl(er) Config (R)gthree */
+  var NS_RUN = 4;
   function nsAcro(words, q) {
     var memo = {};
     function go(qi, wi) {
@@ -2034,7 +2038,10 @@
       for (var w = wi; w < words.length && !ok; w++) {
         var word = words[w], n = 0;
         while (n < word.length && qi + n < q.length && word.charAt(n) === q.charAt(qi + n)) n++;
-        for (var k = n; k >= 1 && !ok; k--) ok = go(qi + k, w + 1);
+        for (var k = n; k >= 1 && !ok; k--) {
+          if (k > NS_RUN && k < word.length && qi + k < q.length) continue;
+          ok = go(qi + k, w + 1);
+        }
       }
       memo[key] = ok;
       return ok;
