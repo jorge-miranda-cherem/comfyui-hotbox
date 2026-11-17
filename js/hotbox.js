@@ -847,8 +847,8 @@
       '.shb-drawer .shb-btn-row .shb-star .shb-ico{color:inherit}',
       '.shb-btn-row:hover .shb-star,.shb-btn-row.shb-qsel .shb-star{opacity:.75}',
       '.shb-btn-row .shb-star:hover{opacity:1;color:#f5c04e;background:rgba(245,192,78,.14)}',
-      '.shb-btn-row.shb-fav .shb-star{opacity:1;color:#f5c04e}',
-      '.shb-btn-row.shb-fav .shb-star .shb-ico{fill:currentColor}',
+      '.shb-btn-row.shb-starred .shb-star{opacity:1;color:#f5c04e}',
+      '.shb-btn-row.shb-starred .shb-star .shb-ico{fill:currentColor}',
       '.shb-drawer-hint{padding:1px 4px 2px;font:500 10.5px/1.2 Inter,system-ui,sans-serif;color:#8e8e8e}',
 
       /* Bar items: × badges, removal collapse, drag source & edit-mode outline */
@@ -2005,6 +2005,43 @@
     return j === q.length ? i - start : -1;
   }
 
+  /* The words of a display name, in order: "KSampler (Advanced)" → k, sampler, advanced */
+  function nsNameWords(s) {
+    return String(s || '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  }
+
+  /* What was typed is at the start of a word of the name, not inside one ("ima" in Load Image, not in Primary) */
+  function nsAtWordStart(e, q) {
+    var qc = q.replace(/[^a-z0-9]+/g, '');
+    return e.w.some(function (ws) { return ws.some(function (w) { return w.indexOf(qc) === 0; }); })
+      || e.f.some(function (f) {
+        var at = f.indexOf(q);
+        return at === 0 || (at > 0 && /[^a-z0-9]/.test(f.charAt(at - 1)));
+      });
+  }
+
+  /* `q` is made of the starts of the words, in order, one letter or more of each, words may be skipped */
+  function nsAcro(words, q) {
+    var memo = {};
+    function go(qi, wi) {
+      if (qi >= q.length) return true;
+      var key = qi * 64 + wi;
+      if (memo[key] !== undefined) return memo[key];
+      var ok = false;
+      for (var w = wi; w < words.length && !ok; w++) {
+        var word = words[w], n = 0;
+        while (n < word.length && qi + n < q.length && word.charAt(n) === q.charAt(qi + n)) n++;
+        for (var k = n; k >= 1 && !ok; k--) ok = go(qi + k, w + 1);
+      }
+      memo[key] = ok;
+      return ok;
+    }
+    return go(0, 0);
+  }
+
   /* How one name matches, as ComfyUI's search box grades it: [tier, where, length], lower is better; null for
      no match. 0 the whole name, 1 its start, 2 a whole word, 3 part of a word, 4 every word typed is a word of
      the name (any order), 5 every word typed starts a word ("prev ima"), 6 every word typed is in it somewhere */
@@ -2080,6 +2117,7 @@
         t: t, disp: disp, f: low, w: names.map(nsWords), al: al, alw: al.map(nsWords),
         all: low.concat(al).join(' ') + ' ' + String((def && def.category) || '').toLowerCase(),
         compact: disp.toLowerCase().replace(/[^a-z0-9]+/g, ''),
+        aw: nsNameWords(disp),
         ins: ins, core: isCoreType(t), freq: +freq[t] || 0, old: isOldVersion(t)
       };
     });
@@ -2126,11 +2164,60 @@
 
   /* true: it is starred now */
   function nmStar(type) {
+    nmSyncStars();
     var m = nmMem(), i = m.fav.indexOf(type);
     if (i >= 0) m.fav.splice(i, 1);
     else m.fav.push(type);
     save();
+    nmSyncStars();
     return i < 0;
+  }
+
+  /* ---- The stars are shared with ImissNuke's Tab menu, where it is installed. The two memories stay apart
+     (this one is in hotbox.json; that one is this browser's, localStorage 'imissnuke-tab-memory'), but a star
+     is a star in both: the two lists of starred nodes are merged the first time, and kept the same after.
+     What both held the last time (NM_SHARED_KEY, kept in this browser like the other memory) tells a star taken
+     off on one side from a star put on on the other: kept by both or new on either side, it stays; missing
+     from one side that had it, it goes from both. Only `fav` is written in ImissNuke's memory, whose Tab menu
+     reads it again each time it opens. Without that memory nothing is read or written. true: the stars here
+     changed */
+  var NM_IN_KEY = 'imissnuke-tab-memory', NM_SHARED_KEY = 'hotbox_stars_shared_v1';
+  var NM_SYNC = { raw: null, fav: null };
+
+  function nmSyncStars() {
+    var raw = null;
+    try { raw = localStorage.getItem(NM_IN_KEY); } catch (e) { return false; }
+    if (!raw) return false;
+    var m = nmMem(), favKey = JSON.stringify(m.fav);
+    if (NM_SYNC.raw === raw && NM_SYNC.fav === favKey) return false;
+    var im = null, base = null;
+    try { im = JSON.parse(raw); } catch (e) { im = null; }
+    /* a memory of another make is left alone */
+    if (!im || typeof im !== 'object' || Array.isArray(im) || (im.v != null && im.v !== 1)) return false;
+    try { base = JSON.parse(localStorage.getItem(NM_SHARED_KEY) || '[]'); } catch (e) { base = null; }
+    function strs(a) { return (Array.isArray(a) ? a : []).filter(function (x) { return typeof x === 'string' && x; }); }
+    function setOf(a) { var s = {}; a.forEach(function (x) { s[x] = 1; }); return s; }
+    var theirs = strs(im.fav), inB = setOf(strs(base)), inH = setOf(m.fav), inI = setOf(theirs);
+    var out = [], inOut = {};
+    function add(x) { if (!inOut[x]) { inOut[x] = 1; out.push(x); } }
+    m.fav.forEach(function (x) { if (typeof x === 'string' && x && (!inB[x] || inI[x])) add(x); });
+    theirs.forEach(function (x) { if (!inB[x] && !inH[x]) add(x); });
+    var changedH = out.length !== m.fav.length || m.fav.some(function (x) { return !inOut[x]; });
+    var changedI = out.length !== theirs.length || theirs.some(function (x) { return !inOut[x]; });
+    if (changedH) { m.fav = out.slice(); save(); }
+    if (changedI) {
+      /* theirs keeps its own order, the new ones after */
+      im.fav = theirs.filter(function (x) { return inOut[x]; }).concat(out.filter(function (x) { return !inI[x]; }));
+      try {
+        var next = JSON.stringify(im);
+        localStorage.setItem(NM_IN_KEY, next);
+        raw = next;
+      } catch (e) {}
+    }
+    try { localStorage.setItem(NM_SHARED_KEY, JSON.stringify(out)); } catch (e) {}
+    NM_SYNC.raw = raw;
+    NM_SYNC.fav = JSON.stringify(m.fav);
+    return changedH;
   }
 
   function nmPrune(m) {
@@ -2219,6 +2306,7 @@
 
   /* What one search, or one drawing of the list, reads from the memory and the open graph */
   function nmState(node) {
+    nmSyncStars();
     var m = nmMem(), fav = {}, inGraph = {};
     m.fav.forEach(function (x) { fav[x] = 1; });
     try { allNodes((node && node.graph) || getGraph()).forEach(function (n) { if (n && n.type) inGraph[n.type] = 1; }); } catch (e) {}
@@ -2275,7 +2363,7 @@
 
   /* the ground a match stands on, by how well the name matches (nsBand): the whole name, its start, a word
      of it, anything looser */
-  var NM_BASE = [1000, 700, 450, 150];
+  var NM_BASE = [1000, 700, 450, 150], NM_ACRO = 40, NM_INWORD = 80;
 
   /* All the nodes that match `q`, best first: [{ t, disp, tier, fits }]. The display name and the internal
      name grade a node; its search aliases (PreviewImage: "show image") find it too, three tiers lower, since
@@ -2291,19 +2379,25 @@
     var hits = [], mem = nmState(node);
     nsIndex().forEach(function (e) {
       if (e.old && !withOld) return;
-      var best = null, r, i;
+      var best = null, r, i, bestQ = '', byAlias = false;
       vars.forEach(function (v) {
         for (i = 0; i < e.f.length; i++) {
           r = nsTier(v.q, v.toks, e.f[i], e.w[i]);
-          if (better(r, best)) best = r;
+          if (better(r, best)) { best = r; bestQ = v.q; byAlias = false; }
         }
         for (i = 0; i < e.al.length; i++) {
           r = nsTier(v.q, v.toks, e.al[i], e.alw[i]);
           if (r) r = [r[0] + 3, 50 + r[1], e.disp.length];
-          if (better(r, best)) best = r;
+          if (better(r, best)) { best = r; byAlias = true; }
         }
         if (!best && v.toks.every(function (k) { return e.all.indexOf(k) >= 0; })) best = [7, 0, e.disp.length];
       });
+      /* The letters typed start the name's words, in order ("vd" VAE Decode, "clte" CLIP Text Encode): a
+         match of its own, under a name that holds what was typed at the start of a word and over one that
+         only holds it inside a word ("vd" in SVD) */
+      var inWord = !!best && best[0] === 3 && !byAlias && !nsAtWordStart(e, bestQ);
+      var acro = (!best || inWord) && qc.length >= 2 && e.aw.some(function (w) { return w.charAt(0) === qc.charAt(0); }) && nsAcro(e.aw, qc);
+      if (acro && !best) best = [5, 0, e.disp.length];
       if (!best && nsTypo(toks0, [].concat.apply([], e.w))) best = [8, 0, e.disp.length];
       if (!best && qc.length >= 3) {
         var span = nsSubseq(qc, e.compact);
@@ -2315,7 +2409,7 @@
          A loose match gets a quarter of the lift, so a favorite never passes a node that is really called that */
       var band = nsBand(best[0]), lift = nmBoost(e.t, mem);
       hits.push({ t: e.t, disp: e.disp, tier: best[0], pos: best[1], len: best[2], core: e.core, fits: fits, freq: e.freq,
-        score: NM_BASE[band] + (band <= 2 ? lift : lift * 0.25) });
+        score: NM_BASE[band] - (acro ? NM_ACRO : (inWord ? NM_INWORD : 0)) + (band <= 2 ? lift : lift * 0.25) });
     });
     var last = mem.m.last;
     hits.sort(function (a, b) {
@@ -7905,7 +7999,7 @@
         var pack = packLabel(x);
         var mSlots = (sug || q) && node ? matchingSlotsDesc(node, x) : '';
         var fav = !!mem.fav[x], use = +mem.m.use[x] || 0;
-        return '<button type="button" class="shb-btn shb-btn-row' + (fav ? ' shb-fav' : '') + '" data-hb-create="' + esc(x) + '" data-drawer-uid="' + esc(uid) + '" title="' +
+        return '<button type="button" class="shb-btn shb-btn-row' + (fav ? ' shb-starred' : '') + '" data-hb-create="' + esc(x) + '" data-drawer-uid="' + esc(uid) + '" title="' +
             esc(disp + (pack ? ' · from ' + nodePack(x) : ' · ComfyUI') + (use ? ' · added ' + use + (use === 1 ? ' time' : ' times') : '') + ' · Drag to any bar to pin · Click (or Enter) to add') + '" style="cursor:grab">' +
           /* how much you use it, against the one you use most */
           (use ? '<i class="shb-use" style="height:' + Math.round(30 + 60 * Math.log(1 + use) / Math.log(1 + maxUse)) + '%"></i>' : '') +
@@ -10759,6 +10853,13 @@
     });
 
     /* Long-Press initiation on bar buttons & Pro Slider track scrubbing */
+    /* A press that begins on a row's star is a press on the star, wherever the star is when it is let go: a
+       pressed row gives way a little (it shrinks), and the star at its end slides from under the pointer */
+    el.addEventListener('pointerdown', function (e) {
+      var s = e.target && e.target.closest ? e.target.closest('[data-hb-star]') : null;
+      HB.starDown = s ? { type: s.getAttribute('data-hb-star'), at: Date.now() } : null;
+    }, true);
+
     el.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
       var t = e.target;
@@ -11160,9 +11261,15 @@
         return;
       }
 
-      var star = t.closest('[data-hb-star]');
-      if (star) {
-        nmStarRow(star.getAttribute('data-hb-star'));
+      var star = t.closest('[data-hb-star]'), pressed = HB.starDown;
+      var starType = star ? star.getAttribute('data-hb-star') : '';
+      HB.starDown = null;
+      if (!starType && pressed && Date.now() - pressed.at < 3000) {
+        var starRow = t.closest('[data-hb-create]');
+        if (starRow && starRow.getAttribute('data-hb-create') === pressed.type) starType = pressed.type;
+      }
+      if (starType) {
+        nmStarRow(starType);
         return;
       }
 

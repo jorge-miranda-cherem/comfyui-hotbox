@@ -30,7 +30,7 @@ Restart ComfyUI and press <kbd>`</kbd> over any node.
 <img src="docs/media/find-any-node.webp" alt="F opens the search on a VAE Decode: upscale lists the nodes that take its IMAGE first, Enter adds and wires one, then a typo, previw, still finds Preview Image" width="100%">
 
 It ranks like ComfyUI's own search: ComfyUI's nodes first, a check on the ones that fit the node's output,
-the pack's name beside a custom node. Typos and short forms (`previw`, `load img`, `ckpt`) still find it.
+the pack's name beside a custom node. Typos, short forms and initials (`previw`, `load img`, `ckpt`, `vd`) still find it.
 <kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired. It learns as you go: the nodes
 you add most and the ones you usually add after the node you are on come up, and a star
 (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>) puts a node first.
