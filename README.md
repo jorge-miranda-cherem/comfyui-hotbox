@@ -73,7 +73,7 @@ A saved button can change and stay the same button: select the nodes and choose 
 nodes…** to change a value right there. **Settings → Button Editor** opens the button editor: the hotbox itself, drawn with the buttons its bars hold, to pick the bar to edit (the bottom bar, the dock, the context bar, the swap bar of an API node), the power tools to put on it or take off,
 a lane for every group, and each button's name, color, icon, key and nodes.
 
-<img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, a new group moves along the bar, and the Dock picked on the map gets two models on its swap bar" width="100%">
+<img src="docs/tutorial/11-button-editor.gif" alt="The button editor, with the hotbox itself drawn at the top: a button gets a name, a color, an icon and a key, goes into a group, and a new group moves along the bar" width="100%">
 
 **Send a button to anyone**
 

@@ -13363,16 +13363,23 @@
   }
 
   /* The picture is as large as lets it stand in its box without scrolling: a long dock or a full bottom bar
-     folds into rows, as in the hotbox, and a smaller picture folds less */
+     folds into rows, as in the hotbox, and a smaller picture folds less. A short window gives the picture and
+     the strip less room, so the lanes under them keep theirs */
   function brwStageFit() {
-    var real = BRW.el && BRW.el.querySelector('[data-bed-map] .shb-bed-real');
+    var bg = BRW.el, map = bg && bg.querySelector('[data-bed-map]'), real = map && map.querySelector('.shb-bed-real');
     if (!real) return;
-    var zs = [0.92, 0.84, 0.76, 0.68, 0.6];
+    var box = bg.querySelector('.shb-bed'), h = (box && box.clientHeight) || 820;
+    var room = Math.max(150, Math.min(282, Math.round(h * 0.36) - 40));
+    map.style.maxHeight = (room + 18) + 'px';
+    var strip = bg.querySelector('[data-bed-bar]');
+    if (strip) strip.style.maxHeight = (h < 760 ? 78 : 112) + 'px';
+    var zs = [0.92, 0.84, 0.76, 0.68, 0.6, 0.52];
     for (var i = 0; i < zs.length; i++) {
       real.style.setProperty('--shb-bed-rz', String(zs[i]));
-      if (real.scrollHeight <= 282) break;
+      if (real.scrollHeight <= room) break;
     }
   }
+  listen(window, 'resize', function () { if (BRW.el) brwStageFit(); });
 
   /* the kinds the picture can step through: with the dock or the context bar picked, the ones that have that bar */
   function brwStageSteps() {
@@ -13663,6 +13670,8 @@
       b.innerHTML = ico(win.max ? 'collapse' : 'expand', 14);
       b.title = win.max ? 'Back to the size it had' : 'Fill the screen';
     }
+    /* the hotbox drawn in the editor goes by the window's height */
+    if (BRW.el && !PTB.el) brwStageFit();
   }
 
   /* Larger or smaller text and buttons. The window keeps the size it has on screen when that is one you gave
