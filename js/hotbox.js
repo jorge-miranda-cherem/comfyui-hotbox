@@ -1196,7 +1196,6 @@
          under its theme), a row each with its name beside it. The one being edited is lit; a click on another
          picks it. Nothing in it answers the pointer but the rows */
       '.shb-bed-mapcol{flex:none;min-width:0;display:flex;flex-direction:column;gap:7px}',
-      '.shb-bed-barcol{flex:none;min-width:0;display:flex;flex-direction:column;gap:7px}',
       '.shb-bed-map{display:flex;flex-direction:column;gap:4px;max-height:300px;padding:8px 12px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
       '.shb-bed-real{display:flex;flex-direction:column;gap:4px;font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg);user-select:none}',
       '.shb-bed-rrow{display:flex;align-items:center;gap:12px;padding:3px 8px 3px 6px;border-radius:10px;border:1.5px solid transparent;cursor:pointer;opacity:.62;transition:opacity .12s,border-color .12s,background .12s}',
@@ -1216,46 +1215,68 @@
       '.shb-bed-real .shb-gdrop,.shb-bed-real .shb-x,.shb-bed-real .shb-dial{display:none !important}',
       '.shb-bed-real .shb-plus-wrap{position:static !important;inset:auto !important;transform:none !important;translate:none !important;margin:0 0 0 10px !important;display:flex;align-items:center}',
       '.shb-bed-rnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.52 0 0);padding:5px 9px}',
+      /* the bar being edited and what can go on it are one amber frame: the row with the bar's own buttons (each
+         one dragged along it, and taken off with the × that shows under the pointer), then the palette */
+      '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
+      '.shb-bed-rzone > .shb-bed-rrow.shb-on{border-color:transparent;background:transparent;padding:0 0 0 0}',
+      '.shb-bed-rrow.shb-on .shb-bed-ebar,.shb-bed-rrow.shb-on .shb-bed-epill,.shb-bed-rrow.shb-on .shb-bed-erm{pointer-events:auto !important}',
+      '.shb-bed-ebar{min-height:30px;min-width:120px}',
+      '.shb-bed-epill{position:relative;display:inline-flex;align-items:center;border-radius:10px;cursor:grab;touch-action:none}',
+      '.shb-bed-epill.shb-on{outline:1.5px solid oklch(0.82 0.13 78);outline-offset:1px}',
+      '.shb-bed-epill.shb-hot{outline:2px solid oklch(0.82 0.13 78);outline-offset:1px;background:oklch(0.36 0.05 78 / .5)}',
+      '.shb-bed-epill > .shb-bed-erm{position:absolute;top:-7px;right:-5px;width:17px;height:17px;margin:0;padding:0;border-radius:50%;background:oklch(0.42 0 0);border:1.5px solid oklch(0.16 0 0);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;opacity:0;transition:opacity .1s,background .1s;z-index:3;cursor:pointer}',
+      '.shb-bed-epill:hover > .shb-bed-erm,.shb-bed-epill.shb-on > .shb-bed-erm{opacity:1}',
+      '.shb-bed-epill > .shb-bed-erm:hover{background:oklch(0.5 0.16 25);color:#fff}',
+      '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0 0);color:oklch(0.6 0 0);font-size:12px;white-space:nowrap}',
+      '.shb-bed-gpill{font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;color:var(--shb-fg);background:transparent !important;box-shadow:none !important}',
+      '.shb-bed-gpill .shb-bed-erm,.shb-bed-gpill .shb-gdrop,.shb-bed-gpill .shb-x{display:none !important}',
+      '.shb-bed-pal{display:flex;flex-direction:column;gap:6px;padding:7px 8px 8px;border-radius:8px;background:oklch(0.17 0 0 / .8);border:1px solid oklch(0.82 0.13 78 / .28);font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-palhd{display:flex;align-items:center;gap:8px;min-width:0}',
+      '.shb-bed-palhd > b{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:oklch(0.88 0.1 82);white-space:nowrap}',
+      '.shb-bed-ptabs{display:inline-flex;gap:4px;flex:none}',
+      '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0 0);border-radius:6px;background:oklch(0.22 0 0);color:oklch(0.72 0 0);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
+      '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0 0)}',
+      '.shb-bed-ptab:hover{background:oklch(0.27 0 0)}',
+      '.shb-bed-ptab.shb-on{border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78);color:oklch(0.93 0.07 85)}',
+      '.shb-bed-ptab.shb-on em{color:oklch(0.8 0.08 85)}',
+      '.shb-bed-find.shb-bed-addfind{flex:1 1 200px;width:auto;height:26px;min-width:120px}',
+      '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
+      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:7px;border:1px dashed oklch(0.42 0 0);background:oklch(0.23 0 0);color:oklch(0.88 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none}',
+      '.shb-bed-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-chip > i{flex:none;width:7px;height:7px;border-radius:2px}',
+      '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0 0)}',
+      '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0 0)}',
+      '.shb-bed-chip:hover{background:oklch(0.28 0 0);border-color:oklch(0.6 0 0)}',
+      '.shb-bed-chip.shb-on{border-style:solid;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .6);color:oklch(0.93 0.07 85)}',
+      '.shb-bed-chip.shb-on > u{color:oklch(0.86 0.13 78);font-weight:700;font-size:12px}',
+      '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0 0)}',
+      '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0 0);padding:4px 2px}',
+      /* apart from all that, your own: the lanes of the saved buttons and their groups */
+      '.shb-bed-libcap{flex:none;display:flex;align-items:baseline;gap:8px;padding:10px 18px 0;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-libcap + .shb-bed-lanes{padding-top:8px}',
       '.shb-bed-rnoderow{display:flex;justify-content:center;padding:1px 8px 1px 122px}',
       '.shb-bed-mnode{width:min(300px,100%);height:32px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px;box-sizing:border-box}',
       '.shb-bed-mnode span{flex:1;min-width:0;text-align:center;font:500 12px/1.2 Inter,system-ui,sans-serif;color:oklch(0.92 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-mnode span small{margin-left:7px;font-size:10.5px;font-weight:400;color:oklch(0.58 0 0)}',
       /* a power tool's card in the lane of the twelve: lit while it is on the bar in the strip */
-      '.shb-bed-ptc.shb-on{background:oklch(0.3 0.045 78 / .55);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
-      '.shb-bed-ptc.shb-on > u{color:oklch(0.86 0.13 78);font-size:13px;font-weight:700}',
-      '.shb-bed-ptc .shb-bed-ico{color:oklch(0.78 0 0)}',
-      '.shb-bed-pill > .shb-ico{flex:none;color:oklch(0.72 0 0)}',
       '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0 0);font-size:16px;line-height:1}',
       '.shb-bed-mnode button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
       '.shb-bed-mnode button:disabled{visibility:hidden}',
       '.shb-bed-cap b{font-weight:600;color:oklch(0.82 0.13 78)}',
       '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font-size:11px;letter-spacing:0;text-transform:none}',
       '.shb-bed-cap button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
-      '.shb-bed-barhint{font-size:11.5px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0 0);font-size:13px;line-height:1}',
       '.shb-bed-prm:hover{background:oklch(0.36 0.07 25);color:oklch(0.92 0.06 25)}',
       '.shb-bed-lane.shb-bed-extra{background:oklch(0.235 0.018 78);border:1px dashed oklch(0.5 0.08 78)}',
-      '.shb-bed-extra > .shb-bed-lhd{cursor:default;background:transparent}',
       '.shb-bed-card.shb-bed-addc{cursor:pointer}',
-      '.shb-bed-addc > u{flex:none;text-decoration:none;font-size:15px;line-height:1;color:oklch(0.62 0 0)}',
-      '.shb-bed-addc:hover > u{color:oklch(0.82 0.13 78)}',
       '.shb-bed-where{display:flex;flex-wrap:wrap;gap:6px}',
       '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
       '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
       /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
-      '.shb-bed-bar{flex:none;min-height:40px;max-height:112px;display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:6px;padding:7px 8px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);overflow-y:auto}',
-      '.shb-bed-pill{flex:none;height:28px;display:flex;align-items:center;gap:7px;padding:0 11px;border-radius:999px;background:oklch(0.26 0 0);font-size:12px;color:oklch(0.9 0 0);white-space:nowrap;cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s}',
-      '.shb-bed-pill:hover{background:oklch(0.3 0 0)}',
-      '.shb-bed-pill.shb-mute{background:oklch(0.24 0 0);color:oklch(0.6 0 0)}',
-      '.shb-bed-pill.shb-mute:not([data-bed-pill]){cursor:default}',
-      '.shb-bed-pill kbd{font-size:10px;color:oklch(0.45 0 0)}',
-      '.shb-bed-pill.shb-on,.shb-bed-pill.shb-hot{box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
-      '.shb-bed-pill.shb-hot{background:oklch(0.36 0.05 78)}',
-      '.shb-bed-pill > i{width:8px;height:8px;border-radius:2px;background:var(--shb-tint,oklch(0.5 0 0));flex:none}',
-      '.shb-bed-pill em{font-size:10px;line-height:1.5;padding:0 5px;border-radius:999px;background:oklch(0.32 0 0);color:oklch(0.75 0 0)}',
       '.shb-bed-g{font-size:12px;line-height:1;color:var(--shb-tint)}',
-      '.shb-bed-vsep{flex:none;width:1px;height:18px;background:oklch(0.32 0 0);margin:0 4px}',
-      '.shb-bed-barnone{font-size:12px;color:oklch(0.45 0 0)}',
       '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden}',
       '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0 0);border:1px solid oklch(0.29 0 0);transition:background .14s,border-color .14s}',
       '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
@@ -13088,7 +13109,7 @@
   var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 },
     /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
        the dock and the context bar, the kind of node last picked for each */
-    bar: 'bot', ctxKey: { add: '', tools: '' }, stageId: '' };
+    bar: 'bot', ctxKey: { add: '', tools: '' }, stageId: '', addQ: '', addFound: true, addTab: { bot: 'pt', add: 'more', tools: 'more' } };
   var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 }, BRW_WIN_ZS = [1, 1.25, 1.5, 2];
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
@@ -13369,11 +13390,11 @@
     var bg = BRW.el, map = bg && bg.querySelector('[data-bed-map]'), real = map && map.querySelector('.shb-bed-real');
     if (!real) return;
     var box = bg.querySelector('.shb-bed'), h = (box && box.clientHeight) || 820;
-    var room = Math.max(150, Math.min(282, Math.round(h * 0.36) - 40));
+    var room = Math.max(200, Math.min(380, Math.round(h * 0.47) - 40));
     map.style.maxHeight = (room + 18) + 'px';
-    var strip = bg.querySelector('[data-bed-bar]');
-    if (strip) strip.style.maxHeight = (h < 760 ? 78 : 112) + 'px';
-    var zs = [0.92, 0.84, 0.76, 0.68, 0.6, 0.52];
+    /* the palette shows two rows of chips, one in a short window; the rest scrolls */
+    map.style.setProperty('--shb-bed-chh', (h < 800 ? 28 : 58) + 'px');
+    var zs = [0.92, 0.84, 0.76, 0.68, 0.6];
     for (var i = 0; i < zs.length; i++) {
       real.style.setProperty('--shb-bed-rz', String(zs[i]));
       if (real.scrollHeight <= room) break;
@@ -13406,15 +13427,17 @@
     var fl = hbIsFluid();
     function row(b, cls, name, sub, tip, extra) {
       var inner = '', on = bar === b;
-      try { inner = brwStageBarHTML(b, st); } catch (e) { inner = ''; }
-      var barHTML = '<div class="shb-bar ' + cls + '"><div class="shb-bar-items">' +
-        (inner || '<span class="shb-bed-rnone">' + (b !== 'bot' && !st[b] ? 'This kind has none here' : 'Nothing on it yet') + '</span>') + '</div>' + (extra || '') + '</div>';
-      return '<div class="shb-bed-rrow' + (on ? ' shb-on' : '') + '" data-bed-pick="' + b + '" title="' + esc(on ? tip : 'Click to edit ' + tip.charAt(0).toLowerCase() + tip.slice(1)) + '">' +
-        '<span class="shb-bed-rlbl"><em>Editing</em><b>' + esc(name) + '</b><small>' + esc(sub) + '</small></span>' +
+      try { inner = on ? brwEditBarHTML(b, st) : brwStageBarHTML(b, st); } catch (e) { inner = ''; }
+      var none = '<span class="shb-bed-rnone">' + (b !== 'bot' && !st[b] ? 'This kind has none here' : (on ? 'Nothing on it yet: click a chip below, or drag one here' : 'Nothing on it yet')) + '</span>';
+      /* the bar being edited is the place its buttons are dragged along, and where a chip is dropped */
+      var barHTML = '<div class="shb-bar ' + cls + '"><div class="shb-bar-items' + (on ? ' shb-bed-ebar" data-bed-bar' : '"') + '>' + (inner || none) + '</div>' + (extra || '') + '</div>';
+      var rowHTML = '<div class="shb-bed-rrow' + (on ? ' shb-on' : '') + '" data-bed-pick="' + b + '"' + (on ? '' : ' title="' + esc('Click to edit ' + tip.charAt(0).toLowerCase() + tip.slice(1)) + '"') + '>' +
+        '<span class="shb-bed-rlbl"' + (on ? ' title="' + esc(tip) + '"' : '') + '><em>Editing</em><b>' + esc(name) + '</b><small>' + esc(sub) + '</small></span>' +
         '<div class="shb-bed-rbar"><div class="shb-bed-rz">' +
           (b === 'bot' ? '<div class="shb-botrow">' + barHTML + '<div class="shb-plus-wrap"><button type="button" class="shb-plus" tabindex="-1">' + ico('plus', fl ? 22 : 18) + '</button></div></div>' : barHTML) +
         '</div></div>' +
       '</div>';
+      return on ? '<div class="shb-bed-rzone">' + rowHTML + brwPalHTML() + '</div>' : rowHTML;
     }
     var dc = hbDockCat(), dcInfo = HB_CATS[dc];
     var dockEnd = dcInfo ? '<span class="shb-vsep"></span><button type="button" class="shb-btn shb-models-btn" tabindex="-1">' + ico(dcInfo.icon, 13) + '<span>' + esc(dcInfo.short) + '</span></button>' : '';
@@ -13430,14 +13453,6 @@
         '</div></div>' +
         row('bot', 'shb-botbar', 'Bottom bar', 'Same on every node', 'The bottom bar: its tools, your buttons and your groups, on every node', botEnd) +
       '</div>';
-  }
-
-  function brwBarCapHTML() {
-    var bar = BRW.bar, c = brwCtx();
-    if (bar === 'bot') return '<b>Bottom bar</b> <small>the same on every node · a tool shows where it applies</small>';
-    return '<b>' + esc(bar === 'add' ? 'Dock · ' + brwDockSub(c ? c.key : '') : 'Context bar') + '</b> <small>' +
-      (c ? 'for: ' + esc(c.name) + (brwBarOwn() ? '' : ' · as Hotbox proposes it, until you change it') : '') + '</small>' +
-      (c && brwBarOwn() ? '<button type="button" data-bed-act="barreset" title="Back to what Hotbox proposes for this kind of node">Reset</button>' : '');
   }
 
   function brwBarAdd(uid, before) {
@@ -13545,7 +13560,7 @@
         '<div class="shb-bed-hd">' +
           '<span class="shb-bed-mark"></span><b>Hotbox</b><i>/</i><span class="shb-bed-t2">Buttons</span><span class="shb-bed-sum" data-bed-sum></span>' +
           '<span class="shb-bed-sp"></span>' +
-          '<label class="shb-bed-find"><span>⌕</span><input type="text" data-bed-q spellcheck="false" placeholder="Find a button or node…"><span class="shb-bed-kc">/</span></label>' +
+          '<label class="shb-bed-find"><span>⌕</span><input type="text" data-bed-q spellcheck="false" placeholder="Find in your buttons…"><span class="shb-bed-kc">/</span></label>' +
           '<span data-bed-extra></span>' +
           '<span class="shb-bed-two" style="gap:2px">' +
             '<button type="button" class="shb-bed-hb" data-bed-act="undo" title="Undo (Ctrl+Z)">↶ Undo</button>' +
@@ -13563,15 +13578,11 @@
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
               '<div class="shb-bed-mapcol">' +
-                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · click a bar to edit it</small></div>' +
+                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · click a bar to edit it · drag its buttons along it, × takes one off</small></div>' +
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
-              '<div class="shb-bed-barcol">' +
-                '<div class="shb-bed-cap" data-bed-barcap></div>' +
-                '<div class="shb-bed-bar" data-bed-bar></div>' +
-                '<div class="shb-bed-barhint" data-bed-barhint></div>' +
-              '</div>' +
             '</div>' +
+            '<div class="shb-bed-libcap">Your saved buttons <small>drag one to another group, or onto a group in the bar · click one to edit it</small></div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
           '<div class="shb-bed-insp" data-bed-insp></div>' +
@@ -13780,82 +13791,113 @@
     '</div>';
   }
 
-  function brwBarHTML() {
-    if (BRW.bar === 'add' || BRW.bar === 'tools') {
-      /* the dock or the context bar of one kind of node: every button of it is a pill, with a × to take it off */
-      if (!brwCtx()) {
-        return '<span class="shb-bed-barnone">No context bar to show yet. It is here once a node is on the canvas, or once you change one in the hotbox (edit mode)</span>';
-      }
-      var bar = BRW.bar;
-      var html = brwBarList().map(function (u) {
-        var on = BRW.sel && BRW.sel.id === u ? ' shb-on' : '';
-        var rm = '<button type="button" class="shb-bed-prm" data-bed-rm="' + esc(u) + '" title="Take it off this bar" aria-label="Take it off this bar">×</button>';
-        if (/^grp:/.test(u)) {
-          var g = grpById(u.slice(4));
-          if (!g) return '';
-          return '<span class="shb-bed-pill' + on + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '"><i></i>' +
-            esc(hbBtnName(u, g.name)) + '<em>' + (g.items || []).length + '</em>' + rm + '</span>';
-        }
+  /* ---- THE BAR BEING EDITED, on the hotbox drawn in the editor: its own buttons, as the hotbox draws them, each
+     one a thing to drag along the bar and to take off with its × (in Icons Only a tool is its icon here too,
+     and its name is in its tip). A button this ComfyUI does not have is a quiet pill, to take off. In the
+     bottom bar the tools keep the start, as in the hotbox, then what is yours ---- */
+  function brwEditBarHTML(bar, st) {
+    var acts = '', pins = '', num = 0;
+    try {
+      brwStageList(bar, st).forEach(function (u) {
         var it = null;
-        try { it = resolveBarItem(u, null, true, bar); } catch (e) { it = null; }
-        var mark = /^tpl:/.test(u) ? '<span class="shb-bed-g">' + (hbGlyphOf(u) || '✦') + '</span>' : '<i></i>';
-        return '<span class="shb-bed-pill' + on + (it ? '' : ' shb-mute') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '"' +
-          (it ? '' : ' title="Not in this ComfyUI: it shows nothing in the hotbox"') + '>' + mark + esc(it ? it.label : hbBtnName(u, u.replace(/^[a-z]+:/, ''))) + rm + '</span>';
-      }).join('');
-      return html || '<span class="shb-bed-barnone">Nothing on this bar. Click a card in the first lane, or drag a button here, to add it</span>';
-    }
-    var toolsHTML = '', pins = '';
-    brwBotUids().forEach(function (u) {
-      if (/^grp:/.test(u)) {
-        var g = grpById(u.slice(4));
-        if (!g) return;
-        pins += '<span class="shb-bed-pill' + (BRW.sel && BRW.sel.id === u ? ' shb-on' : '') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '">' +
-          '<i></i>' + esc(hbBtnName(u, g.name)) + '<em>' + (g.items || []).length + '</em></span>';
-        return;
-      }
-      var it = null;
-      try { it = resolveBarItem(u, null, true, 'bot'); } catch (e) { it = null; }
-      if (!it) return;
-      if (it.kind === 'tool') {
-        /* a tool of the bar: its own pill, to move among the tools and to take off */
-        toolsHTML += '<span class="shb-bed-pill' + (BRW.sel && BRW.sel.id === u ? ' shb-on' : '') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '" title="' + esc(it.label + (it.kbd ? ' (' + it.kbd + ')' : '') + ' · in the hotbox it shows where it applies') + '">' +
-          ico(it.icon || 'tools', 13) + esc(it.label) +
-          '<button type="button" class="shb-bed-prm" data-bed-rm="' + esc(u) + '" title="Take it off this bar" aria-label="Take it off this bar">×</button></span>';
-      } else if (it.kind === 'template') {
-        pins += '<span class="shb-bed-pill' + (BRW.sel && BRW.sel.id === u ? ' shb-on' : '') + '" data-bed-pill="' + esc(u) + '" style="--shb-tint:' + esc(brwTint(u)) + '">' +
-          '<span class="shb-bed-g">' + (hbGlyphOf(u) || '✦') + '</span>' + esc(it.label) + '</span>';
-      } else {
-        pins += '<span class="shb-bed-pill shb-mute" data-bed-pill="' + esc(u) + '"><i></i>' + esc(it.label) + '</span>';
-      }
-    });
-    /* the tools keep the start of the bar, as in the hotbox, then what is yours */
-    return toolsHTML + (toolsHTML && pins ? '<span class="shb-bed-vsep"></span>' : '') + pins +
-      (pins ? '' : '<span class="shb-bed-barnone">Nothing of yours in the bar yet</span>');
+        try { it = resolveBarItem(u, st.node, true, bar); } catch (e) { it = null; }
+        var on = BRW.sel && BRW.sel.id === u ? ' shb-on' : '';
+        var canRm = !(bar === 'bot' && /^(tpl|grp):/.test(u));
+        var rm = canRm ? '<button type="button" class="shb-bed-prm shb-bed-erm" data-bed-rm="' + esc(u) + '" title="Take it off this bar" aria-label="Take it off this bar">×</button>' : '';
+        var html = '';
+        if (!it) {
+          if (bar === 'bot') return;
+          html = '<span class="shb-bed-epill shb-bed-egone' + on + '" data-bed-pill="' + esc(u) + '" title="Not in this ComfyUI: it shows nothing in the hotbox">' +
+            '<span class="shb-bed-egonel">' + esc(hbBtnName(u, u.replace(/^[a-z]+:/, ''))) + '</span>' + rm + '</span>';
+        } else {
+          num++;
+          html = '<span class="shb-bed-epill' + on + '" data-bed-pill="' + esc(u) + '" title="' +
+            esc(it.label + (it.kind === 'tool' && it.kbd ? ' (' + it.kbd + ')' : '') + ' · drag it along the bar' + (canRm ? ' · × takes it off' : '') +
+              (bar === 'bot' && it.kind === 'tool' ? ' · in the hotbox it shows where it applies' : '')) + '">' +
+            renderBarItemHTML(it, bar, bar === 'add' && num <= 9 ? num : 0) + rm + '</span>';
+        }
+        if (bar === 'bot' && it && it.kind !== 'tool') pins += html;
+        else acts += html;
+      });
+    } catch (e) {}
+    return acts + (bar === 'bot' && acts && pins ? '<span class="shb-vsep"></span>' : '') + pins;
   }
 
-  /* The twelve power tools, for the bar in the strip, whichever it is: the ones on it are lit, and a click puts
-     one on or takes it off */
-  function brwPowerLaneHTML(q) {
-    if (BRW.bar !== 'bot' && !brwCtx()) return '';
-    var have = brwBarList(), nOn = 0, nAll = 0;
-    var cards = POWER_TOOLS.map(function (pt) {
-      if (!hbToolOn(pt.uid.slice(5))) return '';
-      var on = have.indexOf(pt.uid) >= 0;
-      nAll++;
-      if (on) nOn++;
-      var hit = !q || (pt.name + ' ' + pt.desc + ' ' + pt.keys).toLowerCase().indexOf(q) >= 0;
-      return '<div class="shb-bed-card shb-bed-addc shb-bed-ptc' + (on ? ' shb-on' : '') + (hit ? '' : ' shb-dim') + '" ' + (on ? 'data-bed-rm' : 'data-bed-add') + '="' + esc(pt.uid) + '" data-bed-pt="' + esc(pt.uid) + '"' +
-        ' title="' + esc(pt.name + ' (' + pt.keys + ') · ' + (on ? 'on this bar: click to take it off' : 'click to put it on this bar')) + '">' +
-        '<span class="shb-bed-ico">' + ico(pt.icon, 14) + '</span>' +
-        '<span class="shb-bed-ct"><b>' + esc(pt.name) + '</b><small>' + esc(pt.desc) + '</small></span><u>' + (on ? '✓' : '+') + '</u></div>';
+  /* ---- WHAT CAN GO ON THE BAR BEING EDITED: a palette right under it, in the same frame. A tab of what suits
+     the bar (the nodes that fit a dock, the models of a swap bar, the tools of a context bar), a tab of the
+     twelve power tools, and with a name typed everything found: any tool, any node. A chip is clicked onto
+     the bar or dragged to a place on it; one already there is lit, and a click takes it off ---- */
+  function brwPalData() {
+    var bar = BRW.bar, q = String(BRW.addQ || '').toLowerCase().trim(), have = brwBarList(), tabs = [];
+    if (bar !== 'bot' && !brwCtx()) return { tabs: [], cur: '', uids: [], have: have, q: q };
+    var more = null;
+    try { more = brwMore(''); } catch (e) { more = null; }
+    if (more && more.uids.length) tabs.push({ id: 'more', label: more.title, n: more.total });
+    var pts = POWER_TOOLS.filter(function (pt) { return hbToolOn(pt.uid.slice(5)); }).map(function (pt) { return pt.uid; });
+    if (pts.length) tabs.push({ id: 'pt', label: 'Power tools', n: pts.filter(function (u) { return have.indexOf(u) >= 0; }).length + ' of ' + pts.length });
+    var found = [];
+    if (q) {
+      POWER_TOOLS.forEach(function (pt) {
+        if (hbToolOn(pt.uid.slice(5)) && (pt.name + ' ' + pt.desc + ' ' + pt.keys).toLowerCase().indexOf(q) >= 0) found.push(pt.uid);
+      });
+      var hit = null;
+      try { hit = brwMore(q); } catch (e) { hit = null; }
+      if (hit) hit.uids.forEach(function (u) { if (found.indexOf(u) < 0) found.push(u); });
+      tabs.push({ id: 'found', label: 'Found', n: found.length });
+    }
+    var want = (q && BRW.addFound !== false) ? 'found' : (BRW.addTab[bar] || '');
+    var cur = tabs.filter(function (t) { return t.id === want; })[0] || tabs[0] || null;
+    var uids = !cur ? [] : (cur.id === 'found' ? found : (cur.id === 'pt' ? pts : more.uids));
+    /* a name typed narrows the tab in view too */
+    if (q && cur && cur.id !== 'found') uids = uids.filter(function (u) { return found.indexOf(u) >= 0 || brwMatch(u, q); });
+    return { tabs: tabs, cur: cur ? cur.id : '', uids: uids, have: have, q: q };
+  }
+
+  function brwChipHTML(u, on) {
+    var it = null;
+    try { it = resolveBarItem(u, null, true, BRW.bar); } catch (e) { it = null; }
+    if (!it) return '';
+    var word = { model: 'Model', node: 'Node', tool: 'Hotbox tool', template: 'Saved button', group: 'Group' };
+    return '<span class="shb-bed-chip' + (on ? ' shb-on' : '') + '" data-bed-chip="' + esc(u) + '" ' + (on ? 'data-bed-rm' : 'data-bed-add') + '="' + esc(u) + '"' +
+      ' title="' + esc(it.label + (it.kind === 'tool' && it.kbd ? ' (' + it.kbd + ')' : '') + ' · ' + (word[it.kind] || 'Button') + ' · ' +
+        (on ? 'on this bar: click to take it off' : 'click to put it on this bar, or drag it to a place on it')) + '">' +
+      (it.kind === 'tool' ? ico(it.icon || 'tools', 13) : '<i style="background:' + esc(brwPillTint(u)) + '"></i>') +
+      '<span>' + esc(it.label) + '</span><u>' + (on ? '✓' : '+') + '</u></span>';
+  }
+
+  function brwPalTabsHTML(d) {
+    return d.tabs.map(function (t) {
+      return '<button type="button" class="shb-bed-ptab' + (t.id === d.cur ? ' shb-on' : '') + '" data-bed-tab="' + t.id + '">' + esc(t.label) + '<em>' + esc(t.n) + '</em></button>';
     }).join('');
-    if (!nAll) return '';
-    return '<div class="shb-bed-lane shb-bed-extra shb-bed-plane" data-bed-plane>' +
-      '<div class="shb-bed-lhd"><b>Power tools</b><span class="shb-bed-cnt">' + nOn + ' of ' + nAll + '</span><span class="shb-bed-place shb-bar">For this bar</span></div>' +
-      '<div class="shb-bed-lbody">' + cards +
-        '<div class="shb-bed-hint">Click one to put it on this bar, or to take it off. On a bar it stays, dimmed where it does not apply.</div>' +
+  }
+
+  function brwPalChipsHTML(d) {
+    var html = d.uids.map(function (u) { return brwChipHTML(u, d.have.indexOf(u) >= 0); }).join('');
+    if (html) return html;
+    return '<span class="shb-bed-palnone">' + (d.q ? 'Nothing with that name' : (d.tabs.length ? 'Everything here is on the bar already' : 'Type a name: any tool, and any node this ComfyUI has, can go on this bar')) + '</span>';
+  }
+
+  function brwPalHTML() {
+    var d = brwPalData(), own = BRW.bar !== 'bot' && brwBarOwn();
+    return '<div class="shb-bed-pal" data-bed-pal>' +
+      '<div class="shb-bed-palhd">' +
+        '<b>' + ico('plus', 12) + 'Add to this bar</b>' +
+        '<span class="shb-bed-ptabs" data-bed-ptabs>' + brwPalTabsHTML(d) + '</span>' +
+        '<label class="shb-bed-find shb-bed-addfind"><span>⌕</span><input type="text" data-bed-addq spellcheck="false" value="' + esc(BRW.addQ || '') + '" placeholder="Type a node, tool or model to add…"></label>' +
+        (own ? '<button type="button" class="shb-bed-preset" data-bed-act="barreset" title="Back to what Hotbox proposes for this kind of node">Reset</button>' : '') +
       '</div>' +
+      '<div class="shb-bed-chips" data-bed-chips>' + brwPalChipsHTML(d) + '</div>' +
     '</div>';
+  }
+
+  /* while a name is typed only the tabs and the chips are drawn again: the field keeps its caret */
+  function brwPalUpdate() {
+    var bg = BRW.el;
+    if (!bg) return;
+    var d = brwPalData(), t = bg.querySelector('[data-bed-ptabs]'), c = bg.querySelector('[data-bed-chips]');
+    if (t) t.innerHTML = brwPalTabsHTML(d);
+    if (c) { c.innerHTML = brwPalChipsHTML(d); c.scrollTop = 0; }
+    brwStageFit();
   }
 
   function brwLanesHTML() {
@@ -13883,31 +13925,7 @@
       '</div>' +
     '</div>';
     html += '<button type="button" class="shb-bed-new" data-bed-act="newgrp" data-bed-lanebox="new"><span>＋</span>New group<small>or drop a button here</small></button>';
-    /* what else could go on the bar in the strip, in a lane before the groups: for the dock and the context bar
-       what suits them, and with a name typed anything there is. A click on a card of it puts it there. And
-       first of all, for every bar, the twelve power tools */
-    var more = brwMore(q);
-    if (more) {
-      var word = { model: 'Model', node: 'Node', tool: 'Hotbox tool' };
-      var rest = more.found - more.uids.length;
-      html = '<div class="shb-bed-lane shb-bed-extra">' +
-        '<div class="shb-bed-lhd"><b>' + esc(more.title) + '</b><span class="shb-bed-cnt">' + more.total + '</span><span class="shb-bed-place shb-bar">For this bar</span></div>' +
-        '<div class="shb-bed-lbody">' +
-          more.uids.map(function (u) {
-            var it = null;
-            try { it = resolveBarItem(u, null, true, BRW.bar); } catch (e) { it = null; }
-            if (!it) return '';
-            return '<div class="shb-bed-card shb-bed-addc" data-bed-add="' + esc(u) + '" style="--shb-tint:' + esc(brwPillTint(u)) + '" title="Put it on this bar">' +
-              '<span class="shb-bed-ct"><b>' + esc(it.label) + '</b><small>' + (word[it.kind] || 'Button') + '</small></span><u>+</u></div>';
-          }).join('') +
-          (more.typed && !more.uids.length ? '<div class="shb-bed-empty">Nothing with that name</div>' : '') +
-          '<div class="shb-bed-hint">' + (rest > 0 ? rest + ' more. ' : '') +
-            (more.typed ? (rest > 0 ? 'Type more of the name.' : 'Click one to put it on this bar.')
-              : 'Press <kbd>/</kbd> and type a name: any node in this ComfyUI, and any Hotbox tool, can go on this bar.') + '</div>' +
-        '</div>' +
-      '</div>' + html;
-    }
-    return brwPowerLaneHTML(q) + html;
+    return html;
   }
 
   function brwSwatchesHTML(uid) {
@@ -14057,12 +14075,19 @@
     }
     var c0 = brwCtx();
     if (c0) BRW.ctxKey[BRW.bar] = c0.key;
-    bg.querySelector('[data-bed-map]').innerHTML = brwMapHTML();
+    /* the field of the palette keeps its caret, and the chips their place, while the picture is drawn again */
+    var mapEl = bg.querySelector('[data-bed-map]'), af = document.activeElement;
+    var addSel = af && af.hasAttribute && af.hasAttribute('data-bed-addq') ? [af.selectionStart, af.selectionEnd] : null;
+    var chips0 = mapEl.querySelector('[data-bed-chips]'), chipsTop = chips0 ? chips0.scrollTop : 0, mapTop = mapEl.scrollTop;
+    mapEl.innerHTML = brwMapHTML();
     brwStageFit();
-    bg.querySelector('[data-bed-barcap]').innerHTML = brwBarCapHTML();
-    bg.querySelector('[data-bed-barhint]').textContent = BRW.bar === 'bot'
-      ? 'Drag along the bar to move · × takes a tool off · a power tool goes on from its lane below · drop a button on a group to put it in'
-      : (c0 ? 'Drag along the bar to reorder · × takes one off · click a card in the first lanes, or drag a button here, to add it' : '');
+    mapEl.scrollTop = mapTop;
+    var chips1 = mapEl.querySelector('[data-bed-chips]');
+    if (chips1 && chipsTop) chips1.scrollTop = chipsTop;
+    if (addSel) {
+      var addIn = mapEl.querySelector('[data-bed-addq]');
+      if (addIn) { try { addIn.focus(); addIn.setSelectionRange(addSel[0], addSel[1]); } catch (e) {} }
+    }
     var nOwn = (S.templates || []).length, nGrp = Object.keys(S.hbGroups || {}).length, nSh = libSharedButtons().length;
     bg.querySelector('[data-bed-sum]').textContent = nOwn + (nOwn === 1 ? ' button' : ' buttons') + ' · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '');
     bg.querySelector('[data-bed-act="undo"]').disabled = !hbUndoLeft();
@@ -14071,7 +14096,6 @@
       ? '<button type="button" class="shb-bed-hb" data-bed-act="paste" title="Add the buttons someone copied for you with Copy to share (Ctrl+V anywhere in ComfyUI does the same)">⇩ Paste…</button>' : '';
     bg.querySelector('[data-bed-saved]').textContent = CFG.state === 'error' ? 'Could not save (' + (CFG.err || 'error') + ')'
       : (BRW.saved ? 'Saved · ' + (Date.now() - BRW.saved < 60000 ? 'just now' : new Date(BRW.saved).toLocaleTimeString()) : 'All changes saved');
-    bg.querySelector('[data-bed-bar]').innerHTML = brwBarHTML();
     /* the lanes keep their place: how far along they are scrolled, and each one down its list */
     var lanes = bg.querySelector('[data-bed-lanes]'), sx = lanes.scrollLeft, sy = {};
     Array.prototype.forEach.call(lanes.querySelectorAll('[data-bed-lanebox]'), function (l) {
@@ -14318,6 +14342,11 @@
     if (t.hasAttribute('data-bed-q')) {
       BRW.q = t.value;
       brwRender();
+    } else if (t.hasAttribute('data-bed-addq')) {
+      /* a name typed in the palette: what is found shows at once */
+      BRW.addQ = t.value;
+      BRW.addFound = true;
+      brwPalUpdate();
     } else if (t.hasAttribute('data-bed-name') && BRW.sel) {
       brwRename(BRW.sel.id, t.value);
     } else if (t.hasAttribute('data-bed-paste')) {
@@ -14341,11 +14370,20 @@
     var zb = t.closest('[data-bed-z]');
     if (zb) { brwWinZoom(+zb.getAttribute('data-bed-z')); return; }
     /* the map: a bar, or the kind of node before or after; and the bar in the strip: off it, onto it, as it was */
+    /* the palette's tabs */
+    var tb = t.closest('[data-bed-tab]');
+    if (tb) {
+      var tid = tb.getAttribute('data-bed-tab');
+      if (tid === 'found') BRW.addFound = true;
+      else { BRW.addTab[BRW.bar] = tid; BRW.addFound = false; }
+      brwRender();
+      return;
+    }
     var pk = t.closest('[data-bed-pick]');
-    if (pk) {
-      /* the dock or the context bar of the node the hotbox is drawn for */
+    if (pk && pk.getAttribute('data-bed-pick') !== BRW.bar) {
+      /* another bar of the picture: the dock or the context bar of the node the hotbox is drawn for */
       var pb = pk.getAttribute('data-bed-pick'), stp = brwStage();
-      if (pb !== BRW.bar) brwGoBar(pb, stp && (pb === 'add' || pb === 'tools') ? stp[pb] : '');
+      brwGoBar(pb, stp && (pb === 'add' || pb === 'tools') ? stp[pb] : '');
       return;
     }
     var cx = t.closest('[data-bed-ctx]');
@@ -14431,6 +14469,21 @@
     var k = String(e.key || ''), kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     var a = document.activeElement, typing = hbTyping();
     if (typing) {
+      if (a && a.hasAttribute && a.hasAttribute('data-bed-addq') && (k === 'Escape' || k === 'Enter')) {
+        /* in the palette's field Enter puts the first one found on the bar, Esc empties the field, then leaves it */
+        hbEat(e);
+        if (k === 'Enter') {
+          var first = BRW.el.querySelector('[data-bed-chips] [data-bed-add]');
+          if (first && !e.repeat) brwBarAdd(first.getAttribute('data-bed-add'), '');
+        } else if (a.value) {
+          a.value = '';
+          BRW.addQ = '';
+          brwPalUpdate();
+        } else {
+          try { a.blur(); } catch (x) {}
+        }
+        return true;
+      }
       if (k === 'Escape' || k === 'Enter') {
         if (a && a.hasAttribute && a.hasAttribute('data-bed-paste') && k === 'Enter') return false;
         hbEat(e);
@@ -14482,10 +14535,10 @@
     if (ev.button !== 0) return;
     var t = ev.target;
     if (!t || !t.closest || t.closest('input,textarea')) return;
-    var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]');
-    var el = c || p;
+    var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]'), ch = (c || p) ? null : t.closest('[data-bed-chip]');
+    var el = c || p || ch;
     if (!el) return;
-    BRW.drag = { uid: el.getAttribute(c ? 'data-bed-card' : 'data-bed-pill'), pill: !c, el: el, x0: ev.clientX, y0: ev.clientY, active: false, to: null, ghost: null };
+    BRW.drag = { uid: el.getAttribute(c ? 'data-bed-card' : (p ? 'data-bed-pill' : 'data-bed-chip')), pill: !!p, chip: !!ch, el: el, x0: ev.clientX, y0: ev.clientY, active: false, to: null, ghost: null };
   }
 
   function brwLine(r) {
@@ -14552,6 +14605,8 @@
       d.z = (d.el.offsetWidth && r0.width / d.el.offsetWidth) || 1;
       d.ghost = owns(d.el.cloneNode(true));
       d.ghost.className += ' shb-bed-ghost';
+      /* a button of the bar is the hotbox's own: its copy, outside the picture, wears the hotbox's style too */
+      if (d.pill) d.ghost.className += ' shb-bed-gpill ' + hbThemeCls();
       d.ghost.style.width = (r0.width / d.z) + 'px';
       d.ghost.style.height = (r0.height / d.z) + 'px';
       BRW.el.appendChild(d.ghost);
@@ -14567,8 +14622,17 @@
     d.to = null;
     if (!under || !under.closest) { brwLine(null); brwHot(null); return; }
     var bar = under.closest('[data-bed-bar]');
+    if (d.chip) {
+      /* a chip of the palette: onto the bar being edited, where the line is */
+      if (!bar) { brwLine(null); brwHot(null); return; }
+      var sc = brwPillSpot(bar, x, y, null, z);
+      d.to = { addBar: true, before: sc.before };
+      brwHot(null);
+      brwLine(sc.line);
+      return;
+    }
     if (d.pill) {
-      /* a pill of the bar: only along the bar, among what is pinned */
+      /* a button of the bar: only along the bar */
       if (!bar) { brwLine(null); brwHot(null); return; }
       var sp = brwPillSpot(bar, x, y, d.el, z);
       brwHot(null);
