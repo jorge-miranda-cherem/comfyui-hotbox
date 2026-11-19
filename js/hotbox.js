@@ -1249,13 +1249,13 @@
       '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
       '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
       '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
-      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:7px;border:1px dashed oklch(0.42 0 0);background:oklch(0.23 0 0);color:oklch(0.88 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none}',
+      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0 0);background:transparent;color:oklch(0.66 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
       '.shb-bed-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-chip > i{flex:none;width:7px;height:7px;border-radius:2px}',
       '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0 0)}',
       '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0 0)}',
       '.shb-bed-chip:hover{background:oklch(0.28 0 0);border-color:oklch(0.6 0 0)}',
-      '.shb-bed-chip.shb-on{border-style:solid;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .6);color:oklch(0.93 0.07 85)}',
+      '.shb-bed-chip.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
       '.shb-bed-chip.shb-on > u{color:oklch(0.86 0.13 78);font-weight:700;font-size:12px}',
       '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0 0)}',
       '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0 0);padding:4px 2px}',
@@ -1289,7 +1289,7 @@
       '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
       '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0 0);border-color:oklch(0.27 0 0)}',
       '.shb-bed-lane.shb-hot{background:oklch(0.25 0.012 78);border-color:oklch(0.6 0.1 78)}',
-      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0 0);border-radius:8px 8px 0 0;cursor:pointer}',
+      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0 0);border-radius:8px 8px 0 0;cursor:grab}',
       '.shb-bed-lhd:hover{background:oklch(0.26 0 0)}',
       '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0 0)}',
       '.shb-bed-loose > .shb-bed-lhd{cursor:default;background:transparent}',
@@ -1298,6 +1298,9 @@
       '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0 0)}',
       '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0 0);font-size:10px;color:oklch(0.6 0 0);white-space:nowrap}',
       '.shb-bed-place.shb-bar{color:oklch(0.82 0.1 78)}',
+      /* a group that is on no bar: its tag puts it on the one being edited (blue, as what adds) */
+      '.shb-bed-place.shb-bed-put{border:1px dashed oklch(0.62 0.12 250);background:transparent;color:oklch(0.8 0.1 250);font-family:inherit;cursor:pointer}',
+      '.shb-bed-place.shb-bed-put:hover{border-style:solid;background:oklch(0.32 0.07 250);color:#fff}',
       '.shb-bed-lbody{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}',
       '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0 0);box-shadow:inset 0 0 0 1px oklch(0.3 0 0);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
       '.shb-bed-card:hover{background:oklch(0.28 0 0)}',
@@ -1323,11 +1326,22 @@
       '.shb-bed-new span{font-size:20px;line-height:1}',
       '.shb-bed-new small{font-size:11px;color:oklch(0.48 0 0)}',
       '.shb-bed-fresh .shb-bed-card{animation:shbBedRise .18s ease-out}',
-      '.shb-bed-line{position:fixed;left:0;top:0;z-index:5;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
+      '.shb-bed-line{position:fixed;left:0;top:0;z-index:7;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
       '.shb-bed-line.shb-on{opacity:1}',
       '.shb-bed-ghost,.shb-bed-ghost *{box-sizing:border-box}',
       '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
-      '.shb-bed-insp{width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
+      /* a button of the bar held outside it: letting go takes it off */
+      '.shb-bed-ghost.shb-bed-off{opacity:1 !important;background:oklch(0.24 0 0) !important;border-radius:10px;outline:1.5px solid oklch(0.62 0.17 25);outline-offset:1px}',
+      '.shb-bed-ghost.shb-bed-off::after{content:"Off the bar";position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;padding:3px 8px;border-radius:999px;background:oklch(0.5 0.16 25);color:#fff;font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;white-space:nowrap}',
+      /* a group, held by the head of its lane: its color and its name, no wider than they are */
+      '.shb-bed-ghost.shb-bed-ghead{width:auto !important;max-width:240px;height:32px !important;padding:0 12px 0 10px;border:1px solid oklch(0.5 0 0);border-radius:8px;background:oklch(0.27 0 0)}',
+      '.shb-bed-ghead .shb-bed-place,.shb-bed-ghead .shb-bed-cnt{display:none}',
+      /* the panel on the right is there only while a button or a group is picked (or something is being pasted
+         or sent): the rest of the time its room is the picture's and the lanes' */
+      '.shb-bed-insp{position:relative;width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
+      '.shb-bed-insp[hidden]{display:none}',
+      '.shb-bed-ix{position:absolute;top:11px;right:11px;z-index:2;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.58 0 0);font:400 17px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
+      '.shb-bed-ix:hover{background:oklch(0.3 0 0);color:oklch(0.96 0 0)}',
       '.shb-bed-ibody{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}',
       '.shb-bed-f{display:flex;flex-direction:column;gap:8px}',
       '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0 0)}',
@@ -1354,10 +1368,10 @@
       '.shb-bed-keyb span{flex:1;color:oklch(0.55 0 0)}',
       '.shb-bed-keyb.shb-on span{color:oklch(0.85 0.12 78)}',
       '.shb-bed-warn{font-size:11.5px;line-height:1.4;color:oklch(0.78 0.13 60)}',
-      '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px}',
-      '.shb-bed-chip{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;color:oklch(0.66 0 0);font-size:12px;transition:all .12s}',
-      '.shb-bed-chip.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
-      '.shb-bed-chip i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0 0))}',
+      '.shb-bed-tags{display:flex;flex-wrap:wrap;gap:5px}',
+      '.shb-bed-tag{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;color:oklch(0.66 0 0);font-size:12px;transition:all .12s}',
+      '.shb-bed-tag.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-tag i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0 0))}',
       '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0 0)}',
       '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0 0);font-size:12px;color:oklch(0.78 0 0);white-space:nowrap;overflow:hidden}',
       '.shb-bed-nodes div:last-child{border-bottom:0}',
@@ -1371,9 +1385,6 @@
       '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0 0)}',
       '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0 0)}',
       '.shb-bed-two{display:flex;gap:6px}',
-      '.shb-bed-ob{flex:1;height:30px;border:1px solid oklch(0.33 0 0);border-radius:5px;background:transparent;color:oklch(0.82 0 0);font-size:12px}',
-      '.shb-bed-ob:hover{background:oklch(0.28 0 0)}',
-      '.shb-bed-ob:disabled{opacity:.35;background:transparent}',
       '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0 0);font-size:11.5px;line-height:1.55;color:oklch(0.55 0 0)}',
       '.shb-bed-note b{font-weight:400;color:oklch(0.8 0 0)}',
       '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0 0)}',
@@ -13465,9 +13476,14 @@
   function brwBarAdd(uid, before) {
     var list = brwBarList();
     if ((BRW.bar !== 'bot' && !brwCtx()) || !uid || list.indexOf(uid) >= 0) return;
-    /* the bottom bar takes tools and nodes this way; a saved button or a group goes on it from its lane */
-    if (BRW.bar === 'bot' && /^(tpl|grp):/.test(uid)) return;
+    /* the bottom bar takes tools, nodes and groups this way; a saved button is on it already, or in a group */
+    if (BRW.bar === 'bot' && /^tpl:/.test(uid)) return;
     var name = hbUidLabel(uid), bar = BRW.bar;
+    /* in the bottom bar the tools keep the start: what is not a tool goes no nearer than the first pin */
+    if (bar === 'bot' && !/^tool:/.test(uid) && before && /^tool:/.test(before)) {
+      before = '';
+      list.forEach(function (u) { if (!before && !/^tool:/.test(u)) before = u; });
+    }
     brwCommit('baradd', 'putting "' + name + '" on the bar', function () {
       var to = before ? list.indexOf(before) : -1;
       if (to < 0) list.push(uid);
@@ -13481,8 +13497,8 @@
   function brwBarRemove(uid) {
     var list = brwBarList(), at = list.indexOf(uid);
     if ((BRW.bar !== 'bot' && !brwCtx()) || at < 0) return;
-    if (BRW.bar === 'bot' && /^(tpl|grp):/.test(uid)) return;
-    var name = hbUidLabel(uid);
+    if (BRW.bar === 'bot' && /^tpl:/.test(uid)) return;
+    var name = hbUidLabel(uid), isGrp = /^grp:/.test(uid);
     brwCommit('barrm', 'taking "' + name + '" off the bar', function () {
       list.splice(at, 1);
       brwBarWrite(list);
@@ -13490,7 +13506,15 @@
       var g = /^grp:/.test(uid) ? grpById(uid.slice(4)) : null;
       if (g) g.keep = true;
       hbForgetIfGone(uid);
-    }, { msg: name + ' is off the bar' });
+    }, { msg: name + ' is off the bar' + (isGrp ? ' · its buttons are kept' : '') });
+  }
+
+  /* A group goes on the bar being edited, at a place: dragged there by the head of its lane, or put there by
+     its tag. One already on that bar takes the new place */
+  function brwGroupToBar(uid, before) {
+    if (!grpById(String(uid).slice(4)) || (BRW.bar !== 'bot' && !brwCtx())) return;
+    if (brwBarList().indexOf(uid) >= 0) brwBarMove(uid, before);
+    else brwBarAdd(uid, before);
   }
 
   function brwBarReset() {
@@ -13585,14 +13609,14 @@
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
               '<div class="shb-bed-mapcol">' +
-                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · click a bar to edit it · drag its buttons along it, × takes one off</small></div>' +
+                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · click a bar to edit it · drag its buttons along it, or off it to take them off</small></div>' +
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
             '</div>' +
-            '<div class="shb-bed-libcap">Your saved buttons <small>drag one to another group, or onto a group in the bar · click one to edit it · drag the background to slide along</small></div>' +
+            '<div class="shb-bed-libcap">Your saved buttons <small>drag a button to another group · drag a group by its name up onto the bar · click one to edit it · drag the background to slide along</small></div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
-          '<div class="shb-bed-insp" data-bed-insp></div>' +
+          '<div class="shb-bed-insp" data-bed-insp hidden></div>' +
         '</div>' +
         '<div class="shb-bed-ft">' +
           [['drag', 'move'], ['dbl-click', 'edit nodes'], ['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']].map(function (h) {
@@ -13812,7 +13836,7 @@
         var it = null;
         try { it = resolveBarItem(u, st.node, true, bar); } catch (e) { it = null; }
         var on = BRW.sel && BRW.sel.id === u ? ' shb-on' : '';
-        var canRm = !(bar === 'bot' && /^(tpl|grp):/.test(u));
+        var canRm = !(bar === 'bot' && /^tpl:/.test(u));
         var rm = canRm ? '<button type="button" class="shb-bed-prm shb-bed-erm" data-bed-rm="' + esc(u) + '" title="Take it off this bar" aria-label="Take it off this bar">×</button>' : '';
         var html = '';
         if (!it) {
@@ -13822,7 +13846,7 @@
         } else {
           num++;
           html = '<span class="shb-bed-epill' + on + '" data-bed-pill="' + esc(u) + '" title="' +
-            esc(it.label + (it.kind === 'tool' && it.kbd ? ' (' + it.kbd + ')' : '') + ' · drag it along the bar' + (canRm ? ' · × takes it off' : '') +
+            esc(it.label + (it.kind === 'tool' && it.kbd ? ' (' + it.kbd + ')' : '') + ' · drag it along the bar' + (canRm ? ', or off it (or its ×) to take it off' : '') +
               (bar === 'bot' && it.kind === 'tool' ? ' · in the hotbox it shows where it applies' : '')) + '">' +
             renderBarItemHTML(it, bar, bar === 'add' && num <= 9 ? num : 0) + rm + '</span>';
         }
@@ -13912,13 +13936,15 @@
 
   function brwLanesHTML() {
     var q = String(BRW.q || '').toLowerCase().trim();
-    var placeName = { bar: 'Bottom bar', other: 'Another bar', hidden: 'Hidden' };
+    var placeName = { bar: 'Bottom bar', other: 'Another bar' };
     var html = brwGroups().map(function (gid) {
       var g = S.hbGroups[gid] || {}, uid = 'grp:' + gid, items = g.items || [], place = brwPlace(gid);
       return '<div class="shb-bed-lane' + (BRW.sel && BRW.sel.id === uid ? ' shb-on' : '') + '" data-bed-lanebox="' + esc(gid) + '">' +
-        '<div class="shb-bed-lhd" data-bed-group="' + esc(gid) + '" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
+        '<div class="shb-bed-lhd" data-bed-group="' + esc(gid) + '" style="--shb-tint:' + esc(brwTint(uid)) + '" title="Click to edit the group · hold it by here and drag it up onto the bar being edited">' +
           '<i class="shb-bed-sq"></i><b>' + esc(hbBtnName(uid, g.name)) + '</b><span class="shb-bed-cnt">' + items.length + '</span>' +
-          '<span class="shb-bed-place' + (place === 'bar' ? ' shb-bar' : '') + '">' + placeName[place] + '</span>' +
+          (place === 'hidden'
+            ? '<button type="button" class="shb-bed-place shb-bed-put" data-bed-put="' + esc(gid) + '" title="It is on no bar. Click to put it on the bar being edited, or drag the group up there">＋ Put on bar</button>'
+            : '<span class="shb-bed-place' + (place === 'bar' ? ' shb-bar' : '') + '">' + placeName[place] + '</span>') +
         '</div>' +
         '<div class="shb-bed-lbody">' +
           items.map(function (u) { return brwCardHTML(u, gid, q); }).join('') +
@@ -13989,21 +14015,13 @@
     var sel = BRW.sel, uid = sel ? sel.id : '';
     if (sel && sel.kind === 'group' && grpById(uid.slice(4))) {
       var gid = uid.slice(4), g = grpById(gid), place = brwPlace(gid), n = (g.items || []).length;
-      var pins = brwBotUids().filter(function (u) { return !/^tool:/.test(u); }), at = pins.indexOf(uid);
       return '<div class="shb-bed-ibody">' +
         '<div class="shb-bed-f"><div class="shb-bed-cap">Group</div>' +
           '<div class="shb-bed-name" style="--shb-tint:' + esc(brwTint(uid)) + '"><i class="shb-bed-sq"></i><input type="text" data-bed-name spellcheck="false" value="' + esc(hbBtnName(uid, g.name)) + '"></div></div>' +
         '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Color</span></div>' + brwSwatchesHTML(uid) + '</div>' +
-        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Where it shows</span></div>' +
-          '<button type="button" class="shb-bed-pl' + (place === 'bar' ? ' shb-on' : '') + '" data-bed-place="bar"><i></i><span>Bottom bar<small>In the hotbox\'s bottom bar, on every node</small></span></button>' +
-          (place === 'other' ? '<button type="button" class="shb-bed-pl shb-on" data-bed-place="other"><i></i><span>Another bar<small>The dock or a context bar, where edit mode put it</small></span></button>' : '') +
-          '<button type="button" class="shb-bed-pl' + (place === 'hidden' ? ' shb-on' : '') + '" data-bed-place="hidden"><i></i><span>Hidden<small>Kept, with its buttons, but in no bar</small></span></button>' +
-        '</div>' +
-        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Order in the bar</span></div><div class="shb-bed-two">' +
-          '<button type="button" class="shb-bed-ob" data-bed-act="left"' + (at > 0 ? '' : ' disabled') + '>← Move left</button>' +
-          '<button type="button" class="shb-bed-ob" data-bed-act="right"' + (at >= 0 && at < pins.length - 1 ? '' : ' disabled') + '>Move right →</button>' +
-        '</div></div>' +
-        '<div class="shb-bed-note">' + n + (n === 1 ? ' button' : ' buttons') + '. Deleting the group keeps its buttons: they go back to the bar, and show under <b>Not in a group</b>.</div>' +
+        '<div class="shb-bed-note">' + n + (n === 1 ? ' button' : ' buttons') + '. ' +
+          (place === 'hidden' ? 'It is on no bar: drag it by its name, in its column, up onto the bar.' : 'Drag its button off a bar (or press its ×) to take it off that bar; it keeps its buttons.') +
+          ' Deleting the group keeps its buttons too: they go back to the bar, and show under <b>Not in a group</b>.</div>' +
       '</div>' +
       '<div class="shb-bed-iact">' + brwShareHTML() +
         '<div class="shb-bed-two"><button type="button" class="shb-bed-tb shb-red" data-bed-act="del">Delete group</button></div>' +
@@ -14015,7 +14033,6 @@
       var key = hbKeyFor(uid), clash = key ? hbKeyClash(key, uid) : '';
       var names = brwNodeNames(tp), glyph = hbGlyphOf(uid) || '✦';
       var grabbing = !!BRW.grab;
-      var bpins = brwBotUids().filter(function (u) { return !/^tool:/.test(u); }), bat = bpins.indexOf(uid);
       var where = brwWhere(uid), curCtx = brwCtx();
       return '<div class="shb-bed-ibody" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
         '<div class="shb-bed-f"><div class="shb-bed-cap">Button' + (tp && tp.lib ? ' <small>from ' + esc(tp.libLabel || 'a shared library') + (tp.canDelete ? '' : ' · read-only') + '</small>' : '') + '</div>' +
@@ -14031,21 +14048,17 @@
             '<span>' + (grabbing ? 'Press a key · Esc cancels · ⌫ clears' : (key ? 'Click to change' : 'Click, then press a key')) + '</span></button>' +
           (BRW.keyNote ? '<div class="shb-bed-warn">⚠ ' + esc(BRW.keyNote) + '</div>' : (clash ? '<div class="shb-bed-warn">⚠ ' + esc(clash) + '</div>' : '')) +
         '</div>' +
-        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Group</span></div><div class="shb-bed-chips">' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Group</span></div><div class="shb-bed-tags">' +
           brwGroups().map(function (g2) {
-            return '<button type="button" class="shb-bed-chip' + (inG === g2 ? ' shb-on' : '') + '" data-bed-chip="' + esc(g2) + '" style="--shb-tint:' + esc(brwTint('grp:' + g2)) + '"><i></i>' + esc(hbBtnName('grp:' + g2, S.hbGroups[g2].name)) + '</button>';
+            return '<button type="button" class="shb-bed-tag' + (inG === g2 ? ' shb-on' : '') + '" data-bed-ingrp="' + esc(g2) + '" style="--shb-tint:' + esc(brwTint('grp:' + g2)) + '"><i></i>' + esc(hbBtnName('grp:' + g2, S.hbGroups[g2].name)) + '</button>';
           }).join('') +
-          '<button type="button" class="shb-bed-chip' + (inG ? '' : ' shb-on') + '" data-bed-chip="loose"><i></i>None</button>' +
+          '<button type="button" class="shb-bed-tag' + (inG ? '' : ' shb-on') + '" data-bed-ingrp="loose"><i></i>None</button>' +
         '</div></div>' +
         (where.length ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Shows in</span></div><div class="shb-bed-where">' +
           where.map(function (w) {
             var cur = w.bar === BRW.bar && (w.bar === 'bot' || (curCtx && curCtx.key === w.key));
-            return '<button type="button" class="shb-bed-chip' + (cur ? ' shb-on' : '') + '" data-bed-where="' + esc(w.bar + '|' + w.key) + '" title="Show that bar in the strip"><i></i>' + esc(w.name) + '</button>';
+            return '<button type="button" class="shb-bed-tag' + (cur ? ' shb-on' : '') + '" data-bed-where="' + esc(w.bar + '|' + w.key) + '" title="Show that bar in the strip"><i></i>' + esc(w.name) + '</button>';
           }).join('') + '</div></div>' : '') +
-        (!inG && bat >= 0 ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Order in the bar</span></div><div class="shb-bed-two">' +
-          '<button type="button" class="shb-bed-ob" data-bed-act="left"' + (bat > 0 ? '' : ' disabled') + '>← Move left</button>' +
-          '<button type="button" class="shb-bed-ob" data-bed-act="right"' + (bat < bpins.length - 1 ? '' : ' disabled') + '>Move right →</button>' +
-        '</div></div>' : '') +
         (tp ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>What it adds</span><em>' + esc(tp.count) + (tp.count === 1 ? ' node' : ' nodes') + '</em></div><div class="shb-bed-nodes">' +
           names.slice(0, 6).map(function (t) { return '<div><i style="background:' + brwNodeDot(t) + '"></i>' + esc(t) + '</div>'; }).join('') +
           (names.length > 6 ? '<div class="shb-more">+' + (names.length - 6) + ' more</div>' : '') +
@@ -14058,7 +14071,7 @@
         '<div class="shb-bed-two">' +
           (tp ? '<button type="button" class="shb-bed-tb" data-bed-act="dup" title="A copy of your own, with the same nodes">Duplicate</button>' : '') +
           (canEdit ? '<button type="button" class="shb-bed-tb shb-red" data-bed-act="del">Delete</button>'
-            : (inG ? '<button type="button" class="shb-bed-tb" data-bed-chip="loose">Take out of the group</button>' : '')) +
+            : (inG ? '<button type="button" class="shb-bed-tb" data-bed-ingrp="loose">Take out of the group</button>' : '')) +
         '</div>' +
       '</div>';
     }
@@ -14075,6 +14088,10 @@
         : (/^tpl:/.test(su) ? !!tplById(su.slice(4)) : (!!brwInGroup()[su] || brwBarList().indexOf(su) >= 0));
       if (!there) BRW.sel = null;
     }
+    /* the panel on the right is there while something is picked, pasted or sent: before the picture is
+       measured, since the picture has the room the panel leaves */
+    var insp = bg.querySelector('[data-bed-insp]'), inspOn = !!(BRW.panel || BRW.sel), inspWas = !insp.hidden;
+    insp.hidden = !inspOn;
     /* the hotbox it is drawn for (its dock and its context bar are the ones the strip edits), and what the
        strip says it is showing */
     var st0 = brwStage();
@@ -14119,13 +14136,17 @@
       if (b && y) b.scrollTop = y;
     });
     /* a name being typed keeps its field (and the caret in it): the rest is drawn around it */
-    var insp = bg.querySelector('[data-bed-insp]');
     var forWhat = (BRW.panel ? 'panel:' + BRW.panel.kind : '') + '|' + (BRW.sel ? BRW.sel.id : '');
     var a = document.activeElement;
     var typing = a && insp.contains(a) && a.hasAttribute && (a.hasAttribute('data-bed-name') || a.hasAttribute('data-bed-paste'));
     if (!(typing && BRW.inspFor === forWhat)) {
-      insp.innerHTML = brwInspHTML();
+      insp.innerHTML = inspOn ? '<button type="button" class="shb-bed-ix" data-bed-act="inspclose" title="Close (Esc)" aria-label="Close">×</button>' + brwInspHTML() : '';
       BRW.inspFor = forWhat;
+    }
+    /* the panel just took its room from the lanes: what was picked stays in sight */
+    if (inspOn && !inspWas && BRW.sel) {
+      var seen = lanes.querySelector('.shb-bed-card.shb-on') || lanes.querySelector('.shb-bed-lane.shb-on');
+      if (seen && seen.scrollIntoView) { try { seen.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} }
     }
   }
 
@@ -14212,38 +14233,6 @@
       else bar.splice(to, 0, uid);
       brwBarWrite(bar);
     });
-  }
-
-  /* one step left or right among what is pinned (the actions keep the start of the bar) */
-  function brwBarStep(uid, dir) {
-    var bar = brwBotUids(), pins = bar.filter(function (u) { return !/^tool:/.test(u); }), i = pins.indexOf(uid), j = i + dir;
-    if (i < 0 || j < 0 || j >= pins.length) return;
-    brwCommit('order', 'moving "' + hbUidLabel(uid) + '" along the bar', function () {
-      var a = bar.indexOf(uid), b = bar.indexOf(pins[j]);
-      bar[a] = pins[j];
-      bar[b] = uid;
-      S.customBotBar = bar;
-    });
-  }
-
-  function brwSetPlace(gid, place) {
-    var uid = 'grp:' + gid, g = grpById(gid);
-    if (!g || place === 'other' || brwPlace(gid) === place) return;
-    brwCommit('place', (place === 'hidden' ? 'hiding "' : 'showing "') + hbBtnName(uid, g.name) + '"', function () {
-      if (place === 'hidden') {
-        /* a bar that was never customized gets its own list first, so the others in it stay as they are */
-        if (!Array.isArray(S.customBotBar)) S.customBotBar = brwBotUids();
-        hbBarLists().forEach(function (L) {
-          if (L.get().indexOf(uid) >= 0) L.set(L.get().filter(function (u) { return u !== uid; }));
-        });
-        g.keep = true;
-      } else {
-        hbBarLists().forEach(function (L) {
-          if (L.bar !== 'bot' && L.get().indexOf(uid) >= 0) L.set(L.get().filter(function (u) { return u !== uid; }));
-        });
-        hbBotAppend([uid]);
-      }
-    }, { msg: hbBtnName(uid, g.name) + (place === 'hidden' ? ' is hidden · its buttons are kept' : ' is in the bottom bar') });
   }
 
   function brwDuplicate(uid) {
@@ -14410,6 +14399,14 @@
       return;
     }
     if (act === 'panelclose') { BRW.panel = null; brwRender(); return; }
+    if (act === 'inspclose') {
+      if (BRW.panel) { BRW.panel = null; brwRender(); }
+      else brwSelect('', '');
+      return;
+    }
+    /* the tag of a group that is on no bar: onto the bar being edited, last */
+    var put = t.closest('[data-bed-put]');
+    if (put) { brwGroupToBar('grp:' + put.getAttribute('data-bed-put'), ''); return; }
     if (act === 'pasteadd') { brwPasteAdd(); return; }
     var tg = t.closest('[data-bed-target]');
     if (tg && BRW.panel && BRW.panel.kind === 'send') { brwSendTo(BRW.panel.targets[+tg.getAttribute('data-bed-target')]); return; }
@@ -14423,7 +14420,6 @@
       }
       if (act === 'dup') { brwDuplicate(uid); return; }
       if (act === 'del') { brwDeleteSel(); return; }
-      if (act === 'left' || act === 'right') { brwBarStep(uid, act === 'left' ? -1 : 1); return; }
       if (act === 'send') { brwSendOpen(uid); return; }
       if (act === 'copy') { brwCopyShare(uid); return; }
       if (act === 'fill') {
@@ -14456,10 +14452,8 @@
         });
         return;
       }
-      var chip = t.closest('[data-bed-chip]');
-      if (chip && sel.kind === 'button') { brwMove(uid, chip.getAttribute('data-bed-chip'), ''); return; }
-      var pl = t.closest('[data-bed-place]');
-      if (pl && sel.kind === 'group') { brwSetPlace(uid.slice(4), pl.getAttribute('data-bed-place')); return; }
+      var ing = t.closest('[data-bed-ingrp]');
+      if (ing && sel.kind === 'button') { brwMove(uid, ing.getAttribute('data-bed-ingrp'), ''); return; }
     }
     var card = t.closest('[data-bed-card]');
     if (card) { brwSelect('button', card.getAttribute('data-bed-card')); return; }
@@ -14471,6 +14465,8 @@
     }
     var gh = t.closest('[data-bed-group]');
     if (gh) { brwSelect('group', 'grp:' + gh.getAttribute('data-bed-group')); return; }
+    /* a click on the lanes' background lets go of what was picked, and the panel gives its room back */
+    if (BRW.sel && !BRW.panel && t.closest('[data-bed-lanes]') && !t.closest('[data-bed-lanebox]')) brwSelect('', '');
   }
 
   /* The keys of the editor (the window's key listener hands them over while it is the window on top).
@@ -14539,10 +14535,11 @@
   }
 
   /* ---- dragging in the editor: a card to a place in a lane, onto a group of the bar or onto New group; a
-     pill of the bar to another place along it. The card stays where it is, dimmed, a copy follows the pointer
-     and an amber line marks the place ---- */
+     pill of the bar to another place along it, or off the bar; a group, by the head of its lane, onto the bar.
+     What is dragged stays where it is, dimmed, a copy follows the pointer and an amber line marks the place ---- */
   /* ---- the lanes slide along: dragged by their background (or by anything in them, with the middle button),
-     and by the wheel wherever a list has no more to scroll. A press that does not travel is still a click ---- */
+     and by the wheel wherever a list has no more to scroll. A press that does not travel is still a click.
+     The head of a group's lane does both: sideways it slides the lanes, up or down it carries the group ---- */
   function brwPanEnd() {
     var pn = BRW.pan;
     BRW.pan = null;
@@ -14555,9 +14552,17 @@
     var pn = BRW.pan;
     if (!pn) return;
     if (e.buttons === 0 || !BRW.el) { brwPanEnd(); return; }
-    var dx = e.clientX - pn.x0;
+    var dx = e.clientX - pn.x0, dy = e.clientY - pn.y0;
     if (!pn.active) {
-      if (Math.abs(dx) < 5) return;
+      if (pn.head) {
+        if (Math.hypot(dx, dy) < 6) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          /* up or down: it is the group that is being taken (the listener after this one carries on with it) */
+          BRW.pan = null;
+          BRW.drag = { uid: 'grp:' + pn.head.getAttribute('data-bed-group'), head: true, pill: false, chip: false, el: pn.head, x0: pn.x0, y0: pn.y0, active: false, to: null, ghost: null };
+          return;
+        }
+      } else if (Math.abs(dx) < 5) return;
       pn.active = true;
       pn.el.classList.add('shb-bed-panning');
       tipHide();
@@ -14584,13 +14589,14 @@
     if (!t || !t.closest) return;
     var lanes = t.closest('[data-bed-lanes]');
     if (lanes && (ev.button === 1 || (ev.button === 0 && !t.closest('[data-bed-card],button,input,textarea')))) {
-      BRW.pan = { el: lanes, x0: ev.clientX, left0: lanes.scrollLeft, active: false,
+      BRW.pan = { el: lanes, x0: ev.clientX, y0: ev.clientY, left0: lanes.scrollLeft, active: false,
+        head: ev.button === 0 ? t.closest('[data-bed-group]') : null,
         z: (lanes.offsetWidth && lanes.getBoundingClientRect().width / lanes.offsetWidth) || 1 };
       return;
     }
     if (ev.button !== 0) return;
     if (t.closest('input,textarea')) return;
-    var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]'), ch = (c || p) ? null : t.closest('[data-bed-chip]');
+    var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]'), ch = (c || p) ? null : t.closest('[data-bed-chips] [data-bed-chip]');
     var el = c || p || ch;
     if (!el) return;
     BRW.drag = { uid: el.getAttribute(c ? 'data-bed-card' : (p ? 'data-bed-pill' : 'data-bed-chip')), pill: !!p, chip: !!ch, el: el, x0: ev.clientX, y0: ev.clientY, active: false, to: null, ghost: null };
@@ -14628,6 +14634,17 @@
       line: { x: (isA ? br.left - 3 * z : br.right + 3 * z) - 1.5, y: br.top - 3, w: 3, h: br.height + 6 } };
   }
 
+  /* the bar being edited, when the pointer is on it or on its row of the picture (`pad` more around the row) */
+  function brwBarAt(x, y, under, pad) {
+    var bar = under && under.closest ? under.closest('[data-bed-bar]') : null;
+    if (bar) return bar;
+    var row = BRW.el && BRW.el.querySelector('.shb-bed-rrow.shb-on');
+    bar = row ? row.querySelector('[data-bed-bar]') : null;
+    if (!bar) return null;
+    var r = row.getBoundingClientRect();
+    return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad ? bar : null;
+  }
+
   function brwHot(el) {
     if (!BRW.el) return;
     Array.prototype.forEach.call(BRW.el.querySelectorAll('.shb-hot'), function (x) { if (x !== el) x.classList.remove('shb-hot'); });
@@ -14658,10 +14675,13 @@
       /* the copy lives outside the window, which may be scaled up (the four A's): it gets the card's own
          size and that same scale, measured, so it is the card as it looks */
       d.z = (d.el.offsetWidth && r0.width / d.el.offsetWidth) || 1;
+      /* the head of a lane is wide: its copy is its name alone, held near its start, so the bar shows */
+      if (d.head) { d.gx = Math.min(d.gx, 20 * d.z); d.gy = Math.min(d.gy, 16 * d.z); }
       d.ghost = owns(d.el.cloneNode(true));
       d.ghost.className += ' shb-bed-ghost';
       /* a button of the bar is the hotbox's own: its copy, outside the picture, wears the hotbox's style too */
       if (d.pill) d.ghost.className += ' shb-bed-gpill ' + hbThemeCls();
+      if (d.head) d.ghost.className += ' shb-bed-ghead';
       d.ghost.style.width = (r0.width / d.z) + 'px';
       d.ghost.style.height = (r0.height / d.z) + 'px';
       BRW.el.appendChild(d.ghost);
@@ -14676,7 +14696,16 @@
     try { under = document.elementFromPoint(x, y); } catch (err) { under = null; }
     d.to = null;
     if (!under || !under.closest) { brwLine(null); brwHot(null); return; }
-    var bar = under.closest('[data-bed-bar]');
+    var bar = brwBarAt(x, y, under, 0);
+    if (d.head) {
+      /* a group, by the head of its lane: onto the bar being edited, where the line is */
+      brwHot(null);
+      if (!bar) { brwLine(null); return; }
+      var sh = brwPillSpot(bar, x, y, bar.querySelector('[data-bed-pill="' + cssEsc(d.uid) + '"]'), z);
+      d.to = { grpBar: true, before: sh.before };
+      brwLine(sh.line);
+      return;
+    }
     if (d.chip) {
       /* a chip of the palette: onto the bar being edited, where the line is */
       if (!bar) { brwLine(null); brwHot(null); return; }
@@ -14687,10 +14716,19 @@
       return;
     }
     if (d.pill) {
-      /* a button of the bar: only along the bar */
-      if (!bar) { brwLine(null); brwHot(null); return; }
-      var sp = brwPillSpot(bar, x, y, d.el, z);
+      /* a button of the bar: along the bar, or out of it. Held away from the bar's row, letting go takes it
+         off (what can be taken off: all but a saved button in the bottom bar, which lives there) */
+      var pb = brwBarAt(x, y, under, 12 * z);
       brwHot(null);
+      if (!pb) {
+        var canOff = !!d.el.querySelector('[data-bed-rm]');
+        d.ghost.classList.toggle('shb-bed-off', canOff);
+        if (canOff) d.to = { off: true };
+        brwLine(null);
+        return;
+      }
+      d.ghost.classList.remove('shb-bed-off');
+      var sp = brwPillSpot(pb, x, y, d.el, z);
       if (!sp.found) { brwLine(null); return; }
       d.to = { bar: true, before: sp.before };
       brwLine(sp.line);
@@ -14738,14 +14776,18 @@
   listen(document, 'pointerup', function () {
     var d = BRW.drag;
     if (!d) return;
-    var to = d.to, uid = d.uid, pill = d.pill, was = d.active;
+    var to = d.to, uid = d.uid, pill = d.pill, head = d.head, was = d.active;
     brwDragEnd();
     if (!was) return;
     BRW.noClick = Date.now() + 250;
     if (!BRW.el || !to) return;
-    if (pill) { if (to.bar) brwBarMove(uid, to.before); return; }
+    if (head) { if (to.grpBar) brwGroupToBar(uid, to.before); return; }
+    if (pill) {
+      if (to.off) brwBarRemove(uid);
+      else if (to.bar) brwBarMove(uid, to.before);
+      return;
+    }
     if (to.addBar) { brwBarAdd(uid, to.before); return; }
-    if (!BRW.sel || BRW.sel.id !== uid) { BRW.sel = { kind: 'button', id: uid }; BRW.panel = null; BRW.inspFor = ''; }
     brwMove(uid, to.lane, to.before);
     if (BRW.el) brwRender();
   }, true);

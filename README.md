@@ -71,7 +71,7 @@ was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
 
 A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
 nodes…** to change a value right there. **Settings → Button Editor** opens the button editor: the hotbox itself, drawn with the buttons its bars hold, where the bar you pick (the bottom bar, the dock, the context bar, the swap bar of an API node) is edited in place, a palette under it of what can go on it (power tools, nodes, models: click or drag),
-and, apart, a lane for every group of your saved buttons, with each button's name, color, icon, key and nodes.
+and, apart, a lane for every group of your saved buttons, with each button's name, color, icon, key and nodes. A group is dragged off a bar to take it off, and back onto it by its name.
 
 <img src="docs/tutorial/11-button-editor.gif" alt="The button editor, with the hotbox itself drawn at the top: a button gets a name, a color, an icon and a key, goes into a group, and a new group moves along the bar" width="100%">
 
