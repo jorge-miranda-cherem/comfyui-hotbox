@@ -1283,7 +1283,8 @@
       '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
       /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
       '.shb-bed-g{font-size:12px;line-height:1;color:var(--shb-tint)}',
-      '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden}',
+      '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden;cursor:grab}',
+      '.shb-bed-lanes.shb-bed-panning,.shb-bed-lanes.shb-bed-panning *{cursor:grabbing !important;user-select:none}',
       '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0 0);border:1px solid oklch(0.29 0 0);transition:background .14s,border-color .14s}',
       '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
       '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0 0);border-color:oklch(0.27 0 0)}',
@@ -13588,7 +13589,7 @@
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
             '</div>' +
-            '<div class="shb-bed-libcap">Your saved buttons <small>drag one to another group, or onto a group in the bar · click one to edit it</small></div>' +
+            '<div class="shb-bed-libcap">Your saved buttons <small>drag one to another group, or onto a group in the bar · click one to edit it · drag the background to slide along</small></div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
           '<div class="shb-bed-insp" data-bed-insp></div>' +
@@ -13627,6 +13628,9 @@
       if (c && brwCanEdit(c.getAttribute('data-bed-card'))) tplEditOpen(c.getAttribute('data-bed-card').slice(4));
     });
     bg.addEventListener('pointerdown', brwDown);
+    bg.addEventListener('wheel', brwWheel, { passive: false });
+    /* the middle button slides the lanes: not the browser's own scrolling compass */
+    bg.addEventListener('mousedown', function (ev) { if (ev.button === 1 && ev.target && ev.target.closest && ev.target.closest('[data-bed-lanes]')) ev.preventDefault(); });
     bg.addEventListener('input', brwInput);
     bg.addEventListener('paste', function (ev) {
       /* the text a teammate sent, pasted into its box: read as it lands */
@@ -14537,10 +14541,55 @@
   /* ---- dragging in the editor: a card to a place in a lane, onto a group of the bar or onto New group; a
      pill of the bar to another place along it. The card stays where it is, dimmed, a copy follows the pointer
      and an amber line marks the place ---- */
+  /* ---- the lanes slide along: dragged by their background (or by anything in them, with the middle button),
+     and by the wheel wherever a list has no more to scroll. A press that does not travel is still a click ---- */
+  function brwPanEnd() {
+    var pn = BRW.pan;
+    BRW.pan = null;
+    if (!pn) return;
+    pn.el.classList.remove('shb-bed-panning');
+    if (pn.active) BRW.noClick = Date.now() + 250;
+  }
+
+  listen(document, 'pointermove', function (e) {
+    var pn = BRW.pan;
+    if (!pn) return;
+    if (e.buttons === 0 || !BRW.el) { brwPanEnd(); return; }
+    var dx = e.clientX - pn.x0;
+    if (!pn.active) {
+      if (Math.abs(dx) < 5) return;
+      pn.active = true;
+      pn.el.classList.add('shb-bed-panning');
+      tipHide();
+    }
+    e.preventDefault();
+    pn.el.scrollLeft = pn.left0 - dx / pn.z;
+  }, true);
+  listen(document, 'pointerup', brwPanEnd, true);
+  listen(document, 'pointercancel', brwPanEnd, true);
+
+  function brwWheel(ev) {
+    var t = ev.target, lanes = t && t.closest ? t.closest('[data-bed-lanes]') : null;
+    if (!lanes || ev.ctrlKey || !ev.deltaY || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
+    if (lanes.scrollWidth <= lanes.clientWidth + 1) return;
+    /* a list that can still go that way scrolls itself */
+    var body = t.closest('.shb-bed-lbody'), dy = ev.deltaY;
+    if (body && !ev.shiftKey && ((dy < 0 && body.scrollTop > 0) || (dy > 0 && body.scrollTop + body.clientHeight < body.scrollHeight - 1))) return;
+    ev.preventDefault();
+    lanes.scrollLeft += dy * (ev.deltaMode === 1 ? 32 : 1);
+  }
+
   function brwDown(ev) {
-    if (ev.button !== 0) return;
     var t = ev.target;
-    if (!t || !t.closest || t.closest('input,textarea')) return;
+    if (!t || !t.closest) return;
+    var lanes = t.closest('[data-bed-lanes]');
+    if (lanes && (ev.button === 1 || (ev.button === 0 && !t.closest('[data-bed-card],button,input,textarea')))) {
+      BRW.pan = { el: lanes, x0: ev.clientX, left0: lanes.scrollLeft, active: false,
+        z: (lanes.offsetWidth && lanes.getBoundingClientRect().width / lanes.offsetWidth) || 1 };
+      return;
+    }
+    if (ev.button !== 0) return;
+    if (t.closest('input,textarea')) return;
     var c = t.closest('[data-bed-card]'), p = c ? null : t.closest('[data-bed-pill]'), ch = (c || p) ? null : t.closest('[data-bed-chip]');
     var el = c || p || ch;
     if (!el) return;
