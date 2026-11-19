@@ -1221,6 +1221,10 @@
       '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
       '.shb-bed-rzone > .shb-bed-rrow.shb-on{border-color:transparent;background:transparent;padding:0 0 0 0}',
       '.shb-bed-rrow.shb-on .shb-bed-ebar,.shb-bed-rrow.shb-on .shb-bed-epill,.shb-bed-rrow.shb-on .shb-bed-erm{pointer-events:auto !important}',
+      /* the + of the bar being edited opens Add to this bar under it, and closes it (the hotbox's own + for the
+         bottom bar; the dock and the context bar get one like it while they are edited) */
+      '.shb-bed-rrow.shb-on .shb-bed-palbtn{pointer-events:auto !important;cursor:pointer}',
+      '.shb-bed-prow{display:flex;justify-content:center;align-items:center;max-width:100%}',
       '.shb-bed-ebar{min-height:30px;min-width:120px}',
       '.shb-bed-epill{position:relative;display:inline-flex;align-items:center;border-radius:10px;cursor:grab;touch-action:none}',
       '.shb-bed-epill.shb-on{outline:1.5px solid oklch(0.82 0.13 78);outline-offset:1px}',
@@ -1234,7 +1238,7 @@
       /* the palette is a box of its own that hangs from the bar: a solid ground, an edge in the hotbox's blue (the
          blue of its +, which adds; amber is the bar being edited), and a notch that points up at the bar its chips go onto */
       '.shb-bed-pal{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:7px;padding:8px 9px 9px;border-radius:9px;background:oklch(0.2 0.022 250);border:1.5px solid oklch(0.7 0.14 250);box-shadow:0 6px 16px rgba(0,0,0,.28);font-family:Inter,system-ui,sans-serif}',
-      '.shb-bed-pal::before{content:"";position:absolute;top:-7.5px;left:calc(50% - 6px);width:12px;height:12px;box-sizing:border-box;background:oklch(0.2 0.022 250);border-left:1.5px solid oklch(0.7 0.14 250);border-top:1.5px solid oklch(0.7 0.14 250);border-top-left-radius:3px;transform:rotate(45deg)}',
+      '.shb-bed-pal::before{content:"";position:absolute;top:-7.5px;left:calc(var(--shb-bed-nx,50%) - 6px);width:12px;height:12px;box-sizing:border-box;background:oklch(0.2 0.022 250);border-left:1.5px solid oklch(0.7 0.14 250);border-top:1.5px solid oklch(0.7 0.14 250);border-top-left-radius:3px;transform:rotate(45deg)}',
       '.shb-bed-palhd{display:flex;align-items:center;gap:8px;min-width:0}',
       '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.64 0.16 250);color:#fff;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
       '.shb-bed-palhd > b .shb-ico{stroke-width:2.6}',
@@ -1248,6 +1252,8 @@
       '.shb-bed-find.shb-bed-addfind:focus-within{border-color:oklch(0.7 0.14 250)}',
       '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
       '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-palx{flex:none;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0.03 250);font:400 16px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
+      '.shb-bed-palx:hover{background:oklch(0.3 0.05 250);color:#fff}',
       '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
       '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0 0);background:transparent;color:oklch(0.66 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
       '.shb-bed-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}',
@@ -1264,9 +1270,28 @@
       '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-libcap + .shb-bed-lanes{padding-top:8px}',
       '.shb-bed-rnoderow{display:flex;justify-content:center;padding:1px 8px 1px 122px}',
-      '.shb-bed-mnode{width:min(300px,100%);height:32px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px;box-sizing:border-box}',
-      '.shb-bed-mnode span{flex:1;min-width:0;text-align:center;font:500 12px/1.2 Inter,system-ui,sans-serif;color:oklch(0.92 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-mnode span small{margin-left:7px;font-size:10.5px;font-weight:400;color:oklch(0.58 0 0)}',
+      '.shb-bed-mnode{width:min(520px,100%);height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px;box-sizing:border-box}',
+      /* its name is in a field: type another node's name there and the hotbox is drawn for that one */
+      '.shb-bed-nfind{flex:1;min-width:0;height:26px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid oklch(0.34 0 0);border-radius:6px;background:oklch(0.2 0 0);cursor:text;font:500 12px/1.2 Inter,system-ui,sans-serif;transition:border-color .12s,background .12s}',
+      '.shb-bed-nfind:hover{border-color:oklch(0.5 0 0)}',
+      '.shb-bed-nfind:focus-within{border-color:oklch(0.82 0.13 78);background:oklch(0.17 0 0)}',
+      '.shb-bed-nfind > .shb-ico{flex:none;color:oklch(0.66 0 0)}',
+      '.shb-bed-nfind input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:none;color:oklch(0.94 0 0);font:inherit;text-overflow:ellipsis;user-select:text}',
+      '.shb-bed-nfind input::placeholder{color:oklch(0.5 0 0);font-weight:400}',
+      '.shb-bed-nfind small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.6 0 0);white-space:nowrap}',
+      '.shb-bed-nfind em{flex:none;font-style:normal;font-size:10.5px;font-weight:400;color:oklch(0.5 0 0);white-space:nowrap;padding-left:8px;border-left:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-nfind:focus-within small,.shb-bed-nfind:focus-within em{display:none}',
+      /* what the field finds, under it: the kinds there are, then every node with that name */
+      '.shb-bed-ndd{position:absolute;z-index:8;display:flex;flex-direction:column;gap:1px;padding:5px;box-sizing:border-box;border-radius:9px;border:1px solid oklch(0.42 0 0);background:oklch(0.19 0 0);box-shadow:0 14px 34px rgba(0,0,0,.55);overflow-y:auto;scrollbar-width:thin;font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-ndd[hidden]{display:none}',
+      '.shb-bed-ndcap{flex:none;padding:4px 8px 3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.5 0 0)}',
+      '.shb-bed-ndr{flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:oklch(0.9 0 0);font:500 12px/1 Inter,system-ui,sans-serif;text-align:left;cursor:pointer}',
+      '.shb-bed-ndr span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-ndr small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.55 0 0)}',
+      '.shb-bed-ndr:hover{background:oklch(0.26 0 0)}',
+      '.shb-bed-ndr.shb-hot{background:oklch(0.3 0.045 78 / .7);color:oklch(0.97 0 0)}',
+      '.shb-bed-ndr.shb-hot small{color:oklch(0.78 0.06 85)}',
+      '.shb-bed-ndnone{flex:none;padding:8px;font-size:11.5px;color:oklch(0.55 0 0)}',
       /* a power tool's card in the lane of the twelve: lit while it is on the bar in the strip */
       '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0 0);font-size:16px;line-height:1}',
       '.shb-bed-mnode button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
@@ -13127,7 +13152,10 @@
   var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 },
     /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
        the dock and the context bar, the kind of node last picked for each */
-    bar: 'bot', ctxKey: { add: '', tools: '' }, stageId: '', addQ: '', addFound: true, addTab: { bot: 'pt', add: 'more', tools: 'more' } };
+    bar: 'bot', ctxKey: { add: '', tools: '' }, stageId: '', addQ: '', addFound: true, addTab: { bot: 'pt', add: 'more', tools: 'more' },
+    /* Add to this bar is open (it is closed when the window opens: the + of the bar opens it); the nodes
+       found by name in the picture's field, the last one first; and what is typed there (null: nothing) */
+    palOpen: false, picks: [], nodeQ: null, nodeHot: 0, nodeRows: [], nodeKeep: false };
   var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 }, BRW_WIN_ZS = [1, 1.25, 1.5, 2];
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
@@ -13169,6 +13197,55 @@
     return (m[1] === 'out' ? 'Node giving ' : 'Node taking ') + m[2].split('+').join(' + ');
   }
 
+  /* A node of that type with none of it on the canvas: enough of one, made from its definition (what it takes,
+     what it gives, its widgets), for the hotbox to say which dock and which context bar it opens with and
+     what they hold before any change. Nothing is created in the graph */
+  var BRW_LIKE = {};
+  function brwNodeLike(type) {
+    var def = (SRV.types && SRV.types[type]) || null, reg = null;
+    try { reg = ((litegraph() || {}).registered_node_types || {})[type] || null; } catch (e) { reg = null; }
+    if (!def && reg && reg.nodeData && typeof reg.nodeData === 'object') def = reg.nodeData;
+    if (!def && !reg) return null;
+    var c = BRW_LIKE[type];
+    if (c && c.def === def) return c.node;
+    var nd = { id: -1, type: type, comfyClass: type, title: String((def && def.display_name) || (reg && reg.title) || type),
+      inputs: [], outputs: [], widgets: [], properties: {}, flags: {}, pos: [0, 0], size: [210, 80], mode: 0, graph: null };
+    try {
+      var outs = def && Array.isArray(def.output) ? def.output : [], names = (def && Array.isArray(def.output_name)) ? def.output_name : [];
+      outs.forEach(function (t, i) {
+        var ty = Array.isArray(t) ? 'COMBO' : String(t);
+        nd.outputs.push({ name: String(names[i] || ty), type: ty, links: null });
+      });
+      ['required', 'optional'].forEach(function (g) {
+        var grp = (def && def.input && def.input[g]) || {};
+        Object.keys(grp).forEach(function (k) {
+          var spec = grp[k], it = Array.isArray(spec) ? spec[0] : spec;
+          var opt = (Array.isArray(spec) && spec[1] && typeof spec[1] === 'object') ? spec[1] : {};
+          var isW = Array.isArray(it) || /^(INT|FLOAT|STRING|BOOLEAN|COMBO)$/.test(String(it));
+          if (isW && !opt.forceInput) {
+            nd.widgets.push({ name: k, type: Array.isArray(it) ? 'combo' : String(it).toLowerCase(), value: opt['default'] !== undefined ? opt['default'] : (Array.isArray(it) ? it[0] : ''), options: opt });
+            if (opt.control_after_generate) nd.widgets.push({ name: 'control_after_generate', type: 'combo', value: 'randomize', options: {} });
+          } else nd.inputs.push({ name: k, type: String(it), link: null });
+        });
+      });
+    } catch (e) {}
+    BRW_LIKE[type] = { def: def, node: nd };
+    return nd;
+  }
+
+  /* the nodes found by name in the picture's field: each stands for its kind, as a node on the canvas does */
+  function brwPickOf(type) {
+    var nd = brwNodeLike(type);
+    if (!nd) return null;
+    try {
+      var b = hbBucket(nd);
+      return { type: type, node: nd, add: slotSig(nd), tools: b, name: nd.title, kind: BRW_BUCKET_NAMES[b] || '' };
+    } catch (e) { return null; }
+  }
+  function brwPicks() {
+    return (BRW.picks || []).map(brwPickOf).filter(Boolean);
+  }
+
   function brwCtxs(bar) {
     var by = {}, out = [];
     function push(key, node) {
@@ -13184,6 +13261,7 @@
     allNodes(getGraph()).slice(0, 400).forEach(function (n) {
       try { push(bar === 'add' ? slotSig(n) : hbBucket(n), n); } catch (e) {}
     });
+    brwPicks().forEach(function (p) { push(bar === 'add' ? p.add : p.tools, p.node); });
     return out;
   }
 
@@ -13210,6 +13288,8 @@
       out.push(e);
     }
     push({ add: 'canvas', tools: 'empty', node: null, name: 'Empty canvas', kind: '' });
+    /* a node found by name comes before the ones on the canvas, so the picture bears its name */
+    brwPicks().forEach(function (p) { push({ add: p.add, tools: p.tools, node: p.node, name: p.name, kind: p.kind, pick: p.type }); });
     allNodes(getGraph()).slice(0, 400).forEach(function (nd) {
       try {
         var b = hbBucket(nd);
@@ -13235,7 +13315,7 @@
     if (!cur) {
       var sn = null;
       try { sn = selNodes()[0] || null; } catch (e) { sn = null; }
-      for (i = 0; i < list.length && !cur; i++) if (sn ? list[i].node === sn || (list[i].add === slotSig(sn) && list[i].tools === hbBucket(sn)) : !!list[i].node) cur = list[i];
+      for (i = 0; i < list.length && !cur; i++) if (sn ? list[i].node === sn || (list[i].add === slotSig(sn) && list[i].tools === hbBucket(sn)) : (!!list[i].node && !list[i].pick)) cur = list[i];
     }
     if (bar === 'add' || bar === 'tools') {
       var k = BRW.ctxKey[bar];
@@ -13417,6 +13497,12 @@
       real.style.setProperty('--shb-bed-rz', String(zs[i]));
       if (real.scrollHeight <= room) break;
     }
+    /* Add to this bar hangs from the + that opened it: its notch is under it */
+    var pal = map.querySelector('[data-bed-pal]'), pbtn = map.querySelector('.shb-bed-palbtn');
+    if (pal && pbtn && pal.offsetWidth) {
+      var pr = pal.getBoundingClientRect(), br = pbtn.getBoundingClientRect(), pk = pr.width / pal.offsetWidth || 1;
+      pal.style.setProperty('--shb-bed-nx', Math.round(Math.max(16, Math.min(pal.offsetWidth - 16, (br.left + br.width / 2 - pr.left) / pk))) + 'px');
+    }
   }
   listen(window, 'resize', function () { if (BRW.el) brwStageFit(); });
 
@@ -13442,20 +13528,27 @@
      another one picks it */
   function brwMapHTML() {
     var bar = BRW.bar, st = brwStage(), many = brwStageSteps().length > 1;
-    var fl = hbIsFluid();
+    var fl = hbIsFluid(), palOpen = !!BRW.palOpen;
+    /* the hotbox's +. On the bar being edited it opens Add to this bar, and closes it */
+    function plus(live) {
+      return '<div class="shb-plus-wrap"><button type="button" class="shb-plus' +
+        (live ? ' shb-bed-palbtn' + (palOpen ? ' shb-plus-on' : '') + '" data-bed-act="pal" aria-expanded="' + (palOpen ? 'true' : 'false') + '" title="' +
+          esc(palOpen ? 'Close Add to this bar' : 'Add to this bar: the tools, nodes and models that can go on it') + '"' : '" tabindex="-1"') +
+        '>' + ico('plus', fl ? 22 : 18) + '</button></div>';
+    }
     function row(b, cls, name, sub, tip, extra) {
       var inner = '', on = bar === b;
       try { inner = on ? brwEditBarHTML(b, st) : brwStageBarHTML(b, st); } catch (e) { inner = ''; }
-      var none = '<span class="shb-bed-rnone">' + (b !== 'bot' && !st[b] ? 'This kind has none here' : (on ? 'Nothing on it yet: click a chip below, or drag one here' : 'Nothing on it yet')) + '</span>';
+      var none = '<span class="shb-bed-rnone">' + (b !== 'bot' && !st[b] ? 'This kind has none here' : (on ? (palOpen ? 'Nothing on it yet: click a chip below, or drag one here' : 'Nothing on it yet: the + adds') : 'Nothing on it yet')) + '</span>';
       /* the bar being edited is the place its buttons are dragged along, and where a chip is dropped */
       var barHTML = '<div class="shb-bar ' + cls + '"><div class="shb-bar-items' + (on ? ' shb-bed-ebar" data-bed-bar' : '"') + '>' + (inner || none) + '</div>' + (extra || '') + '</div>';
       var rowHTML = '<div class="shb-bed-rrow' + (on ? ' shb-on' : '') + '" data-bed-pick="' + b + '"' + (on ? '' : ' title="' + esc('Click to edit ' + tip.charAt(0).toLowerCase() + tip.slice(1)) + '"') + '>' +
         '<span class="shb-bed-rlbl"' + (on ? ' title="' + esc(tip) + '"' : '') + '><em>Editing</em><b>' + esc(name) + '</b><small>' + esc(sub) + '</small></span>' +
         '<div class="shb-bed-rbar"><div class="shb-bed-rz">' +
-          (b === 'bot' ? '<div class="shb-botrow">' + barHTML + '<div class="shb-plus-wrap"><button type="button" class="shb-plus" tabindex="-1">' + ico('plus', fl ? 22 : 18) + '</button></div></div>' : barHTML) +
+          (b === 'bot' ? '<div class="shb-botrow">' + barHTML + plus(on) + '</div>' : (on ? '<div class="shb-bed-prow">' + barHTML + plus(true) + '</div>' : barHTML)) +
         '</div></div>' +
       '</div>';
-      return on ? '<div class="shb-bed-rzone">' + rowHTML + brwPalHTML() + '</div>' : rowHTML;
+      return on ? '<div class="shb-bed-rzone">' + rowHTML + (palOpen ? brwPalHTML() : '') + '</div>' : rowHTML;
     }
     var dc = hbDockCat(), dcInfo = HB_CATS[dc];
     var dockEnd = dcInfo ? '<span class="shb-vsep"></span><button type="button" class="shb-btn shb-models-btn" tabindex="-1">' + ico(dcInfo.icon, 13) + '<span>' + esc(dcInfo.short) + '</span></button>' : '';
@@ -13465,8 +13558,12 @@
         row('tools', 'shb-ctx', 'Context bar', 'Tools for this node', 'The context bar: the tools for this kind of node', '') +
         '<div class="shb-bed-rnoderow"><div class="shb-bed-mnode">' +
           '<button type="button" data-bed-ctx="-1" title="The kind of node before" aria-label="The kind of node before"' + (many ? '' : ' disabled') + '>‹</button>' +
-          '<span title="The hotbox is drawn as it opens on this. The arrows step through the kinds of nodes on the canvas, and the bars you changed">' + esc(st.name) +
-            (st.kind && st.kind !== st.name ? '<small>' + esc(st.kind) + '</small>' : '') + '</span>' +
+          '<label class="shb-bed-nfind" title="The hotbox is drawn as it opens on this node. Type the name of any node to draw it for that one, and edit its dock and its context bar. The arrows step through the nodes on the canvas and the bars you changed">' +
+            ico('search', 13) +
+            '<input type="text" data-bed-nodeq spellcheck="false" autocomplete="off" value="' + esc(st.name) + '" placeholder="Type a node\'s name…" aria-label="The node the hotbox is drawn for: type a name to find another">' +
+            (st.kind && st.kind !== st.name ? '<small>' + esc(st.kind) + '</small>' : '') +
+            '<em>type to find a node</em>' +
+          '</label>' +
           '<button type="button" data-bed-ctx="1" title="The next kind of node" aria-label="The next kind of node"' + (many ? '' : ' disabled') + '>›</button>' +
         '</div></div>' +
         row('bot', 'shb-botbar', 'Bottom bar', 'Same on every node', 'The bottom bar: its tools, your buttons and your groups, on every node', botEnd) +
@@ -13609,7 +13706,7 @@
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
               '<div class="shb-bed-mapcol">' +
-                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · click a bar to edit it · drag its buttons along it, or off it to take them off</small></div>' +
+                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · type in the node to pick another · click a bar to edit it · drag its buttons along it, or off it · its + adds</small></div>' +
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
             '</div>' +
@@ -13625,6 +13722,7 @@
           '<span class="shb-bed-sp"></span><span class="shb-bed-saved"><i></i><span data-bed-saved></span></span>' +
         '</div>' +
         '<div data-bed-toast></div>' +
+        '<div class="shb-bed-ndd" data-bed-nodedd hidden></div>' +
         '<div class="shb-bed-grip" data-bed-grip title="Drag to make the window larger or smaller · double-click for its usual size">' +
           '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M10 3 3 10M10 7 7 10"/></svg>' +
         '</div>' +
@@ -13644,6 +13742,8 @@
     BRW.last = '';
     BRW.inspFor = '';
     BRW.bar = 'bot';
+    BRW.palOpen = false;
+    BRW.nodeQ = null;
     BRW.shut = modalOpen(function () { brwClose(); });
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
     bg.addEventListener('click', brwClick);
@@ -13656,6 +13756,27 @@
     /* the middle button slides the lanes: not the browser's own scrolling compass */
     bg.addEventListener('mousedown', function (ev) { if (ev.button === 1 && ev.target && ev.target.closest && ev.target.closest('[data-bed-lanes]')) ev.preventDefault(); });
     bg.addEventListener('input', brwInput);
+    /* the node's field: its name is picked whole when it is entered, what it finds shows under it, and it
+       is the node's name again when it is left. A press on what it found does not take the field's caret */
+    bg.addEventListener('focusin', function (ev) {
+      var f = ev.target;
+      if (!f || !f.hasAttribute || !f.hasAttribute('data-bed-nodeq') || BRW.nodeKeep) return;
+      BRW.nodeQ = '';
+      BRW.nodeHot = 0;
+      /* in the list of kinds, the one the hotbox is drawn for is the lit one */
+      try {
+        var curSt = brwStage();
+        brwStageSteps().forEach(function (e, i) { if (curSt && e.id === curSt.id) BRW.nodeHot = i; });
+      } catch (e) {}
+      setTimeout(function () { if (document.activeElement === f) { try { f.select(); } catch (e) {} } }, 0);
+      brwNodeDD();
+    });
+    bg.addEventListener('focusout', function (ev) {
+      var f = ev.target;
+      if (!f || !f.hasAttribute || !f.hasAttribute('data-bed-nodeq') || BRW.nodeKeep) return;
+      brwNodeLeave(f);
+    });
+    bg.addEventListener('mousedown', function (ev) { if (ev.target && ev.target.closest && ev.target.closest('[data-bed-nodedd]')) ev.preventDefault(); });
     bg.addEventListener('paste', function (ev) {
       /* the text a teammate sent, pasted into its box: read as it lands */
       if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-bed-paste')) setTimeout(function () { brwPasteRead(ev.target.value); }, 0);
@@ -13919,6 +14040,7 @@
         '<span class="shb-bed-ptabs" data-bed-ptabs>' + brwPalTabsHTML(d) + '</span>' +
         '<label class="shb-bed-find shb-bed-addfind"><span>⌕</span><input type="text" data-bed-addq spellcheck="false" value="' + esc(BRW.addQ || '') + '" placeholder="Type a node, tool or model to add…"></label>' +
         (own ? '<button type="button" class="shb-bed-preset" data-bed-act="barreset" title="Back to what Hotbox proposes for this kind of node">Reset</button>' : '') +
+        '<button type="button" class="shb-bed-palx" data-bed-act="pal" title="Close (the + of the bar opens it again)" aria-label="Close Add to this bar">×</button>' +
       '</div>' +
       '<div class="shb-bed-chips" data-bed-chips>' + brwPalChipsHTML(d) + '</div>' +
     '</div>';
@@ -14105,6 +14227,8 @@
     /* the field of the palette keeps its caret, and the chips their place, while the picture is drawn again */
     var mapEl = bg.querySelector('[data-bed-map]'), af = document.activeElement;
     var addSel = af && af.hasAttribute && af.hasAttribute('data-bed-addq') ? [af.selectionStart, af.selectionEnd] : null;
+    var nodeSel = af && af.hasAttribute && af.hasAttribute('data-bed-nodeq') && BRW.nodeQ !== null ? [af.value, af.selectionStart, af.selectionEnd] : null;
+    if (nodeSel) BRW.nodeKeep = true;
     var chips0 = mapEl.querySelector('[data-bed-chips]'), chipsTop = chips0 ? chips0.scrollTop : 0, mapTop = mapEl.scrollTop;
     mapEl.innerHTML = brwMapHTML();
     brwStageFit();
@@ -14114,6 +14238,12 @@
     if (addSel) {
       var addIn = mapEl.querySelector('[data-bed-addq]');
       if (addIn) { try { addIn.focus(); addIn.setSelectionRange(addSel[0], addSel[1]); } catch (e) {} }
+    }
+    if (nodeSel) {
+      var nodeIn = mapEl.querySelector('[data-bed-nodeq]');
+      if (nodeIn) { try { nodeIn.value = nodeSel[0]; nodeIn.focus(); nodeIn.setSelectionRange(nodeSel[1], nodeSel[2]); } catch (e) {} }
+      BRW.nodeKeep = false;
+      brwNodeDD();
     }
     var nOwn = (S.templates || []).length, nGrp = Object.keys(S.hbGroups || {}).length, nSh = libSharedButtons().length;
     bg.querySelector('[data-bed-sum]').textContent = nOwn + (nOwn === 1 ? ' button' : ' buttons') + ' · ' + nGrp + (nGrp === 1 ? ' group' : ' groups') + (nSh ? ' · ' + nSh + ' shared' : '');
@@ -14335,10 +14465,95 @@
     });
   }
 
+  /* ---- THE NODE THE HOTBOX IS DRAWN FOR is a field. Entered, it lists the kinds there are (the ones the arrows
+     step through); with a name typed, every node this ComfyUI has with that name, ranked as the hotbox's own
+     search ranks them. Picking one draws the hotbox as it opens on that node, on the canvas or not, and its
+     dock is the bar being edited (its context bar, when that was the one) ---- */
+  function brwNodeRows() {
+    var q = String(BRW.nodeQ || '').trim(), rows = [];
+    if (!q) {
+      brwStageSteps().forEach(function (e) { rows.push({ stage: e.id, name: e.name, kind: e.kind && e.kind !== e.name ? e.kind : '' }); });
+      return { cap: 'Type the name of any node · or pick one of these', rows: rows.slice(0, 40) };
+    }
+    try {
+      nodeSearch(q, null).slice(0, 14).forEach(function (h) {
+        var p = brwPickOf(h.t);
+        if (p) rows.push({ type: h.t, name: p.name, kind: p.kind });
+      });
+    } catch (e) {}
+    return { cap: '', rows: rows };
+  }
+
+  function brwNodeDD() {
+    var bg = BRW.el, box = brwBox(), dd = bg && bg.querySelector('[data-bed-nodedd]'), f = bg && bg.querySelector('.shb-bed-nfind');
+    if (!dd || !box || !f || BRW.nodeQ === null) { if (dd) dd.hidden = true; return; }
+    var d = brwNodeRows();
+    BRW.nodeRows = d.rows;
+    if (BRW.nodeHot >= d.rows.length) BRW.nodeHot = Math.max(0, d.rows.length - 1);
+    dd.innerHTML = (d.cap ? '<div class="shb-bed-ndcap">' + esc(d.cap) + '</div>' : '') +
+      (d.rows.length ? d.rows.map(function (r, i) {
+        return '<button type="button" tabindex="-1" class="shb-bed-ndr' + (i === BRW.nodeHot ? ' shb-hot' : '') + '" data-bed-noderow="' + i + '"><span>' + esc(r.name) + '</span>' + (r.kind ? '<small>' + esc(r.kind) + '</small>' : '') + '</button>';
+      }).join('') : '<div class="shb-bed-ndnone">No node with that name</div>');
+    /* under the field, inside the window (which may be scaled up: the four A's) */
+    var br = box.getBoundingClientRect(), fr = f.getBoundingClientRect(), z = (box.offsetWidth && br.width / box.offsetWidth) || 1;
+    dd.style.left = Math.round((fr.left - br.left) / z) + 'px';
+    dd.style.top = Math.round((fr.bottom - br.top) / z + 5) + 'px';
+    dd.style.width = Math.round(fr.width / z) + 'px';
+    dd.style.maxHeight = Math.max(90, Math.min(330, Math.round((br.bottom - fr.bottom) / z - 16))) + 'px';
+    dd.hidden = false;
+    var hot = dd.querySelector('.shb-hot');
+    if (hot && hot.scrollIntoView) { try { hot.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+  }
+
+  function brwNodeLeave(f) {
+    BRW.nodeQ = null;
+    var dd = BRW.el && BRW.el.querySelector('[data-bed-nodedd]');
+    if (dd) dd.hidden = true;
+    if (f) { try { f.value = brwStage().name; } catch (e) {} }
+  }
+
+  function brwNodePick(i) {
+    var r = (BRW.nodeRows || [])[i], f = BRW.el && BRW.el.querySelector('[data-bed-nodeq]');
+    if (!r) return;
+    if (f && document.activeElement === f) { try { f.blur(); } catch (e) {} }
+    brwNodeLeave(null);
+    if (r.stage) {
+      var e = brwStages().filter(function (x) { return x.id === r.stage; })[0];
+      if (!e) return;
+      BRW.stageId = e.id;
+      if (e.add) BRW.ctxKey.add = e.add;
+      if (e.tools) BRW.ctxKey.tools = e.tools;
+      if ((BRW.bar === 'add' || BRW.bar === 'tools') && !e[BRW.bar]) BRW.bar = e.add ? 'add' : (e.tools ? 'tools' : 'bot');
+    } else {
+      var p = brwPickOf(r.type);
+      if (!p) return;
+      BRW.picks = [r.type].concat((BRW.picks || []).filter(function (t) { return t !== r.type; })).slice(0, 6);
+      BRW.stageId = p.add + '|' + p.tools;
+      BRW.ctxKey.add = p.add;
+      BRW.ctxKey.tools = p.tools;
+      /* the bottom bar is the same on every node: what a node is picked for is its dock */
+      if (BRW.bar !== 'tools') BRW.bar = 'add';
+    }
+    brwRender();
+  }
+
+  /* Add to this bar opens under the bar being edited, and closes: the + of the bar, or the palette's own × */
+  function brwPalToggle() {
+    BRW.palOpen = !BRW.palOpen;
+    brwRender();
+    if (!BRW.palOpen || !BRW.el) return;
+    var f = BRW.el.querySelector('[data-bed-addq]');
+    if (f) { try { f.focus(); } catch (e) {} }
+  }
+
   function brwInput(ev) {
     var t = ev.target;
     if (!t || !t.hasAttribute) return;
-    if (t.hasAttribute('data-bed-q')) {
+    if (t.hasAttribute('data-bed-nodeq')) {
+      BRW.nodeQ = t.value;
+      BRW.nodeHot = 0;
+      brwNodeDD();
+    } else if (t.hasAttribute('data-bed-q')) {
       BRW.q = t.value;
       brwRender();
     } else if (t.hasAttribute('data-bed-addq')) {
@@ -14366,6 +14581,9 @@
     if (act === 'newgrp') { brwNewGroup(''); return; }
     if (act === 'paste') { brwPasteOpen(); return; }
     if (act === 'max') { BRW.win.max = !BRW.win.max; brwWinSave(); brwWinApply(); return; }
+    if (act === 'pal') { brwPalToggle(); return; }
+    var nr = t.closest('[data-bed-noderow]');
+    if (nr) { brwNodePick(+nr.getAttribute('data-bed-noderow')); return; }
     var zb = t.closest('[data-bed-z]');
     if (zb) { brwWinZoom(+zb.getAttribute('data-bed-z')); return; }
     /* the map: a bar, or the kind of node before or after; and the bar in the strip: off it, onto it, as it was */
@@ -14475,6 +14693,18 @@
     var k = String(e.key || ''), kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     var a = document.activeElement, typing = hbTyping();
     if (typing) {
+      if (a && a.hasAttribute && a.hasAttribute('data-bed-nodeq')) {
+        /* in the node's field the arrows walk what it found, Enter takes the lit one, Esc leaves it as it was */
+        if (k === 'ArrowDown' || k === 'ArrowUp') {
+          hbEat(e);
+          var nn = (BRW.nodeRows || []).length;
+          if (nn) { BRW.nodeHot = (BRW.nodeHot + (k === 'ArrowDown' ? 1 : nn - 1)) % nn; brwNodeDD(); }
+          return true;
+        }
+        if (k === 'Enter') { hbEat(e); if (!e.repeat) brwNodePick(BRW.nodeHot); return true; }
+        if (k === 'Escape') { hbEat(e); try { a.blur(); } catch (x) {} return true; }
+        return false;
+      }
       if (a && a.hasAttribute && a.hasAttribute('data-bed-addq') && (k === 'Escape' || k === 'Enter')) {
         /* in the palette's field Enter puts the first one found on the bar, Esc empties the field, then leaves it */
         hbEat(e);
