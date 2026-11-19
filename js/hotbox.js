@@ -676,6 +676,7 @@
     chevDown: '<path d="M6 9l6 6 6-6"/>',
     chevRight: '<path d="M9 6l6 6-6 6"/>',
     chevUp: '<path d="M6 15l6-6 6 6"/>',
+    arrowUp: '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
     group: '<rect x="3" y="4" width="18" height="16" rx="2" stroke-dasharray="3 2.6"/><path d="M3 9h18"/>',
     crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
     stitch: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
@@ -1230,9 +1231,13 @@
       '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0 0);color:oklch(0.6 0 0);font-size:12px;white-space:nowrap}',
       '.shb-bed-gpill{font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;color:var(--shb-fg);background:transparent !important;box-shadow:none !important}',
       '.shb-bed-gpill .shb-bed-erm,.shb-bed-gpill .shb-gdrop,.shb-bed-gpill .shb-x{display:none !important}',
-      '.shb-bed-pal{display:flex;flex-direction:column;gap:6px;padding:7px 8px 8px;border-radius:8px;background:oklch(0.17 0 0 / .8);border:1px solid oklch(0.82 0.13 78 / .28);font-family:Inter,system-ui,sans-serif}',
+      /* the palette is a box of its own that hangs from the bar: a solid ground, a clear edge, and a notch that
+         points up at the bar its chips go onto */
+      '.shb-bed-pal{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:7px;padding:8px 9px 9px;border-radius:9px;background:oklch(0.2 0.014 78);border:1.5px solid oklch(0.82 0.13 78 / .7);box-shadow:0 6px 16px rgba(0,0,0,.28);font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-pal::before{content:"";position:absolute;top:-7.5px;left:calc(50% - 6px);width:12px;height:12px;box-sizing:border-box;background:oklch(0.2 0.014 78);border-left:1.5px solid oklch(0.82 0.13 78 / .7);border-top:1.5px solid oklch(0.82 0.13 78 / .7);border-top-left-radius:3px;transform:rotate(45deg)}',
       '.shb-bed-palhd{display:flex;align-items:center;gap:8px;min-width:0}',
-      '.shb-bed-palhd > b{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:oklch(0.88 0.1 82);white-space:nowrap}',
+      '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.82 0.13 78);color:oklch(0.22 0.04 78);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
+      '.shb-bed-palhd > b .shb-ico{stroke-width:2.6}',
       '.shb-bed-ptabs{display:inline-flex;gap:4px;flex:none}',
       '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0 0);border-radius:6px;background:oklch(0.22 0 0);color:oklch(0.72 0 0);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
       '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0 0)}',
@@ -13390,7 +13395,7 @@
     var bg = BRW.el, map = bg && bg.querySelector('[data-bed-map]'), real = map && map.querySelector('.shb-bed-real');
     if (!real) return;
     var box = bg.querySelector('.shb-bed'), h = (box && box.clientHeight) || 820;
-    var room = Math.max(200, Math.min(380, Math.round(h * 0.47) - 40));
+    var room = Math.max(210, Math.min(394, Math.round(h * 0.47) - 26));
     map.style.maxHeight = (room + 18) + 'px';
     /* the palette shows two rows of chips, one in a short window; the rest scrolls */
     map.style.setProperty('--shb-bed-chh', (h < 800 ? 28 : 58) + 'px');
@@ -13881,7 +13886,7 @@
     var d = brwPalData(), own = BRW.bar !== 'bot' && brwBarOwn();
     return '<div class="shb-bed-pal" data-bed-pal>' +
       '<div class="shb-bed-palhd">' +
-        '<b>' + ico('plus', 12) + 'Add to this bar</b>' +
+        '<b title="What can go on the bar above: click a chip, or drag it up to a place on the bar">' + ico('arrowUp', 11) + 'Add to this bar</b>' +
         '<span class="shb-bed-ptabs" data-bed-ptabs>' + brwPalTabsHTML(d) + '</span>' +
         '<label class="shb-bed-find shb-bed-addfind"><span>⌕</span><input type="text" data-bed-addq spellcheck="false" value="' + esc(BRW.addQ || '') + '" placeholder="Type a node, tool or model to add…"></label>' +
         (own ? '<button type="button" class="shb-bed-preset" data-bed-act="barreset" title="Back to what Hotbox proposes for this kind of node">Reset</button>' : '') +
