@@ -30,8 +30,10 @@ Restart ComfyUI and press <kbd>`</kbd> over any node.
 <img src="docs/media/find-any-node.webp" alt="F opens the search on a VAE Decode: upscale lists the nodes that take its IMAGE first, Enter adds and wires one, then a typo, previw, still finds Preview Image" width="100%">
 
 It ranks like ComfyUI's own search: ComfyUI's nodes first, a check on the ones that fit the node's output,
-the pack's name beside a custom node. Typos and short forms (`previw`, `load img`, `ckpt`) still find it.
-<kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired.
+the pack's name beside a custom node. Typos, short forms and initials (`previw`, `load img`, `ckpt`, `vd`) still find it.
+<kbd>↑</kbd> <kbd>↓</kbd> pick one and <kbd>Enter</kbd> adds it, already wired. It learns as you go: the nodes
+you add most and the ones you usually add after the node you are on come up, and a star
+(<kbd>Ctrl</kbd>+<kbd>Enter</kbd>) puts a node first.
 
 **Swap the model, keep the prompt**
 
@@ -62,7 +64,23 @@ Saved buttons can live in a shared folder too (a studio drive, one per show), so
 
 <img src="docs/media/button-colors.webp" alt="Edit mode: Render Selected painted green, Bypass marked red, VAE Decode painted purple" width="100%">
 
-In edit mode, tap a button to rename it or give it a color: on its mark only, or on the whole button.
+In edit mode, click a button (or right-click it any time) to rename it, give it a color (on its mark only, or on the
+whole button) and a key of its own. Drag any button anywhere, into a group too, with no need to hold it first: nothing
+moves while it is in your hand, and a line marks where it will land. Let go outside a bar and it goes back where it
+was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
+
+A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
+nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: a map of the hotbox to pick a bar (the bottom bar, the dock, the swap bar of an API node),
+a lane for every group, and each button's name, color, icon, key and nodes.
+
+<img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, a new group moves along the bar, and the Dock picked on the map gets two models on its swap bar" width="100%">
+
+**Send a button to anyone**
+
+<img src="docs/tutorial/12-share-a-button.gif" alt="Copy to share in the button editor, then Ctrl+V on the canvas: a card asks, and the button is in the bar" width="100%">
+
+**Copy to share** puts a saved button or a group on the clipboard as text. Paste it into any chat; whoever gets it
+presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI, and a card asks before adding it.
 
 **Put any tool anywhere**
 
@@ -70,6 +88,10 @@ In edit mode, tap a button to rename it or give it a color: on its mark only, or
 
 Drag a button from one bar to another, or a power tool straight out of Settings. It stays where you put it, and
 where it does not apply it is dimmed.
+
+**Settings → Power Tools → Browse…** lists every power tool with a short clip of what it does, its key, a switch
+that turns it off and a button that puts it on your bottom bar. **Icons Only**, beside it, leaves the tools in the
+bars as icons alone: the name shows when the pointer is on one.
 
 **One setup per project**
 
