@@ -1231,20 +1231,21 @@
       '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0 0);color:oklch(0.6 0 0);font-size:12px;white-space:nowrap}',
       '.shb-bed-gpill{font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;color:var(--shb-fg);background:transparent !important;box-shadow:none !important}',
       '.shb-bed-gpill .shb-bed-erm,.shb-bed-gpill .shb-gdrop,.shb-bed-gpill .shb-x{display:none !important}',
-      /* the palette is a box of its own that hangs from the bar: a solid ground, a clear edge, and a notch that
-         points up at the bar its chips go onto */
-      '.shb-bed-pal{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:7px;padding:8px 9px 9px;border-radius:9px;background:oklch(0.2 0.014 78);border:1.5px solid oklch(0.82 0.13 78 / .7);box-shadow:0 6px 16px rgba(0,0,0,.28);font-family:Inter,system-ui,sans-serif}',
-      '.shb-bed-pal::before{content:"";position:absolute;top:-7.5px;left:calc(50% - 6px);width:12px;height:12px;box-sizing:border-box;background:oklch(0.2 0.014 78);border-left:1.5px solid oklch(0.82 0.13 78 / .7);border-top:1.5px solid oklch(0.82 0.13 78 / .7);border-top-left-radius:3px;transform:rotate(45deg)}',
+      /* the palette is a box of its own that hangs from the bar: a solid ground, an edge in the hotbox's blue (the
+         blue of its +, which adds; amber is the bar being edited), and a notch that points up at the bar its chips go onto */
+      '.shb-bed-pal{position:relative;margin-top:8px;display:flex;flex-direction:column;gap:7px;padding:8px 9px 9px;border-radius:9px;background:oklch(0.2 0.022 250);border:1.5px solid oklch(0.7 0.14 250);box-shadow:0 6px 16px rgba(0,0,0,.28);font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-pal::before{content:"";position:absolute;top:-7.5px;left:calc(50% - 6px);width:12px;height:12px;box-sizing:border-box;background:oklch(0.2 0.022 250);border-left:1.5px solid oklch(0.7 0.14 250);border-top:1.5px solid oklch(0.7 0.14 250);border-top-left-radius:3px;transform:rotate(45deg)}',
       '.shb-bed-palhd{display:flex;align-items:center;gap:8px;min-width:0}',
-      '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.82 0.13 78);color:oklch(0.22 0.04 78);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
+      '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.64 0.16 250);color:#fff;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
       '.shb-bed-palhd > b .shb-ico{stroke-width:2.6}',
       '.shb-bed-ptabs{display:inline-flex;gap:4px;flex:none}',
       '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0 0);border-radius:6px;background:oklch(0.22 0 0);color:oklch(0.72 0 0);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
       '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0 0)}',
       '.shb-bed-ptab:hover{background:oklch(0.27 0 0)}',
-      '.shb-bed-ptab.shb-on{border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78);color:oklch(0.93 0.07 85)}',
-      '.shb-bed-ptab.shb-on em{color:oklch(0.8 0.08 85)}',
+      '.shb-bed-ptab.shb-on{border-color:oklch(0.7 0.14 250);background:oklch(0.32 0.07 250);color:oklch(0.95 0.03 250)}',
+      '.shb-bed-ptab.shb-on em{color:oklch(0.84 0.07 250)}',
       '.shb-bed-find.shb-bed-addfind{flex:1 1 200px;width:auto;height:26px;min-width:120px}',
+      '.shb-bed-find.shb-bed-addfind:focus-within{border-color:oklch(0.7 0.14 250)}',
       '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
       '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
       '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
