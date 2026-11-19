@@ -70,7 +70,7 @@ moves while it is in your hand, and a line marks where it will land. Let go outs
 was, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes back the last change.
 
 A saved button can change and stay the same button: select the nodes and choose **Use selection**, or **Edit its
-nodes…** to change a value right there. **Settings → Saved Buttons → Browse…** opens the button editor: a map of the hotbox to pick a bar (the bottom bar, the dock, the swap bar of an API node),
+nodes…** to change a value right there. **Settings → Button Editor** opens the button editor: a map of the hotbox to pick a bar (the bottom bar, the dock, the swap bar of an API node),
 a lane for every group, and each button's name, color, icon, key and nodes.
 
 <img src="docs/tutorial/11-button-editor.gif" alt="The button editor: a button gets a name, a color, an icon and a key, goes into a group, a new group moves along the bar, and the Dock picked on the map gets two models on its swap bar" width="100%">
@@ -89,8 +89,8 @@ presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI, and a card asks before adding i
 Drag a button from one bar to another, or a power tool straight out of Settings. It stays where you put it, and
 where it does not apply it is dimmed.
 
-**Settings → Power Tools → Browse…** lists every power tool with a short clip of what it does, its key, a switch
-that turns it off and a button that puts it on your bottom bar. **Icons Only**, beside it, leaves the tools in the
+The **Tool Guide** (the book button in **Settings → Power Tools**) shows every power tool with a short clip of what it does, its key, a switch
+that turns it off and a button that puts it on your bottom bar. **Icons Only**, in that list and on from the start, leaves the tools in the
 bars as icons alone: the name shows when the pointer is on one.
 
 **One setup per project**

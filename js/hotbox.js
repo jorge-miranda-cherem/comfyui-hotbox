@@ -35,7 +35,7 @@
     hbScrim: true,          /* Fluid: soft canvas dim behind the hotbox (never blurred) */
     hbBlur: true,           /* Fluid & Compact: frosted glass behind bars and cards (costly without a GPU: off = plain panels) */
     hbLeaders: false,       /* Quiet: hairlines from the cursor to each zone (off: they cover the node) */
-    hbIconsOnly: false,     /* in the bars a tool shows its icon alone; its name and key show under the pointer */
+    hbIconsOnly: true,      /* in the bars a tool shows its icon alone; its name and key show under the pointer */
     hbScale: 1.0,
     hbGap: 28,              /* spacing in px between node/center and hotbox bars */
     showStatusPill: true,
@@ -176,7 +176,10 @@
        or was just the default of its day, and nothing tells the two apart: it opens in Compact once. Tab (or
        Settings → UI Style) brings Fluid back, and from then on it stays */
     if (rev < 6 && S.hbStyle === 'pro') S.hbStyle = 'classic';
-    S.cfgRev = 6;
+    /* Icons Only is how the bars start now. A file saved before carries it off, chosen or not (it was new and
+       off by default): it comes on once, and the switch in Settings → Power Tools turns it off for good */
+    if (rev < 7) S.hbIconsOnly = true;
+    S.cfgRev = 7;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (!S.customIcons || typeof S.customIcons !== 'object' || Array.isArray(S.customIcons)) S.customIcons = {};
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
@@ -718,6 +721,8 @@
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+    guide: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+    paste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11v6"/><path d="m9 14 3 3 3-3"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
     expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
@@ -1054,8 +1059,25 @@
       '.shb-cycle-dots i{width:5px;height:5px;border-radius:50%;background:#4a4a4a}',
       '.shb-cycle-dots i.shb-on{background:#64a8f0}',
       '.shb-ptmenu{gap:8px;min-width:168px;justify-content:space-between}',
-      '.shb-ptmenu .shb-ptmenu-v{flex:1;text-align:left}',
+      '.shb-ptmenu .shb-ptmenu-v{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.shb-ptmenu .shb-ptmenu-v small{margin-left:9px;font-weight:400;font-size:11.5px;color:#8a8a8a}',
       '.shb-pt{margin-top:6px}',
+      /* Settings: a line between its parts, and a part that is a summary to open, its list, and its buttons under it */
+      '.shb-set-sep{grid-column:1/-1;height:1px;background:#2b2b2b;margin:6px 0 4px}',
+      '.shb-set-sec{display:flex;flex-direction:column;gap:8px;min-width:0}',
+      '.shb-set-row{display:flex;align-items:stretch;gap:8px;min-width:0}',
+      '.shb-set-row > .shb-ptmenu{flex:1;min-width:0;min-height:32px;box-sizing:border-box}',
+      '.shb-set-ib{flex:none;width:34px;min-height:32px;padding:0;justify-content:center;box-sizing:border-box}',
+      '.shb-set-open{align-items:center;gap:10px}',
+      '.shb-set-open small{min-width:0;font-size:11.5px;line-height:1.3;color:#8a8a8a}',
+      '.shb-set-sec > .shb-pt{margin-top:0;padding:6px;border:1px solid #2c2c2c;border-radius:8px;background:rgba(255,255,255,.02);box-sizing:border-box}',
+      '.shb-pt-opt{display:flex;align-items:center;gap:10px;padding:7px 8px;margin-bottom:5px;border-radius:6px;border:1px solid #333;background:#232323;cursor:pointer;user-select:none}',
+      '.shb-pt-opt:hover{background:#292929;border-color:#3f3f3f}',
+      '.shb-pt-opt > .shb-ico{color:#9aa4b2;flex-shrink:0}',
+      '.shb-sw{flex:none;position:relative;width:30px;height:16px;border-radius:8px;background:#3d3d3d;transition:background 120ms ease}',
+      '.shb-sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#b9b9b9;transition:transform 120ms ease,background 120ms ease}',
+      '.shb-sw.shb-on{background:#3f77bd}',
+      '.shb-sw.shb-on::after{transform:translateX(14px);background:#fff}',
       '.shb-pt-row > .shb-ico{color:#9aa4b2}',
       '.shb-pt-info{width:16px;height:16px;border-radius:50%;border:1px solid #555;color:#9a9a9a;font:600 10px/14px Inter,system-ui,sans-serif;text-align:center;flex-shrink:0;cursor:help}',
       '.shb-ghost{position:fixed;z-index:2147483550;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;transform:translate(-50%,-50%)}',
@@ -1119,7 +1141,7 @@
       '.shb-brw-tools{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}',
       '.shb-brw-tools .shb-btn:disabled,.shb-ted-foot .shb-btn:disabled{opacity:.4;pointer-events:none}',
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
-      /* The button editor (Settings → Saved Buttons → Browse…): the look of the studio tools it sits beside —
+      /* The button editor (Settings → Button Editor): the look of the studio tools it sits beside —
          neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
       '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(820px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
       /* its size is yours: the corner stretches it, the arrows beside Done fill the screen, and the four A's
@@ -1373,8 +1395,6 @@
       /* Settings → Saved Buttons: groups, and a button's own color on its row */
       '.shb-sb-grp > .shb-ico{color:var(--shb-tint,#7aa7e0)}',
       '.shb-pt-row[style*="--shb-tint"] .shb-tpl-ico .shb-ico{color:var(--shb-tint) !important}',
-      '.shb-sb-top{display:flex;gap:6px;align-items:stretch}',
-      '.shb-sb-top .shb-ptmenu{flex:1;min-width:0}',
 
       /* Drawer for Categories / Search / Models */
       '.shb-drawer{display:flex;flex-direction:column;gap:6px;width:320px;max-height:420px;overflow:hidden;box-sizing:border-box}',
@@ -1419,7 +1439,7 @@
       /* A button that leads with an icon (22px, larger than its name): the name sits a step back and half a point
          smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
          tall as they were. A tool's row in a card reads the same way */
-      /* The power tools browser (Settings → Power Tools → Browse…): the button editor's window, with its own list and panel */
+      /* The Tool Guide, the power tools browser (Settings → Power Tools → Tool Guide): the button editor's window, with its own list and panel */
       '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0 0);overflow-y:auto}',
       '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0 0);text-align:left;cursor:grab;touch-action:none;user-select:none}',
       '.shb-ptb-row:hover{background:oklch(0.26 0 0)}',
@@ -11493,6 +11513,11 @@
         NODE_DRAG = { node: dn, x0: e.clientX, y0: e.clientY, pos0: [dn.pos[0], dn.pos[1]], active: false, over: false, closeOnUp: !!HB.el };
       }
     }
+    /* Settings goes with a press outside as well: it used to stay afloat over the canvas after the hotbox it
+       was showing had gone. A press on anything of Hotbox's own keeps it (its bars, its windows), and so does
+       the press that only leaves edit mode */
+    if (!inUi && !(HB.el && HB.editMode) && openSettingsModal._close && !(t && t.closest && t.closest('[data-shb-owned]'))
+      && document.getElementById(PANEL_ID + '-settings')) openSettingsModal._close();
     if (!HB.el || inUi) return;
     if (HB.editMode) {
       hbSetEdit(false);
@@ -13036,7 +13061,7 @@
   }
 
   /* ---------------------------------------------------------------------
-   * 14b. THE BUTTON EDITOR (Settings → Saved Buttons → Browse…): the bottom bar as it is, a lane for every
+   * 14b. THE BUTTON EDITOR (Settings → Button Editor): the bottom bar as it is, a lane for every
    * group with its buttons, a lane for the saved buttons that are in no group, and an inspector for the one
    * that is picked (name, color, icon, key, group and what it adds; for a group, where it shows and its place
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
@@ -16004,7 +16029,7 @@
     if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) tipHide();
   }, true);
 
-  /* ---- THE POWER TOOLS BROWSER (Settings → Power Tools → Browse…). Every power tool in one window, in the
+  /* ---- THE TOOL GUIDE, the power tools browser (Settings → Power Tools → Tool Guide). Every power tool in one window, in the
      button editor's look: the list on the left, and on the right the picked tool with a clip of what it does,
      its key, a switch that turns it off everywhere, and a button that puts it on the bottom bar. A tool dragged
      out of the list goes onto any hotbox bar, as it does from Settings: the window steps aside while it moves ---- */
@@ -16066,7 +16091,7 @@
     bg.innerHTML =
       '<div class="shb-modal shb-bed shb-ptb">' +
         '<div class="shb-bed-hd">' +
-          '<span class="shb-bed-mark"></span><b>Hotbox</b><i>/</i><span class="shb-bed-t2">Power Tools</span><span class="shb-bed-sum" data-ptb-sum></span>' +
+          '<span class="shb-bed-mark"></span><b>Hotbox</b><i>/</i><span class="shb-bed-t2">Tool Guide</span><span class="shb-bed-sum" data-ptb-sum></span>' +
           '<span class="shb-bed-sp"></span>' +
           '<label class="shb-bed-find"><span>⌕</span><input type="text" data-ptb-q spellcheck="false" placeholder="Find a tool or a key…"><span class="shb-bed-kc">/</span></label>' +
           '<button type="button" class="shb-bed-hb shb-ptb-io" data-ptb-act="icons" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it">' + ico('layout', 13) + '<span>Icons Only</span></button>' +
@@ -16448,7 +16473,7 @@
         var g = S.hbGroups[gid] || {}, gUid = 'grp:' + gid, gTint = barTint(gUid), gKey = hbKeyName(hbKeyFor(gUid));
         var names = (g.items || []).map(hbUidLabel);
         return '<div class="shb-pt-row shb-sb-grp" data-st-ptuid="' + esc(gUid) + '"' + (gTint ? ' style="--shb-tint:' + esc(gTint) + '"' : '') +
-          ' data-tip="' + esc('A group of ' + names.length + (names.length === 1 ? ' button' : ' buttons') + (names.length ? ': ' + names.join(', ') : '') + ' · Browse opens it') + '">' +
+          ' data-tip="' + esc('A group of ' + names.length + (names.length === 1 ? ' button' : ' buttons') + (names.length ? ': ' + names.join(', ') : '') + ' · the Button Editor opens it') + '">' +
           '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
           ico('folder', 15) +
           '<span class="shb-pt-name">' + esc(hbBtnName(gUid, g.name)) + '<small>' + esc(names.slice(0, 3).join(' · ') + (names.length > 3 ? ' +' + (names.length - 3) : '') || 'empty') + '</small></span>' +
@@ -16456,13 +16481,15 @@
           '<span class="shb-tpl-n">' + names.length + '</span>' +
         '</div>';
       }).join('') : '';
-      return '<div class="shb-sb-top">' +
-        '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-sbmenu data-tip="Every set of nodes saved with Save as Button (X), and every group of buttons. Drag one onto a hotbox bar to pin it, or a saved button onto the canvas to add its nodes there.">' +
-          '<span class="shb-ptmenu-v">' + list.length + ' saved' + (gids.length ? ' · ' + gids.length + (gids.length === 1 ? ' group' : ' groups') : '') + (shared.length ? ' · ' + shared.length + ' shared' : '') + '</span>' +
-          ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
-        '</button>' +
-        '<button type="button" class="shb-btn shb-btn-on" data-st-browse data-tip="The button editor: your bottom bar as it is, a lane for every group, and the name, color, icon, key and nodes of each button. Drag to move; every change saves itself, with Undo and Redo">' + ico('search', 13) + '<span>Browse…</span></button>' +
-        (S.hbShare !== false ? '<button type="button" class="shb-btn shb-btn-pri" data-st-paste data-tip="Add the buttons someone copied for you with Copy to share. Ctrl+V anywhere in ComfyUI does the same">' + ico('download', 13) + '<span>Paste…</span></button>' : '') +
+      /* the summary (it opens the list) with what can be opened from here beside it, as small buttons; the list under */
+      var more = (gids.length ? [gids.length + (gids.length === 1 ? ' group' : ' groups')] : []).concat(shared.length ? [shared.length + ' shared'] : []);
+      return '<div class="shb-set-sec">' +
+        '<div class="shb-set-row">' +
+          '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-sbmenu data-tip="Every set of nodes saved with Save as Button (X), and every group of buttons. Drag one onto a hotbox bar to pin it, or a saved button onto the canvas to add its nodes there.">' +
+            '<span class="shb-ptmenu-v">' + list.length + ' saved' + (more.length ? '<small>' + esc(more.join(' · ')) + '</small>' : '') + '</span>' +
+            ico(sbOpen ? 'chevDown' : 'chevRight', 13) +
+          '</button>' +
+          (S.hbShare !== false ? '<button type="button" class="shb-btn shb-btn-pri shb-set-ib" data-st-paste aria-label="Paste Buttons" data-tip="Paste Buttons · add the buttons someone copied for you with Copy to share. Ctrl+V anywhere in ComfyUI does the same">' + ico('paste', 15) + '</button>' : '') +
         '</div>' +
         (sbOpen ? '<div class="shb-pt">' +
           (list.length || shared.length || gids.length ? '<div class="shb-sb-list">' + list.map(sbRow).join('') + groupsHTML + sharedHTML + '</div>'
@@ -16470,7 +16497,8 @@
           '<div class="shb-sb-foot"><span title="' + esc(cfgPath()) + '">Kept inside ' + esc(CFG.file) + ' · ' + esc(cfgFolder()) + '</span>' +
             '<button type="button" class="shb-btn shb-btn-pri" data-st-copydir data-tip="Copy the path of the folder these files live in">' + ico('folder', 13) + '<span>Copy Folder Path</span></button>' +
           '</div>' +
-        '</div>' : '');
+        '</div>' : '') +
+      '</div>';
     }
 
     function render() {
@@ -16510,17 +16538,28 @@
               '<input type="range" min="8" max="110" step="2" value="' + curGap + '" data-st-gap style="flex:1;accent-color:#4b6584;cursor:ew-resize">' +
               '<span data-st-gap-val style="min-width:46px;font:600 11.5px monospace;text-align:right">' + curGap + 'px</span>' +
             '</div>' +
+            '<div class="shb-set-sep"></div>' +
+            /* the editor is for every bar and every button, not for the saved ones alone: a part of its own */
+            setLabel('layout', 'Button Editor') +
+            '<div class="shb-set-row shb-set-open">' +
+              '<button type="button" class="shb-btn shb-btn-pri" data-st-browse data-tip="Every bar of the hotbox in one window: pick the dock, the context bar or the bottom bar on a map and change what it holds; a lane for every group; and the name, color, icon, key and nodes of each saved button. Drag to move; every change saves itself, with Undo and Redo">' + ico('edit', 13) + '<span>Open Editor…</span></button>' +
+              '<small>every bar and button</small>' +
+            '</div>' +
             setLabel('tools', 'Power Tools', true) +
-            '<div>' +
-              '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-                '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does)">' +
-                  '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools · drag into the hotbox</span>' +
+            '<div class="shb-set-sec">' +
+              '<div class="shb-set-row">' +
+                '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does). Icons Only is in this list too">' +
+                  '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools<small>drag one onto a bar</small></span>' +
                   ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
                 '</button>' +
-                '<button type="button" class="shb-btn shb-btn-on" data-st-ptb data-tip="The power tools browser: every tool with a clip of what it does, its key, a switch that turns it off and a button that puts it on your bottom bar">' + ico('search', 13) + '<span>Browse…</span></button>' +
-                '<button type="button" class="shb-btn ' + (S.hbIconsOnly ? 'shb-btn-on' : 'shb-btn-pri') + '" data-st-toggle="hbIconsOnly" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it. Saved buttons, groups and nodes keep their name, because each kind shares one icon">' + ico('layout', 13) + '<span>Icons Only</span></button>' +
+                '<button type="button" class="shb-btn shb-btn-pri shb-set-ib" data-st-ptb aria-label="Tool Guide" data-tip="Tool Guide · what every power tool does, each with a short clip of it at work, its key, a switch that turns it off and a button that puts it on your bottom bar">' + ico('guide', 15) + '</button>' +
               '</div>' +
               (ptOpen ? '<div class="shb-pt">' +
+                '<div class="shb-pt-opt" role="switch" aria-checked="' + (S.hbIconsOnly ? 'true' : 'false') + '" data-st-toggle="hbIconsOnly" data-tip="In the hotbox bars a tool shows only its icon; its name and key show when the pointer is on it. Saved buttons, groups and nodes keep their name, because each kind shares one icon">' +
+                  ico('layout', 15) +
+                  '<span class="shb-pt-name">Icons Only<small>In the bars a tool is its icon; its name and key show on hover</small></span>' +
+                  '<span class="shb-sw' + (S.hbIconsOnly ? ' shb-on' : '') + '"></span>' +
+                '</div>' +
                 POWER_TOOLS.map(function (pt) {
                   return '<div class="shb-pt-row" data-st-ptuid="' + esc(pt.uid) + '" data-tip="' + esc(pt.tip) + '">' +
                     '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
@@ -16533,7 +16572,8 @@
             '</div>' +
             setLabel('wand', 'Saved Buttons', true) +
             '<div>' + savedButtonsHTML() + '</div>' +
-            (CFG.srv ? setLabel('folder', 'Shared Libraries', true) + '<div>' + libsHTML() + '</div>' : '') +
+            (CFG.srv ? '<div class="shb-set-sep"></div>' + setLabel('folder', 'Shared Libraries', true) + '<div>' + libsHTML() + '</div>' : '') +
+            '<div class="shb-set-sep"></div>' +
             setLabel('folder', 'Project', true) +
             '<div class="shb-cfg">' +
               '<div class="shb-cfg-row">' +
@@ -16559,6 +16599,7 @@
               '</div>' : '') +
             '</div>' +
             (CFG.versions.length > 1 ? setLabel('history', 'Version') + '<div>' + verBtn() + '</div>' : '') +
+            '<div class="shb-set-sep"></div>' +
             setLabel('save', 'Backup & Share', true) +
             '<div class="shb-cfg">' +
               '<div class="shb-cfg-btns">' +
@@ -16608,6 +16649,7 @@
       if (ptBtn) {
         ptBtn.onclick = function () {
           ptOpen = !ptOpen;
+          if (ptOpen) sbOpen = false;
           render();
         };
       }
@@ -16629,6 +16671,7 @@
       if (sbBtn) {
         sbBtn.onclick = function () {
           sbOpen = !sbOpen;
+          if (sbOpen) ptOpen = false;
           render();
         };
       }
@@ -16802,6 +16845,7 @@
     document.body.appendChild(wrap);
     render();
     openSettingsModal._rerender = render;
+    openSettingsModal._close = closeSettings;
   }
 
   /* ---------------------------------------------------------------------
