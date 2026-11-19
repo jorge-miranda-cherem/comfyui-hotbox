@@ -1225,6 +1225,15 @@
          bottom bar; the dock and the context bar get one like it while they are edited) */
       '.shb-bed-rrow.shb-on .shb-bed-palbtn{pointer-events:auto !important;cursor:pointer}',
       '.shb-bed-prow{display:flex;justify-content:center;align-items:center;max-width:100%}',
+      /* the + of the bottom bar while another bar is the one being edited: it is the hotbox's, so it stays, but
+         gray, since it is not the one that adds here */
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus{background:oklch(0.3 0 0) !important;border-color:oklch(0.4 0 0) !important;box-shadow:none !important}',
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus .shb-ico{color:oklch(0.62 0 0) !important}',
+      /* the + is pressed and Add to this bar unfolds out of it: by itself a moment after the window opens (it is
+         held shut until then), and again whenever the + opens it or another bar is picked. The unfolding is
+         played by script (brwPalPlay) */
+      '.shb-bed-pal.shb-bed-pal-hold{max-height:0;margin-top:0;padding-top:0;padding-bottom:0;border-width:0;opacity:0;overflow:hidden;box-shadow:none}',
+      '.shb-bed-pal.shb-bed-pal-hold::before{display:none}',
       '.shb-bed-ebar{min-height:30px;min-width:120px}',
       '.shb-bed-epill{position:relative;display:inline-flex;align-items:center;border-radius:10px;cursor:grab;touch-action:none}',
       '.shb-bed-epill.shb-on{outline:1.5px solid oklch(0.82 0.13 78);outline-offset:1px}',
@@ -13153,9 +13162,10 @@
     /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
        the dock and the context bar, the kind of node last picked for each */
     bar: 'bot', ctxKey: { add: '', tools: '' }, stageId: '', addQ: '', addFound: true, addTab: { bot: 'pt', add: 'more', tools: 'more' },
-    /* Add to this bar is open (it is closed when the window opens: the + of the bar opens it); the nodes
-       found by name in the picture's field, the last one first; and what is typed there (null: nothing) */
-    palOpen: false, picks: [], nodeQ: null, nodeHot: 0, nodeRows: [], nodeKeep: false };
+    /* Add to this bar is open (the + of the bar opens and closes it; when the window opens it is held shut
+       for a moment, then the + opens it by itself: palHold); its height, kept for the picture's size; the
+       nodes found by name in the picture's field, the last one first; and what is typed there (null: nothing) */
+    palOpen: false, palHold: false, palH: 0, palT0: 0, palAnims: [], picks: [], nodeQ: null, nodeHot: 0, nodeRows: [], nodeKeep: false };
   var BRW_WIN_KEY = 'hotbox_bed_win_v1', BRW_WIN_MIN = { w: 900, h: 520 }, BRW_WIN_ZS = [1, 1.25, 1.5, 2];
   /* the lightning carries the mark that keeps it a plain sign: without it some systems draw a color emoji */
   var BRW_GLYPHS = ['✦', '◆', '●', '▲', '■', '★', '⚡︎', '⌘'];
@@ -13479,6 +13489,7 @@
       if (c) BRW.ctxKey[BRW.bar] = c.key;
     }
     brwRender();
+    if (BRW.palOpen && !BRW.palHold) brwPalPlay();
   }
 
   /* The picture is as large as lets it stand in its box without scrolling: a long dock or a full bottom bar
@@ -13492,16 +13503,28 @@
     map.style.maxHeight = (room + 18) + 'px';
     /* the palette shows two rows of chips, one in a short window; the rest scrolls */
     map.style.setProperty('--shb-bed-chh', (h < 800 ? 28 : 58) + 'px');
+    /* Add to this bar is measured as it stands open (not held shut, not half way through unfolding) */
+    var pal = map.querySelector('[data-bed-pal]'), pbtn = map.querySelector('.shb-bed-palbtn');
+    var held = !!pal && pal.classList.contains('shb-bed-pal-hold');
+    brwPalStop();
+    if (pal) pal.classList.remove('shb-bed-pal-hold');
+    /* closed, the picture keeps the size it has with the palette open: it does not grow and shrink with it */
+    var roomZ = room - (pal ? 0 : (BRW.palH || 0));
     var zs = [0.92, 0.84, 0.76, 0.68, 0.6];
     for (var i = 0; i < zs.length; i++) {
       real.style.setProperty('--shb-bed-rz', String(zs[i]));
-      if (real.scrollHeight <= room) break;
+      if (real.scrollHeight <= roomZ) break;
     }
-    /* Add to this bar hangs from the + that opened it: its notch is under it */
-    var pal = map.querySelector('[data-bed-pal]'), pbtn = map.querySelector('.shb-bed-palbtn');
+    /* it hangs from the + that opened it: its notch is under it */
     if (pal && pbtn && pal.offsetWidth) {
       var pr = pal.getBoundingClientRect(), br = pbtn.getBoundingClientRect(), pk = pr.width / pal.offsetWidth || 1;
       pal.style.setProperty('--shb-bed-nx', Math.round(Math.max(16, Math.min(pal.offsetWidth - 16, (br.left + br.width / 2 - pr.left) / pk))) + 'px');
+    }
+    if (pal) {
+      /* what it adds to the picture's height: itself, its margin and the gap over it */
+      BRW.palH = pal.offsetHeight + 14;
+      pal.style.setProperty('--shb-bed-palh', pal.offsetHeight + 'px');
+      if (held) pal.classList.add('shb-bed-pal-hold');
     }
   }
   listen(window, 'resize', function () { if (BRW.el) brwStageFit(); });
@@ -13528,12 +13551,12 @@
      another one picks it */
   function brwMapHTML() {
     var bar = BRW.bar, st = brwStage(), many = brwStageSteps().length > 1;
-    var fl = hbIsFluid(), palOpen = !!BRW.palOpen;
+    var fl = hbIsFluid(), palOpen = !!BRW.palOpen, palShown = palOpen && !BRW.palHold;
     /* the hotbox's +. On the bar being edited it opens Add to this bar, and closes it */
     function plus(live) {
       return '<div class="shb-plus-wrap"><button type="button" class="shb-plus' +
-        (live ? ' shb-bed-palbtn' + (palOpen ? ' shb-plus-on' : '') + '" data-bed-act="pal" aria-expanded="' + (palOpen ? 'true' : 'false') + '" title="' +
-          esc(palOpen ? 'Close Add to this bar' : 'Add to this bar: the tools, nodes and models that can go on it') + '"' : '" tabindex="-1"') +
+        (live ? ' shb-bed-palbtn' + (palShown ? ' shb-plus-on' : '') + '" data-bed-act="pal" aria-expanded="' + (palShown ? 'true' : 'false') + '" title="' +
+          esc(palShown ? 'Close Add to this bar' : 'Add to this bar: the tools, nodes and models that can go on it') + '"' : '" tabindex="-1"') +
         '>' + ico('plus', fl ? 22 : 18) + '</button></div>';
     }
     function row(b, cls, name, sub, tip, extra) {
@@ -13742,7 +13765,12 @@
     BRW.last = '';
     BRW.inspFor = '';
     BRW.bar = 'bot';
-    BRW.palOpen = false;
+    /* Add to this bar opens by itself, out of the + of the bar, a moment after the window is there: so it is
+       seen where it comes from, and that the bar is edited there. Until then it is held shut */
+    BRW.palOpen = true;
+    BRW.palHold = true;
+    clearTimeout(BRW.palT0);
+    BRW.palT0 = setTimeout(brwPalUnhold, 560);
     BRW.nodeQ = null;
     BRW.shut = modalOpen(function () { brwClose(); });
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
@@ -13895,6 +13923,9 @@
     brwDragEnd();
     if (BRW.grab) { if (HB.keyGrab === BRW.grab) HB.keyGrab = null; BRW.grab = null; }
     clearTimeout(BRW.toastT);
+    clearTimeout(BRW.palT0);
+    brwPalStop();
+    BRW.palHold = false;
     BRW.el = null;
     BRW.panel = null;
     modalShut(BRW.shut);
@@ -14034,7 +14065,7 @@
 
   function brwPalHTML() {
     var d = brwPalData(), own = BRW.bar !== 'bot' && brwBarOwn();
-    return '<div class="shb-bed-pal" data-bed-pal>' +
+    return '<div class="shb-bed-pal' + (BRW.palHold ? ' shb-bed-pal-hold' : '') + '" data-bed-pal>' +
       '<div class="shb-bed-palhd">' +
         '<b title="What can go on the bar above: click a chip, or drag it up to a place on the bar">' + ico('arrowUp', 11) + 'Add to this bar</b>' +
         '<span class="shb-bed-ptabs" data-bed-ptabs>' + brwPalTabsHTML(d) + '</span>' +
@@ -14513,7 +14544,7 @@
   }
 
   function brwNodePick(i) {
-    var r = (BRW.nodeRows || [])[i], f = BRW.el && BRW.el.querySelector('[data-bed-nodeq]');
+    var r = (BRW.nodeRows || [])[i], f = BRW.el && BRW.el.querySelector('[data-bed-nodeq]'), barWas = BRW.bar;
     if (!r) return;
     if (f && document.activeElement === f) { try { f.blur(); } catch (e) {} }
     brwNodeLeave(null);
@@ -14535,15 +14566,61 @@
       if (BRW.bar !== 'tools') BRW.bar = 'add';
     }
     brwRender();
+    if (BRW.palOpen && !BRW.palHold && barWas !== BRW.bar) brwPalPlay();
   }
 
   /* Add to this bar opens under the bar being edited, and closes: the + of the bar, or the palette's own × */
   function brwPalToggle() {
+    /* pressed before it opened by itself: it opens now */
+    if (BRW.palHold) { clearTimeout(BRW.palT0); brwPalUnhold(); return; }
     BRW.palOpen = !BRW.palOpen;
     brwRender();
     if (!BRW.palOpen || !BRW.el) return;
+    brwPalPlay();
     var f = BRW.el.querySelector('[data-bed-addq]');
     if (f) { try { f.focus(); } catch (e) {} }
+  }
+
+  /* The + is pressed (it dips, springs back, a ring leaves it, and it turns into its ×) and the palette unfolds
+     out of it, pushing down what is under it. Played by script, not by a CSS animation: where the system asks
+     for reduced motion a page's CSS animations last no time, and this is the cue that says where the bar is
+     edited. It is short, and it plays once */
+  function brwPalStop() {
+    (BRW.palAnims || []).forEach(function (an) { try { an.cancel(); } catch (e) {} });
+    BRW.palAnims = [];
+  }
+
+  function brwPalPlay() {
+    var bg = BRW.el, pal = bg && bg.querySelector('[data-bed-pal]'), btn = bg && bg.querySelector('.shb-bed-palbtn');
+    brwPalStop();
+    if (!pal || typeof pal.animate !== 'function') return;
+    try {
+      var cs = getComputedStyle(pal), clip = 'inset(-12px -4px 0px -4px)';
+      BRW.palAnims.push(pal.animate([
+        { maxHeight: '0px', marginTop: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0, clipPath: clip },
+        { opacity: 1, offset: 0.6 },
+        { maxHeight: pal.offsetHeight + 'px', marginTop: cs.marginTop, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, clipPath: clip }
+      ], { duration: 380, delay: 130, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'backwards' }));
+      if (btn) {
+        BRW.palAnims.push(btn.animate([
+          { transform: 'scale(1)', outline: '2px solid oklch(0.8 0.13 250 / .95)', outlineOffset: '0px', easing: 'ease-out' },
+          { transform: 'scale(.8)', offset: 0.28, easing: 'ease-out' },
+          { transform: 'scale(1.15)', offset: 0.62, easing: 'ease-in-out' },
+          { transform: 'scale(1)', outline: '2px solid oklch(0.8 0.13 250 / 0)', outlineOffset: '16px' }
+        ], { duration: 540 }));
+        var ic = btn.querySelector('.shb-ico');
+        if (ic) BRW.palAnims.push(ic.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(45deg)' }], { duration: 300, delay: 90, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
+      }
+    } catch (e) {}
+  }
+
+  /* a moment after the window opened: the + opens the palette by itself */
+  function brwPalUnhold() {
+    if (!BRW.palHold) return;
+    BRW.palHold = false;
+    if (!BRW.el || PTB.el) return;
+    brwRender();
+    brwPalPlay();
   }
 
   function brwInput(ev) {
