@@ -15624,9 +15624,22 @@
   }
 
   /* The button is as tall as the bar's own buttons beside it (Run, the queue, the panel toggles), whatever the
-     frontend version or theme: the most common height in its row, the icon a little smaller */
+     frontend version or theme: the most common height in its row, the icon a little smaller.
+     Beside ImissNuke's N it measures nothing: the two are a pair, and both style sheets give the same button
+     (32 tall, a 24px mark), so they are the same size by construction. Measured, the H came out 36 next to an
+     N of 32: the bar shows up late, other packs' buttons are taller for a moment, and nothing measured again */
   function hbFitTopBarButton(btn) {
     if (!btn || !isElemVisible(btn) || btn.classList.contains('shb-floating-fallback')) return;
+    var nBtn = document.getElementById('imissnuke-topbar-btn');
+    if (nBtn && nBtn.isConnected && btn.previousElementSibling === nBtn) {
+      if (btn._hbH) {
+        btn._hbH = 0;
+        ['height', 'min-width', 'width', 'padding'].forEach(function (k) { btn.style.removeProperty(k); });
+        var mark = btn.querySelector('.shb-h-icon svg');
+        if (mark) { mark.style.width = ''; mark.style.height = ''; }
+      }
+      return;
+    }
     var me = btn.getBoundingClientRect(), mid = me.top + me.height / 2, count = {}, best = 0, n = 0;
     /* only the bar's own buttons: the whole page would measure every button on every node too */
     var scope = btn.closest('.actionbar-container, .comfyui-menu, .comfy-menu, .comfyui-top-menu, header, nav')
@@ -15701,7 +15714,26 @@
     var placed = hbPlaceTopBarButton(btn);
     TOPBAR_HOME = placed ? btn.parentNode : null;
     updateTopBarButtonState();
+    hbFitTopBarSoon();
     return placed;
+  }
+
+  /* The row the button lands in may still be settling (a bar that shows late, packs that add their buttons one
+     after another): it is measured again a few times after it is placed, and whenever its row changes size */
+  var TOPBAR_FIT_TIMERS = [], TOPBAR_FIT_RO = null, TOPBAR_FIT_ROW = null;
+  function hbFitTopBarSoon() {
+    TOPBAR_FIT_TIMERS.forEach(function (t) { clearTimeout(t); });
+    TOPBAR_FIT_TIMERS = [300, 1000, 3000, 8000, 15000].map(function (d) {
+      return setTimeout(function () { hbFitTopBarButton(TOPBAR_BTN); }, d);
+    });
+    var row = TOPBAR_BTN && TOPBAR_BTN.parentNode;
+    if (!row || row === TOPBAR_FIT_ROW || typeof ResizeObserver !== 'function') return;
+    try {
+      if (TOPBAR_FIT_RO) TOPBAR_FIT_RO.disconnect();
+      TOPBAR_FIT_ROW = row;
+      TOPBAR_FIT_RO = new ResizeObserver(function () { hbFitTopBarButton(TOPBAR_BTN); });
+      TOPBAR_FIT_RO.observe(row);
+    } catch (e) {}
   }
 
   function hbPlaceTopBarButton(btn) {
