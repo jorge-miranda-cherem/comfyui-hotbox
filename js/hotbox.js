@@ -70,6 +70,7 @@
     customIcons: {},        /* the sign picked for a saved button in the button editor (uid: '◆'), where its sparkles were */
     hbShare: true,          /* Copy to share / Paste: a saved button or a group travels as text, through any chat (false: not shown) */
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
+    userTools: [],          /* power tools of your own, written in Settings ({ id, name, icon, when, code }): see YOUR OWN POWER TOOLS */
     templates: [],          /* Save as Button: saved node selections, each one a bar button ('tpl:<id>') */
     saveLib: '',            /* a writable shared library (its path) that Save as Button saves into, or '' for your own */
     hbGroups: {},           /* button groups: { id: { name, items: [uid…], keep? } }, each one a bar button ('grp:<id>'); keep = stays in its bar with one button or none */
@@ -182,6 +183,12 @@
     S.cfgRev = 7;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (!S.customIcons || typeof S.customIcons !== 'object' || Array.isArray(S.customIcons)) S.customIcons = {};
+    /* your own power tools (Settings → Power Tools → New power tool): what does not read as one is dropped */
+    S.userTools = (Array.isArray(S.userTools) ? S.userTools : []).filter(function (t) {
+      return t && typeof t === 'object' && /^[a-z0-9]{1,24}$/.test(String(t.id || '')) && typeof t.code === 'string';
+    }).map(function (t) {
+      return { id: String(t.id), name: String(t.name || 'My tool').slice(0, 40), icon: String(t.icon || 'wand'), when: t.when === 'added' ? 'added' : 'press', code: t.code };
+    });
     if (hbKeyRefused(S.hbKey, S.hbCode)) {
       S.hbKey = '`';
       S.hbCode = 'Backquote';
@@ -796,8 +803,9 @@
       '.shb-zone-bot{transform:translate(-50%,0);align-items:center}',
       '.shb-zone-left{transform:translate(-100%,-50%);align-items:flex-end}',
       '.shb-zone-right{transform:translate(0,-50%);align-items:flex-start}',
-      /* the bottom bar and its "+" ride one row, so the "+" stays centered on the bar when the Custom Bar sits above it */
-      '.shb-botrow{position:relative;display:flex;justify-content:center}',
+      /* the bottom bar and its "+" ride one row, so the "+" stays centered on the bar when the Custom Bar sits above it;
+         the row is in front of the edit bar under it, which a group's list drops over */
+      '.shb-botrow{position:relative;z-index:1;display:flex;justify-content:center}',
       '.shb-botrow > .shb-plus-wrap{position:absolute;left:100%;top:50%;margin-left:12px;transform:translateY(-50%);display:flex}',
       '.shb-zone-bot.shb-plus-left .shb-botrow > .shb-plus-wrap{left:auto;right:100%;margin-left:0;margin-right:12px}',
       /* Custom Bar: buttons other extensions hand to the hotbox (window.__hotboxBars), above the bottom bar */
@@ -1081,6 +1089,47 @@
       '.shb-sw.shb-on::after{transform:translateX(14px);background:#fff}',
       '.shb-pt-row > .shb-ico{color:#9aa4b2}',
       '.shb-pt-info{width:16px;height:16px;border-radius:50%;border:1px solid #555;color:#9a9a9a;font:600 10px/14px Inter,system-ui,sans-serif;text-align:center;flex-shrink:0;cursor:help}',
+      /* your own power tools: the row that starts one, the rows of the ones there are, and the slot one is
+         written in (it opens in the list, under its row, as wide as the whole panel: the column of labels
+         beside the list is empty there, and code wants the room) */
+      '.shb-pt-row.shb-ut-new{cursor:pointer;border:1px dashed #3f5f8a;margin-bottom:3px}',
+      '.shb-pt-row.shb-ut-new:hover,.shb-pt-row.shb-ut-new.shb-on{background:#1e2733;border-color:#5b8fd0}',
+      '.shb-ut-new > .shb-ico{color:#7fb0ec}',
+      '.shb-ut-new .shb-pt-name{color:#b7d4f7}',
+      '.shb-ut-new .shb-pt-name small{color:#7f9fc6}',
+      '.shb-ut-off .shb-pt-name,.shb-ut-off > .shb-ico{color:#8f8f8f}',
+      '.shb-ut-tag{flex:none;font:600 10px/1 Inter,system-ui,sans-serif;padding:3px 7px;border:0;border-radius:999px;background:#22324a;color:#9cc2f5;white-space:nowrap}',
+      '.shb-ut-tag.shb-ut-warn{background:#4a3a16;color:#f0c674;cursor:pointer}',
+      '.shb-ut-tag.shb-ut-warn:hover{background:#5c4819;color:#ffd98a}',
+      '.shb-ut-ib{flex:none;min-width:26px;height:26px;display:inline-grid;place-items:center;padding:0 5px;border:1px solid transparent;border-radius:5px;background:transparent;color:#9aa4b2;font:500 11.5px/1 Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}',
+      '.shb-ut-ib:hover,.shb-ut-ib.shb-on{background:#2c2c2c;border-color:#3f3f3f;color:#fff}',
+      '.shb-ut-ib.shb-red:hover,.shb-ut-ib.shb-red.shb-on{background:#3a2422;border-color:#6b3a35;color:#f2a49b}',
+      '.shb-ut-slot{position:relative;display:flex;flex-direction:column;gap:6px;margin:2px 0 6px -140px;padding:10px;border-radius:7px;border:1px solid #3a4a60;background:#1e2227;box-sizing:border-box;cursor:default}',
+      '.shb-ut-top{display:flex;align-items:center;gap:6px}',
+      '.shb-ut-top .shb-ut-ib{width:30px;height:30px;border-color:#3a3a3a;background:#262626}',
+      '.shb-ut-in,.shb-ut-code{min-width:0;box-sizing:border-box;border:1px solid #3a3a3a;border-radius:5px;background:#171717;color:#eaeaea;outline:none;user-select:text}',
+      '.shb-ut-in{flex:1;height:30px;padding:0 9px;font:500 12.5px/1 Inter,system-ui,sans-serif}',
+      '.shb-ut-code{display:block;width:100%;min-height:96px;padding:8px 9px;font:12px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;resize:vertical;tab-size:2;white-space:pre;overflow:auto}',
+      '.shb-ut-in:focus,.shb-ut-code:focus{border-color:#4f86c6}',
+      '.shb-ut-in::placeholder,.shb-ut-code::placeholder{color:#6a6a6a}',
+      '.shb-ut-key{flex:none;min-width:46px;height:30px;padding:0 8px;border:1px solid #3a3a3a;border-radius:5px;background:#262626;color:#bdbdbd;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;cursor:pointer}',
+      '.shb-ut-key:hover{border-color:#555;color:#fff}',
+      '.shb-ut-key.shb-on{border-color:#4f86c6;color:#fff}',
+      '.shb-ut-icons{display:flex;flex-wrap:wrap;gap:3px}',
+      '.shb-ut-icons button{width:28px;height:28px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:5px;background:transparent;color:#9aa4b2;cursor:pointer}',
+      '.shb-ut-icons button:hover{background:#2c2c2c;color:#fff}',
+      '.shb-ut-icons button.shb-on{border-color:#4f86c6;background:#22324a;color:#fff}',
+      '.shb-ut-lab{font:500 11px/1 Inter,system-ui,sans-serif;color:#8a8a8a;margin-top:2px}',
+      '.shb-ut-seg{display:flex;gap:4px}',
+      '.shb-ut-seg button{flex:none;height:28px;padding:0 9px;border:1px solid #3a3a3a;border-radius:5px;background:#232323;color:#a8a8a8;font:500 11.5px/1 Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}',
+      '.shb-ut-seg button + button{flex:1;min-width:0}',
+      '.shb-ut-seg button:hover{color:#e6e6e6;border-color:#4a4a4a}',
+      '.shb-ut-seg button.shb-on{border-color:#4f86c6;background:#22324a;color:#d6e6fb}',
+      '.shb-ut-note{font:400 11px/1.4 Inter,system-ui,sans-serif;color:#8a8a8a;overflow-wrap:anywhere}',
+      '.shb-ut-note.shb-bad{color:#f2a49b}',
+      '.shb-ut-note.shb-good{color:#9fd8a8}',
+      '.shb-ut-note.shb-warn{color:#f0c674}',
+      '.shb-ut-act{display:flex;flex-wrap:wrap;align-items:center;gap:6px}',
       '.shb-ghost{position:fixed;z-index:2147483550;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;transform:translate(-50%,-50%)}',
       '.shb-ghost-dot{flex-shrink:0}',
       '.shb-ghost.shb-ghost-rm .shb-ghost-dot{background:#e0705f !important}',
@@ -1144,67 +1193,69 @@
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
       /* The button editor (Settings → Button Editor): the look of the studio tools it sits beside —
          neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
-      '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(900px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
+      /* The grays of these windows (the button editor, the Tool Guide, the paste offer) are the hotbox's own
+         gray, oklch(L 0.006 286): beside its bars, which are drawn in here, a pure gray reads a little red */
+      '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(900px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0.006 286);border:1px solid oklch(0.3 0.006 286);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0.006 286);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
       /* its size is yours: the corner stretches it, the arrows beside Done fill the screen, and the four A's
          make everything in it larger (--shb-bed-z: the window is laid out that much smaller and scaled up, so
          what is measured on screen and where the pointer is stay in the same pixels) */
       '.shb-modal.shb-bed.shb-bed-max{width:calc(98vw/var(--shb-bed-z,1));height:calc(96vh/var(--shb-bed-z,1))}',
-      '.shb-bed-zs{flex:none;display:flex;align-items:center;gap:1px;height:26px;padding:2px;border-radius:5px;background:oklch(0.2 0 0);border:1px solid oklch(0.29 0 0)}',
-      '.shb-bed-zs button{width:22px;height:20px;padding:0;border:0;border-radius:3px;background:transparent;color:oklch(0.55 0 0);font-weight:600;line-height:1;display:grid;place-items:center}',
-      '.shb-bed-zs button:hover{background:oklch(0.27 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-zs{flex:none;display:flex;align-items:center;gap:1px;height:26px;padding:2px;border-radius:5px;background:oklch(0.2 0.006 286);border:1px solid oklch(0.29 0.006 286)}',
+      '.shb-bed-zs button{width:22px;height:20px;padding:0;border:0;border-radius:3px;background:transparent;color:oklch(0.55 0.006 286);font-weight:600;line-height:1;display:grid;place-items:center}',
+      '.shb-bed-zs button:hover{background:oklch(0.27 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-zs button.shb-on{background:oklch(0.3 0.03 78);color:oklch(0.87 0.12 78)}',
       '.shb-modal.shb-bed.shb-bed-sizing{transition:none}',
-      '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0 0);cursor:nwse-resize;touch-action:none;transition:color .12s}',
+      '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0.006 286);cursor:nwse-resize;touch-action:none;transition:color .12s}',
       '.shb-bed-grip:hover,.shb-bed-sizing .shb-bed-grip{color:oklch(0.82 0.13 78)}',
       '.shb-bed-grip svg{display:block}',
       '.shb-bed *{box-sizing:border-box}',
       '.shb-bed ::-webkit-scrollbar{width:8px;height:8px}',
-      '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0 0);border-radius:4px}',
+      '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0.006 286);border-radius:4px}',
       '.shb-bed ::-webkit-scrollbar-track{background:transparent}',
       '.shb-bed button{font-family:inherit;cursor:pointer}',
       '.shb-bed button:disabled{cursor:default}',
       '.shb-bed kbd,.shb-bed-kc,.shb-bed-cnt,.shb-bed-key,.shb-bed-n,.shb-bed-lab em,.shb-bed-pill em{font-family:"IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;font-style:normal}',
-      '.shb-bed-hd{height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;border-bottom:1px solid oklch(0.27 0 0)}',
+      '.shb-bed-hd{height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;border-bottom:1px solid oklch(0.27 0.006 286)}',
       '.shb-bed-mark{width:9px;height:9px;border-radius:2px;background:oklch(0.82 0.13 78);flex:none}',
-      '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0 0)}',
-      '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0 0)}',
-      '.shb-bed-t2{color:oklch(0.8 0 0)}',
+      '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0.006 286)}',
+      '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0.006 286)}',
+      '.shb-bed-t2{color:oklch(0.8 0.006 286)}',
       /* a narrow window (or large text in it): the count goes first, then the search box gets shorter, then
          the title; the buttons never do */
       '.shb-bed-hd > b,.shb-bed-t2{flex:0 .001 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.shb-bed-hd > button,.shb-bed-hd > .shb-bed-two,.shb-bed-hd > [data-bed-extra]{flex:none}',
       '.shb-bed-hd button{white-space:nowrap}',
-      '.shb-bed-sum{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:oklch(0.5 0 0);margin-left:4px;white-space:nowrap}',
+      '.shb-bed-sum{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:oklch(0.5 0.006 286);margin-left:4px;white-space:nowrap}',
       '.shb-bed-sp{flex:1}',
-      '.shb-bed-find{flex:0 10 260px;min-width:64px;height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0 0);border-radius:5px;background:oklch(0.2 0 0);color:oklch(0.5 0 0);cursor:text}',
+      '.shb-bed-find{flex:0 10 260px;min-width:64px;height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0.006 286);border-radius:5px;background:oklch(0.2 0.006 286);color:oklch(0.5 0.006 286);cursor:text}',
       '.shb-bed-find:focus-within{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0 0);font:inherit;user-select:text}',
-      '.shb-bed-find input::placeholder{color:oklch(0.5 0 0)}',
-      '.shb-bed-kc{font-size:10px;line-height:1;color:oklch(0.5 0 0);padding:2px 5px;border-radius:3px;background:oklch(0.27 0 0)}',
-      '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0 0);font-size:12.5px}',
-      '.shb-bed-hb:hover{background:oklch(0.28 0 0)}',
-      '.shb-bed-hb:disabled{color:oklch(0.42 0 0);background:transparent}',
-      '.shb-bed-hb.shb-bed-ib{width:30px;padding:0;display:grid;place-items:center;color:oklch(0.66 0 0)}',
-      '.shb-bed-hb.shb-bed-ib:hover{color:oklch(0.95 0 0)}',
+      '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0.006 286);font:inherit;user-select:text}',
+      '.shb-bed-find input::placeholder{color:oklch(0.5 0.006 286)}',
+      '.shb-bed-kc{font-size:10px;line-height:1;color:oklch(0.5 0.006 286);padding:2px 5px;border-radius:3px;background:oklch(0.27 0.006 286)}',
+      '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0.006 286);font-size:12.5px}',
+      '.shb-bed-hb:hover{background:oklch(0.28 0.006 286)}',
+      '.shb-bed-hb:disabled{color:oklch(0.42 0.006 286);background:transparent}',
+      '.shb-bed-hb.shb-bed-ib{width:30px;padding:0;display:grid;place-items:center;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-hb.shb-bed-ib:hover{color:oklch(0.95 0.006 286)}',
       '.shb-bed-done{height:30px;padding:0 16px;border:0;border-radius:4px;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-size:12.5px;font-weight:600}',
       '.shb-bed-done:hover{background:oklch(0.87 0.12 78)}',
       '.shb-bed-mid{flex:1;min-height:0;display:flex}',
       '.shb-bed-main{flex:1;min-width:0;display:flex;flex-direction:column}',
-      '.shb-bed-barbox{flex:none;display:flex;flex-direction:column;gap:11px;padding:12px 18px 11px;border-bottom:1px solid oklch(0.27 0 0);background:oklch(0.205 0 0)}',
+      '.shb-bed-barbox{flex:none;display:flex;flex-direction:column;gap:11px;padding:12px 18px 11px;border-bottom:1px solid oklch(0.27 0.006 286);background:oklch(0.205 0.006 286)}',
       /* the map of the hotbox: its three bars around a node. The one picked is the one the strip beside it
          edits; the node says which kind of node the dock and the context bar are for */
       /* the hotbox itself, in the editor: its three bars with their own buttons (drawn by the hotbox's own code,
          under its theme), a row each with its name beside it. The one being edited is lit; a click on another
          picks it. Nothing in it answers the pointer but the rows */
       '.shb-bed-mapcol{flex:none;min-width:0;display:flex;flex-direction:column;gap:7px}',
-      '.shb-bed-map{display:flex;flex-direction:column;gap:4px;max-height:300px;padding:8px 12px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
+      '.shb-bed-map{display:flex;flex-direction:column;gap:4px;max-height:300px;padding:8px 12px;border-radius:8px;background:oklch(0.17 0.006 286);border:1px solid oklch(0.27 0.006 286);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
       '.shb-bed-real{display:flex;flex-direction:column;gap:4px;font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg);user-select:none}',
       '.shb-bed-rrow{display:flex;align-items:center;gap:12px;padding:3px 8px 3px 6px;border-radius:10px;border:1.5px solid transparent;cursor:pointer;opacity:.62;transition:opacity .12s,border-color .12s,background .12s}',
-      '.shb-bed-rrow:hover{opacity:.96;border-color:oklch(0.42 0 0);background:oklch(0.21 0 0)}',
-      '.shb-bed-rrow.shb-on{opacity:1;cursor:default;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
+      '.shb-bed-rrow:hover{opacity:.96;border-color:oklch(0.42 0.006 286);background:oklch(0.21 0.006 286)}',
+      '.shb-bed-rrow.shb-on{opacity:1;cursor:default;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .16)}',
       '.shb-bed-rlbl{flex:none;width:104px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;font-family:Inter,system-ui,sans-serif}',
-      '.shb-bed-rlbl b{font-size:12px;font-weight:600;color:oklch(0.88 0 0)}',
-      '.shb-bed-rlbl small{font-size:10.5px;font-weight:400;color:oklch(0.58 0 0);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-rlbl b{font-size:12px;font-weight:600;color:oklch(0.88 0.006 286)}',
+      '.shb-bed-rlbl small{font-size:10.5px;font-weight:400;color:oklch(0.58 0.006 286);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-rlbl em{display:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;border-radius:999px;background:oklch(0.82 0.13 78);color:oklch(0.22 0.04 78)}',
       '.shb-bed-rrow.shb-on .shb-bed-rlbl em{display:inline-block}',
       '.shb-bed-rrow.shb-on .shb-bed-rlbl b{color:oklch(0.93 0.07 85)}',
@@ -1215,10 +1266,10 @@
       '.shb-bed-real .shb-botrow{max-width:100%}',
       '.shb-bed-real .shb-gdrop,.shb-bed-real .shb-x,.shb-bed-real .shb-dial{display:none !important}',
       '.shb-bed-real .shb-plus-wrap{position:static !important;inset:auto !important;transform:none !important;translate:none !important;margin:0 0 0 10px !important;display:flex;align-items:center}',
-      '.shb-bed-rnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.52 0 0);padding:5px 9px}',
+      '.shb-bed-rnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.52 0.006 286);padding:5px 9px}',
       /* the bar being edited and what can go on it are one amber frame: the row with the bar's own buttons (each
          one dragged along it, and taken off with the × that shows under the pointer), then the palette */
-      '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
+      '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .16)}',
       '.shb-bed-rzone > .shb-bed-rrow.shb-on{border-color:transparent;background:transparent;padding:0 0 0 0}',
       '.shb-bed-rrow.shb-on .shb-bed-ebar,.shb-bed-rrow.shb-on .shb-bed-epill,.shb-bed-rrow.shb-on .shb-bed-erm{pointer-events:auto !important}',
       /* the + of the bar being edited opens Add to this bar under it, and closes it (the hotbox's own + for the
@@ -1227,8 +1278,8 @@
       '.shb-bed-prow{display:flex;justify-content:center;align-items:center;max-width:100%}',
       /* the + of the bottom bar while another bar is the one being edited: it is the hotbox's, so it stays, but
          gray, since it is not the one that adds here */
-      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus{background:oklch(0.3 0 0) !important;border-color:oklch(0.4 0 0) !important;box-shadow:none !important}',
-      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus .shb-ico{color:oklch(0.62 0 0) !important}',
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus{background:oklch(0.3 0.006 286) !important;border-color:oklch(0.4 0.006 286) !important;box-shadow:none !important}',
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus .shb-ico{color:oklch(0.62 0.006 286) !important}',
       /* the + is pressed and Add to this bar unfolds out of it: by itself a moment after the window opens (it is
          held shut until then), and again whenever the + opens it or another bar is picked. The unfolding is
          played by script (brwPalPlay) */
@@ -1238,10 +1289,10 @@
       '.shb-bed-epill{position:relative;display:inline-flex;align-items:center;border-radius:10px;cursor:grab;touch-action:none}',
       '.shb-bed-epill.shb-on{outline:1.5px solid oklch(0.82 0.13 78);outline-offset:1px}',
       '.shb-bed-epill.shb-hot{outline:2px solid oklch(0.82 0.13 78);outline-offset:1px;background:oklch(0.36 0.05 78 / .5)}',
-      '.shb-bed-epill > .shb-bed-erm{position:absolute;top:-7px;right:-5px;width:17px;height:17px;margin:0;padding:0;border-radius:50%;background:oklch(0.42 0 0);border:1.5px solid oklch(0.16 0 0);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;opacity:0;transition:opacity .1s,background .1s;z-index:3;cursor:pointer}',
+      '.shb-bed-epill > .shb-bed-erm{position:absolute;top:-7px;right:-5px;width:17px;height:17px;margin:0;padding:0;border-radius:50%;background:oklch(0.42 0.006 286);border:1.5px solid oklch(0.16 0.006 286);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;opacity:0;transition:opacity .1s,background .1s;z-index:3;cursor:pointer}',
       '.shb-bed-epill:hover > .shb-bed-erm,.shb-bed-epill.shb-on > .shb-bed-erm{opacity:1}',
       '.shb-bed-epill > .shb-bed-erm:hover{background:oklch(0.5 0.16 25);color:#fff}',
-      '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0 0);color:oklch(0.6 0 0);font-size:12px;white-space:nowrap}',
+      '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0.006 286);color:oklch(0.6 0.006 286);font-size:12px;white-space:nowrap}',
       '.shb-bed-gpill{font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;color:var(--shb-fg);background:transparent !important;box-shadow:none !important}',
       '.shb-bed-gpill .shb-bed-erm,.shb-bed-gpill .shb-gdrop,.shb-bed-gpill .shb-x{display:none !important}',
       /* the palette is a box of its own that hangs from the bar: a solid ground, an edge in the hotbox's blue (the
@@ -1252,212 +1303,212 @@
       '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.64 0.16 250);color:#fff;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
       '.shb-bed-palhd > b .shb-ico{stroke-width:2.6}',
       '.shb-bed-ptabs{display:inline-flex;gap:4px;flex:none}',
-      '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0 0);border-radius:6px;background:oklch(0.22 0 0);color:oklch(0.72 0 0);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
-      '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0 0)}',
-      '.shb-bed-ptab:hover{background:oklch(0.27 0 0)}',
+      '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0.006 286);border-radius:6px;background:oklch(0.22 0.006 286);color:oklch(0.72 0.006 286);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
+      '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-ptab:hover{background:oklch(0.27 0.006 286)}',
       '.shb-bed-ptab.shb-on{border-color:oklch(0.7 0.14 250);background:oklch(0.32 0.07 250);color:oklch(0.95 0.03 250)}',
       '.shb-bed-ptab.shb-on em{color:oklch(0.84 0.07 250)}',
       '.shb-bed-find.shb-bed-addfind{flex:1 1 200px;width:auto;height:26px;min-width:120px}',
       '.shb-bed-find.shb-bed-addfind:focus-within{border-color:oklch(0.7 0.14 250)}',
-      '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
-      '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0.006 286);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.shb-bed-preset:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-palx{flex:none;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0.03 250);font:400 16px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
       '.shb-bed-palx:hover{background:oklch(0.3 0.05 250);color:#fff}',
       '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
-      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0 0);background:transparent;color:oklch(0.66 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
+      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0.006 286);background:transparent;color:oklch(0.66 0.006 286);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
       '.shb-bed-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-chip > i{flex:none;width:7px;height:7px;border-radius:2px}',
-      '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0 0)}',
-      '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0 0)}',
-      '.shb-bed-chip:hover{background:oklch(0.28 0 0);border-color:oklch(0.6 0 0)}',
-      '.shb-bed-chip.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0.006 286)}',
+      '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0.006 286)}',
+      '.shb-bed-chip:hover{background:oklch(0.28 0.006 286);border-color:oklch(0.6 0.006 286)}',
+      '.shb-bed-chip.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
       '.shb-bed-chip.shb-on > u{color:oklch(0.86 0.13 78);font-weight:700;font-size:12px}',
-      '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0 0)}',
-      '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0 0);padding:4px 2px}',
+      '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0.006 286)}',
+      '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0.006 286);padding:4px 2px}',
       /* apart from all that, your own: the lanes of the saved buttons and their groups */
-      '.shb-bed-libcap{flex:none;display:flex;align-items:baseline;gap:8px;padding:10px 18px 0;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
-      '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-libcap{flex:none;display:flex;align-items:baseline;gap:8px;padding:10px 18px 0;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0.006 286);overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-libcap + .shb-bed-lanes{padding-top:8px}',
       '.shb-bed-rnoderow{display:flex;justify-content:center;padding:1px 8px 1px 122px}',
-      '.shb-bed-mnode{width:min(520px,100%);height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px;box-sizing:border-box}',
+      '.shb-bed-mnode{width:min(520px,100%);height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0.006 286);border-radius:8px;box-sizing:border-box}',
       /* its name is in a field: type another node's name there and the hotbox is drawn for that one */
-      '.shb-bed-nfind{flex:1;min-width:0;height:26px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid oklch(0.34 0 0);border-radius:6px;background:oklch(0.2 0 0);cursor:text;font:500 12px/1.2 Inter,system-ui,sans-serif;transition:border-color .12s,background .12s}',
-      '.shb-bed-nfind:hover{border-color:oklch(0.5 0 0)}',
-      '.shb-bed-nfind:focus-within{border-color:oklch(0.82 0.13 78);background:oklch(0.17 0 0)}',
-      '.shb-bed-nfind > .shb-ico{flex:none;color:oklch(0.66 0 0)}',
-      '.shb-bed-nfind input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:none;color:oklch(0.94 0 0);font:inherit;text-overflow:ellipsis;user-select:text}',
-      '.shb-bed-nfind input::placeholder{color:oklch(0.5 0 0);font-weight:400}',
-      '.shb-bed-nfind small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.6 0 0);white-space:nowrap}',
-      '.shb-bed-nfind em{flex:none;font-style:normal;font-size:10.5px;font-weight:400;color:oklch(0.5 0 0);white-space:nowrap;padding-left:8px;border-left:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-nfind{flex:1;min-width:0;height:26px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid oklch(0.34 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);cursor:text;font:500 12px/1.2 Inter,system-ui,sans-serif;transition:border-color .12s,background .12s}',
+      '.shb-bed-nfind:hover{border-color:oklch(0.5 0.006 286)}',
+      '.shb-bed-nfind:focus-within{border-color:oklch(0.82 0.13 78);background:oklch(0.17 0.006 286)}',
+      '.shb-bed-nfind > .shb-ico{flex:none;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-nfind input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:none;color:oklch(0.94 0.006 286);font:inherit;text-overflow:ellipsis;user-select:text}',
+      '.shb-bed-nfind input::placeholder{color:oklch(0.5 0.006 286);font-weight:400}',
+      '.shb-bed-nfind small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.6 0.006 286);white-space:nowrap}',
+      '.shb-bed-nfind em{flex:none;font-style:normal;font-size:10.5px;font-weight:400;color:oklch(0.5 0.006 286);white-space:nowrap;padding-left:8px;border-left:1px solid oklch(0.32 0.006 286)}',
       '.shb-bed-nfind:focus-within small,.shb-bed-nfind:focus-within em{display:none}',
       /* what the field finds, under it: the kinds there are, then every node with that name */
-      '.shb-bed-ndd{position:absolute;z-index:8;display:flex;flex-direction:column;gap:1px;padding:5px;box-sizing:border-box;border-radius:9px;border:1px solid oklch(0.42 0 0);background:oklch(0.19 0 0);box-shadow:0 14px 34px rgba(0,0,0,.55);overflow-y:auto;scrollbar-width:thin;font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-ndd{position:absolute;z-index:8;display:flex;flex-direction:column;gap:1px;padding:5px;box-sizing:border-box;border-radius:9px;border:1px solid oklch(0.42 0.006 286);background:oklch(0.19 0.006 286);box-shadow:0 14px 34px rgba(0,0,0,.55);overflow-y:auto;scrollbar-width:thin;font-family:Inter,system-ui,sans-serif}',
       '.shb-bed-ndd[hidden]{display:none}',
-      '.shb-bed-ndcap{flex:none;padding:4px 8px 3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.5 0 0)}',
-      '.shb-bed-ndr{flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:oklch(0.9 0 0);font:500 12px/1 Inter,system-ui,sans-serif;text-align:left;cursor:pointer}',
+      '.shb-bed-ndcap{flex:none;padding:4px 8px 3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-ndr{flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:oklch(0.9 0.006 286);font:500 12px/1 Inter,system-ui,sans-serif;text-align:left;cursor:pointer}',
       '.shb-bed-ndr span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-ndr small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.55 0 0)}',
-      '.shb-bed-ndr:hover{background:oklch(0.26 0 0)}',
-      '.shb-bed-ndr.shb-hot{background:oklch(0.3 0.045 78 / .7);color:oklch(0.97 0 0)}',
+      '.shb-bed-ndr small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-ndr:hover{background:oklch(0.26 0.006 286)}',
+      '.shb-bed-ndr.shb-hot{background:oklch(0.3 0.045 78 / .7);color:oklch(0.97 0.006 286)}',
       '.shb-bed-ndr.shb-hot small{color:oklch(0.78 0.06 85)}',
-      '.shb-bed-ndnone{flex:none;padding:8px;font-size:11.5px;color:oklch(0.55 0 0)}',
+      '.shb-bed-ndnone{flex:none;padding:8px;font-size:11.5px;color:oklch(0.55 0.006 286)}',
       /* a power tool's card in the lane of the twelve: lit while it is on the bar in the strip */
-      '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0 0);font-size:16px;line-height:1}',
-      '.shb-bed-mnode button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0.006 286);font-size:16px;line-height:1}',
+      '.shb-bed-mnode button:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-mnode button:disabled{visibility:hidden}',
       '.shb-bed-cap b{font-weight:600;color:oklch(0.82 0.13 78)}',
-      '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font-size:11px;letter-spacing:0;text-transform:none}',
-      '.shb-bed-cap button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
-      '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0 0);font-size:13px;line-height:1}',
+      '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0.006 286);font-size:11px;letter-spacing:0;text-transform:none}',
+      '.shb-bed-cap button:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
+      '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0.006 286);font-size:13px;line-height:1}',
       '.shb-bed-prm:hover{background:oklch(0.36 0.07 25);color:oklch(0.92 0.06 25)}',
       '.shb-bed-lane.shb-bed-extra{background:oklch(0.235 0.018 78);border:1px dashed oklch(0.5 0.08 78)}',
       '.shb-bed-card.shb-bed-addc{cursor:pointer}',
       '.shb-bed-where{display:flex;flex-wrap:wrap;gap:6px}',
-      '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
-      '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0.006 286);overflow:hidden;text-overflow:ellipsis}',
       /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
       '.shb-bed-g{font-size:12px;line-height:1;color:var(--shb-tint)}',
       '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden;cursor:grab}',
       '.shb-bed-lanes.shb-bed-panning,.shb-bed-lanes.shb-bed-panning *{cursor:grabbing !important;user-select:none}',
-      '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0 0);border:1px solid oklch(0.29 0 0);transition:background .14s,border-color .14s}',
+      '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0.006 286);border:1px solid oklch(0.29 0.006 286);transition:background .14s,border-color .14s}',
       '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0 0);border-color:oklch(0.27 0 0)}',
+      '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0.006 286);border-color:oklch(0.27 0.006 286)}',
       '.shb-bed-lane.shb-hot{background:oklch(0.25 0.012 78);border-color:oklch(0.6 0.1 78)}',
-      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0 0);border-radius:8px 8px 0 0;cursor:grab}',
-      '.shb-bed-lhd:hover{background:oklch(0.26 0 0)}',
-      '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0 0)}',
+      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0.006 286);border-radius:8px 8px 0 0;cursor:grab}',
+      '.shb-bed-lhd:hover{background:oklch(0.26 0.006 286)}',
+      '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0.006 286)}',
       '.shb-bed-loose > .shb-bed-lhd{cursor:default;background:transparent}',
-      '.shb-bed-sq{width:10px;height:10px;border-radius:3px;background:var(--shb-tint,oklch(0.45 0 0));flex:none}',
-      '.shb-bed-lhd b{flex:1;min-width:0;font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0 0)}',
-      '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0 0);font-size:10px;color:oklch(0.6 0 0);white-space:nowrap}',
+      '.shb-bed-sq{width:10px;height:10px;border-radius:3px;background:var(--shb-tint,oklch(0.45 0.006 286));flex:none}',
+      '.shb-bed-lhd b{flex:1;min-width:0;font-size:13px;font-weight:600;color:oklch(0.94 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0.006 286);font-size:10px;color:oklch(0.6 0.006 286);white-space:nowrap}',
       '.shb-bed-place.shb-bar{color:oklch(0.82 0.1 78)}',
       /* a group that is on no bar: its tag puts it on the one being edited (blue, as what adds) */
       '.shb-bed-place.shb-bed-put{border:1px dashed oklch(0.62 0.12 250);background:transparent;color:oklch(0.8 0.1 250);font-family:inherit;cursor:pointer}',
       '.shb-bed-place.shb-bed-put:hover{border-style:solid;background:oklch(0.32 0.07 250);color:#fff}',
       '.shb-bed-lbody{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}',
-      '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0 0);box-shadow:inset 0 0 0 1px oklch(0.3 0 0);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
-      '.shb-bed-card:hover{background:oklch(0.28 0 0)}',
-      '.shb-bed-card.shb-on{background:oklch(0.31 0 0);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
+      '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0.006 286);box-shadow:inset 0 0 0 1px oklch(0.3 0.006 286);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
+      '.shb-bed-card:hover{background:oklch(0.28 0.006 286)}',
+      '.shb-bed-card.shb-on{background:oklch(0.31 0.006 286);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
       '.shb-bed-card.shb-dim{opacity:.28}',
       '.shb-bed-src{opacity:.35 !important}',
       '.shb-bed-card::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--shb-tint)}',
       '.shb-bed-ico{flex:none;display:inline-grid;place-items:center;min-width:14px;font-size:13px;line-height:1;color:var(--shb-tint)}',
       '.shb-bed-ico .shb-ico{color:inherit !important}',
       '.shb-bed-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
-      '.shb-bed-ct b{font-size:12.5px;font-weight:500;color:oklch(0.9 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-card.shb-on .shb-bed-ct b{color:oklch(0.99 0 0)}',
-      '.shb-bed-ct small{font-size:11px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-key{flex:none;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:3px;border:1px solid oklch(0.36 0 0);font-size:10px;color:oklch(0.8 0 0)}',
-      '.shb-bed-n{flex:none;font-size:10px;line-height:1.6;padding:0 6px;border-radius:999px;background:oklch(0.3 0 0);color:oklch(0.7 0 0)}',
-      '.shb-bed-lib{flex:none;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid oklch(0.36 0 0);color:oklch(0.62 0 0)}',
-      '.shb-bed-empty{flex:none;height:86px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(0.36 0 0);border-radius:6px;font-size:12px;color:oklch(0.5 0 0)}',
-      '.shb-bed-hint{flex:none;margin-top:4px;padding:10px 12px;border-radius:6px;background:oklch(0.21 0 0);font-size:11.5px;line-height:1.5;color:oklch(0.55 0 0)}',
-      '.shb-bed-hint kbd{font-size:10.5px;padding:0 4px;border-radius:3px;background:oklch(0.3 0 0);color:oklch(0.85 0 0)}',
-      '.shb-bed-new{width:200px;flex:none;border:1px dashed oklch(0.36 0 0);border-radius:8px;background:transparent;color:oklch(0.62 0 0);font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:background .14s,border-color .14s}',
-      '.shb-bed-new:hover{background:oklch(0.25 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-ct b{font-size:12.5px;font-weight:500;color:oklch(0.9 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-card.shb-on .shb-bed-ct b{color:oklch(0.99 0.006 286)}',
+      '.shb-bed-ct small{font-size:11px;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-key{flex:none;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:3px;border:1px solid oklch(0.36 0.006 286);font-size:10px;color:oklch(0.8 0.006 286)}',
+      '.shb-bed-n{flex:none;font-size:10px;line-height:1.6;padding:0 6px;border-radius:999px;background:oklch(0.3 0.006 286);color:oklch(0.7 0.006 286)}',
+      '.shb-bed-lib{flex:none;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid oklch(0.36 0.006 286);color:oklch(0.62 0.006 286)}',
+      '.shb-bed-empty{flex:none;height:86px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(0.36 0.006 286);border-radius:6px;font-size:12px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-hint{flex:none;margin-top:4px;padding:10px 12px;border-radius:6px;background:oklch(0.21 0.006 286);font-size:11.5px;line-height:1.5;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-hint kbd{font-size:10.5px;padding:0 4px;border-radius:3px;background:oklch(0.3 0.006 286);color:oklch(0.85 0.006 286)}',
+      '.shb-bed-new{width:200px;flex:none;border:1px dashed oklch(0.36 0.006 286);border-radius:8px;background:transparent;color:oklch(0.62 0.006 286);font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:background .14s,border-color .14s}',
+      '.shb-bed-new:hover{background:oklch(0.25 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-new.shb-hot{border-color:oklch(0.7 0.11 78);background:oklch(0.26 0.02 78)}',
       '.shb-bed-new span{font-size:20px;line-height:1}',
-      '.shb-bed-new small{font-size:11px;color:oklch(0.48 0 0)}',
+      '.shb-bed-new small{font-size:11px;color:oklch(0.48 0.006 286)}',
       '.shb-bed-fresh .shb-bed-card{animation:shbBedRise .18s ease-out}',
       '.shb-bed-line{position:fixed;left:0;top:0;z-index:7;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
       '.shb-bed-line.shb-on{opacity:1}',
       '.shb-bed-ghost,.shb-bed-ghost *{box-sizing:border-box}',
-      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
+      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0.006 286) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
       /* a button of the bar held outside it: letting go takes it off */
-      '.shb-bed-ghost.shb-bed-off{opacity:1 !important;background:oklch(0.24 0 0) !important;border-radius:10px;outline:1.5px solid oklch(0.62 0.17 25);outline-offset:1px}',
+      '.shb-bed-ghost.shb-bed-off{opacity:1 !important;background:oklch(0.24 0.006 286) !important;border-radius:10px;outline:1.5px solid oklch(0.62 0.17 25);outline-offset:1px}',
       '.shb-bed-ghost.shb-bed-off::after{content:"Off the bar";position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;padding:3px 8px;border-radius:999px;background:oklch(0.5 0.16 25);color:#fff;font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;white-space:nowrap}',
       /* a group, held by the head of its lane: its color and its name, no wider than they are */
-      '.shb-bed-ghost.shb-bed-ghead{width:auto !important;max-width:240px;height:32px !important;padding:0 12px 0 10px;border:1px solid oklch(0.5 0 0);border-radius:8px;background:oklch(0.27 0 0)}',
+      '.shb-bed-ghost.shb-bed-ghead{width:auto !important;max-width:240px;height:32px !important;padding:0 12px 0 10px;border:1px solid oklch(0.5 0.006 286);border-radius:8px;background:oklch(0.27 0.006 286)}',
       '.shb-bed-ghead .shb-bed-place,.shb-bed-ghead .shb-bed-cnt{display:none}',
       /* the panel on the right is there only while a button or a group is picked (or something is being pasted
          or sent): the rest of the time its room is the picture's and the lanes' */
-      '.shb-bed-insp{position:relative;width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
+      '.shb-bed-insp{position:relative;width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0.006 286);background:oklch(0.215 0.006 286)}',
       '.shb-bed-insp[hidden]{display:none}',
-      '.shb-bed-ix{position:absolute;top:11px;right:11px;z-index:2;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.58 0 0);font:400 17px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
-      '.shb-bed-ix:hover{background:oklch(0.3 0 0);color:oklch(0.96 0 0)}',
+      '.shb-bed-ix{position:absolute;top:11px;right:11px;z-index:2;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.58 0.006 286);font:400 17px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
+      '.shb-bed-ix:hover{background:oklch(0.3 0.006 286);color:oklch(0.96 0.006 286)}',
       '.shb-bed-ibody{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}',
       '.shb-bed-f{display:flex;flex-direction:column;gap:8px}',
-      '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0 0)}',
-      '.shb-bed-lab em{color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-name{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:6px;background:oklch(0.25 0 0);border:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0.006 286)}',
+      '.shb-bed-lab em{color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-name{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:6px;background:oklch(0.25 0.006 286);border:1px solid oklch(0.32 0.006 286)}',
       '.shb-bed-name:focus-within{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0 0);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
+      '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0.006 286);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
       '.shb-bed-name .shb-bed-ico{font-size:15px}',
       '.shb-bed-name .shb-bed-sq{width:11px;height:11px}',
       '.shb-bed-sws{display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
       '.shb-bed-sw{width:24px;height:24px;border:0;border-radius:6px;padding:0;transition:transform .1s}',
       '.shb-bed-sw:hover{transform:scale(1.12)}',
-      '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0 0),0 0 0 4px oklch(0.92 0 0)}',
-      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0 0)}',
-      '.shb-bed-fill.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0.006 286),0 0 0 4px oklch(0.92 0.006 286)}',
+      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-fill.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
       '.shb-bed-fill:disabled{opacity:.4}',
       '.shb-bed-gl{display:flex;gap:4px}',
-      '.shb-bed-gl button{width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0 0);font-size:14px;line-height:1;padding:0}',
-      '.shb-bed-gl button:hover{background:oklch(0.3 0 0)}',
-      '.shb-bed-gl button.shb-on{background:oklch(0.32 0 0);color:var(--shb-tint)}',
-      '.shb-bed-keyb{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font-size:12.5px;text-align:left;transition:border-color .12s}',
+      '.shb-bed-gl button{width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0.006 286);font-size:14px;line-height:1;padding:0}',
+      '.shb-bed-gl button:hover{background:oklch(0.3 0.006 286)}',
+      '.shb-bed-gl button.shb-on{background:oklch(0.32 0.006 286);color:var(--shb-tint)}',
+      '.shb-bed-keyb{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid oklch(0.32 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);color:oklch(0.9 0.006 286);font-size:12.5px;text-align:left;transition:border-color .12s}',
       '.shb-bed-keyb.shb-on{border-color:oklch(0.82 0.13 78)}',
-      '.shb-bed-keyb kbd{min-width:24px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:4px;border:1px solid oklch(0.4 0 0);background:oklch(0.27 0 0);font-size:11.5px;color:inherit}',
-      '.shb-bed-keyb span{flex:1;color:oklch(0.55 0 0)}',
+      '.shb-bed-keyb kbd{min-width:24px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:4px;border:1px solid oklch(0.4 0.006 286);background:oklch(0.27 0.006 286);font-size:11.5px;color:inherit}',
+      '.shb-bed-keyb span{flex:1;color:oklch(0.55 0.006 286)}',
       '.shb-bed-keyb.shb-on span{color:oklch(0.85 0.12 78)}',
       '.shb-bed-warn{font-size:11.5px;line-height:1.4;color:oklch(0.78 0.13 60)}',
       '.shb-bed-tags{display:flex;flex-wrap:wrap;gap:5px}',
-      '.shb-bed-tag{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;color:oklch(0.66 0 0);font-size:12px;transition:all .12s}',
-      '.shb-bed-tag.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
-      '.shb-bed-tag i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0 0))}',
-      '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0 0)}',
-      '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0 0);font-size:12px;color:oklch(0.78 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-tag{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;color:oklch(0.66 0.006 286);font-size:12px;transition:all .12s}',
+      '.shb-bed-tag.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
+      '.shb-bed-tag i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0.006 286))}',
+      '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0.006 286)}',
+      '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0.006 286);font-size:12px;color:oklch(0.78 0.006 286);white-space:nowrap;overflow:hidden}',
       '.shb-bed-nodes div:last-child{border-bottom:0}',
       '.shb-bed-nodes i{width:6px;height:6px;border-radius:2px;flex:none}',
-      '.shb-bed-nodes .shb-more{font-size:11.5px;color:oklch(0.5 0 0)}',
-      '.shb-bed-pl{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid oklch(0.3 0 0);border-radius:6px;background:transparent;text-align:left;transition:all .12s}',
-      '.shb-bed-pl:hover{border-color:oklch(0.42 0 0)}',
+      '.shb-bed-nodes .shb-more{font-size:11.5px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-pl{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid oklch(0.3 0.006 286);border-radius:6px;background:transparent;text-align:left;transition:all .12s}',
+      '.shb-bed-pl:hover{border-color:oklch(0.42 0.006 286)}',
       '.shb-bed-pl.shb-on{background:oklch(0.27 0.01 78);border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-pl > i{width:14px;height:14px;border-radius:50%;border:1.5px solid oklch(0.45 0 0);flex:none}',
+      '.shb-bed-pl > i{width:14px;height:14px;border-radius:50%;border:1.5px solid oklch(0.45 0.006 286);flex:none}',
       '.shb-bed-pl.shb-on > i{border:4px solid oklch(0.82 0.13 78)}',
-      '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0 0)}',
-      '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0 0)}',
+      '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0.006 286)}',
+      '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0.006 286)}',
       '.shb-bed-two{display:flex;gap:6px}',
-      '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0 0);font-size:11.5px;line-height:1.55;color:oklch(0.55 0 0)}',
-      '.shb-bed-note b{font-weight:400;color:oklch(0.8 0 0)}',
-      '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0 0)}',
-      '.shb-bed-ab{height:32px;border:1px solid oklch(0.36 0 0);border-radius:5px;background:transparent;color:oklch(0.92 0 0);font-size:12.5px}',
-      '.shb-bed-ab:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0.006 286);font-size:11.5px;line-height:1.55;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-note b{font-weight:400;color:oklch(0.8 0.006 286)}',
+      '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0.006 286)}',
+      '.shb-bed-ab{height:32px;border:1px solid oklch(0.36 0.006 286);border-radius:5px;background:transparent;color:oklch(0.92 0.006 286);font-size:12.5px}',
+      '.shb-bed-ab:hover{background:oklch(0.28 0.006 286)}',
       '.shb-bed-ab.shb-pri{border-color:oklch(0.6 0.1 78);color:oklch(0.88 0.11 78)}',
       '.shb-bed-ab:disabled{opacity:.4;background:transparent}',
-      '.shb-bed-tb{flex:1;height:28px;border:0;border-radius:4px;background:transparent;color:oklch(0.66 0 0);font-size:12px}',
-      '.shb-bed-tb:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-tb{flex:1;height:28px;border:0;border-radius:4px;background:transparent;color:oklch(0.66 0.006 286);font-size:12px}',
+      '.shb-bed-tb:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-tb.shb-red{color:oklch(0.7 0.13 25)}',
       '.shb-bed-tb.shb-red:hover{background:oklch(0.3 0.06 25);color:oklch(0.9 0.08 25)}',
-      '.shb-bed-none{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;font-size:13px;color:oklch(0.62 0 0)}',
-      '.shb-bed-none small{font-size:11.5px;line-height:1.6;color:oklch(0.48 0 0)}',
-      '.shb-bed-ta{width:100%;height:130px;resize:none;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font:400 11px/1.4 "IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;padding:8px;outline:none;user-select:text;word-break:break-all}',
+      '.shb-bed-none{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;font-size:13px;color:oklch(0.62 0.006 286)}',
+      '.shb-bed-none small{font-size:11.5px;line-height:1.6;color:oklch(0.48 0.006 286)}',
+      '.shb-bed-ta{width:100%;height:130px;resize:none;border:1px solid oklch(0.32 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);color:oklch(0.9 0.006 286);font:400 11px/1.4 "IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;padding:8px;outline:none;user-select:text;word-break:break-all}',
       '.shb-bed-ta:focus{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-ft{height:36px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid oklch(0.27 0 0);font-size:11.5px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-ft{height:36px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid oklch(0.27 0.006 286);font-size:11.5px;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
       '.shb-bed-ft > span{display:flex;align-items:center;gap:5px}',
-      '.shb-bed-ft kbd{height:18px;display:flex;align-items:center;padding:0 6px;border-radius:3px;background:oklch(0.28 0 0);color:oklch(0.8 0 0);font-size:10.5px}',
-      '.shb-bed-saved{color:oklch(0.6 0 0)}',
+      '.shb-bed-ft kbd{height:18px;display:flex;align-items:center;padding:0 6px;border-radius:3px;background:oklch(0.28 0.006 286);color:oklch(0.8 0.006 286);font-size:10.5px}',
+      '.shb-bed-saved{color:oklch(0.6 0.006 286)}',
       '.shb-bed-saved i{width:6px;height:6px;border-radius:50%;background:oklch(0.72 0.15 150)}',
-      '.shb-bed-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:14px;height:38px;padding:0 8px 0 16px;border-radius:8px;background:oklch(0.3 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px;color:oklch(0.94 0 0);white-space:nowrap;animation:shbBedToast .16s ease-out}',
+      '.shb-bed-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:14px;height:38px;padding:0 8px 0 16px;border-radius:8px;background:oklch(0.3 0.006 286);border:1px solid oklch(0.38 0.006 286);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px;color:oklch(0.94 0.006 286);white-space:nowrap;animation:shbBedToast .16s ease-out}',
       '.shb-bed-toast.shb-plain{padding-right:16px}',
       '.shb-bed-toast button{height:26px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.85 0.12 78);font-size:12.5px;font-weight:600}',
-      '.shb-bed-toast button:hover{background:oklch(0.36 0 0)}',
+      '.shb-bed-toast button:hover{background:oklch(0.36 0.006 286)}',
       '@keyframes shbBedToast{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}',
       '@keyframes shbBedRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
       /* a saved button's own sign, picked in the button editor, where its sparkles were */
       '.shb-glyph{font-style:normal;font-weight:400;line-height:1;color:oklch(0.82 0.11 300)}',
       '.shb-tinted > .shb-tpl-ico .shb-glyph,.shb-pt-row[style*="--shb-tint"] .shb-tpl-ico .shb-glyph{color:var(--shb-tint)}',
       /* buttons someone sent: a card asks before anything is added (window.__hotbox.offer) */
-      '.shb-offer{position:fixed;right:18px;bottom:18px;z-index:2147483200;width:330px;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:8px;background:oklch(0.26 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 14px 40px rgba(0,0,0,.5);font:400 12.5px/1.45 "IBM Plex Sans",Inter,system-ui,sans-serif;color:oklch(0.9 0 0);animation:shbBedRise .18s ease-out}',
+      '.shb-offer{position:fixed;right:18px;bottom:18px;z-index:2147483200;width:330px;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:8px;background:oklch(0.26 0.006 286);border:1px solid oklch(0.38 0.006 286);box-shadow:0 14px 40px rgba(0,0,0,.5);font:400 12.5px/1.45 "IBM Plex Sans",Inter,system-ui,sans-serif;color:oklch(0.9 0.006 286);animation:shbBedRise .18s ease-out}',
       '.shb-offer *{box-sizing:border-box}',
       '.shb-offer-t{display:flex;align-items:center;gap:9px}',
-      '.shb-offer-t b{font-weight:600;color:oklch(0.96 0 0)}',
-      '.shb-offer-b{display:flex;flex-direction:column;gap:3px;color:oklch(0.86 0 0)}',
-      '.shb-offer-b small{font-size:11.5px;color:oklch(0.58 0 0);overflow:hidden;text-overflow:ellipsis}',
-      '.shb-offer-a{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:30px;font-size:12px;color:oklch(0.7 0 0)}',
-      '.shb-offer-a button{height:30px;padding:0 12px;border:1px solid oklch(0.38 0 0);border-radius:5px;background:transparent;color:oklch(0.86 0 0);font:inherit;cursor:pointer}',
-      '.shb-offer-a button:hover{background:oklch(0.32 0 0)}',
+      '.shb-offer-t b{font-weight:600;color:oklch(0.96 0.006 286)}',
+      '.shb-offer-b{display:flex;flex-direction:column;gap:3px;color:oklch(0.86 0.006 286)}',
+      '.shb-offer-b small{font-size:11.5px;color:oklch(0.58 0.006 286);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-offer-a{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:30px;font-size:12px;color:oklch(0.7 0.006 286)}',
+      '.shb-offer-a button{height:30px;padding:0 12px;border:1px solid oklch(0.38 0.006 286);border-radius:5px;background:transparent;color:oklch(0.86 0.006 286);font:inherit;cursor:pointer}',
+      '.shb-offer-a button:hover{background:oklch(0.32 0.006 286)}',
       '.shb-offer-a button.shb-pri{border:0;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-weight:600}',
       '.shb-offer-a button.shb-pri:hover{background:oklch(0.87 0.12 78)}',
       /* The nodes of a saved button */
@@ -1531,40 +1582,40 @@
          smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
          tall as they were. A tool's row in a card reads the same way */
       /* The Tool Guide, the power tools browser (Settings → Power Tools → Tool Guide): the button editor's window, with its own list and panel */
-      '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0 0);overflow-y:auto}',
-      '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0 0);text-align:left;cursor:grab;touch-action:none;user-select:none}',
-      '.shb-ptb-row:hover{background:oklch(0.26 0 0)}',
+      '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0.006 286);overflow-y:auto}',
+      '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0.006 286);text-align:left;cursor:grab;touch-action:none;user-select:none}',
+      '.shb-ptb-row:hover{background:oklch(0.26 0.006 286)}',
       '.shb-ptb-row.shb-on{background:oklch(0.3 0.03 78);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
       '.shb-ptb-row.shb-off{opacity:.5}',
-      '.shb-ptb-row > .shb-ico{flex:none;color:oklch(0.94 0 0)}',
+      '.shb-ptb-row > .shb-ico{flex:none;color:oklch(0.94 0.006 286)}',
       '.shb-ptb-nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
-      '.shb-ptb-nm b{font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-ptb-nm small{font-size:11.5px;color:oklch(0.7 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-ptb-key{flex:none;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:oklch(0.84 0 0);background:oklch(0.26 0 0);border:1px solid oklch(0.33 0 0);border-radius:4px;padding:4px 6px;white-space:nowrap}',
-      '.shb-ptb-none{padding:18px 12px;color:oklch(0.62 0 0)}',
+      '.shb-ptb-nm b{font-size:13px;font-weight:600;color:oklch(0.94 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-nm small{font-size:11.5px;color:oklch(0.7 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-key{flex:none;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:oklch(0.84 0.006 286);background:oklch(0.26 0.006 286);border:1px solid oklch(0.33 0.006 286);border-radius:4px;padding:4px 6px;white-space:nowrap}',
+      '.shb-ptb-none{padding:18px 12px;color:oklch(0.62 0.006 286)}',
       '.shb-ptb-det{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 26px;overflow-y:auto}',
-      '.shb-ptb-clip{flex:0 1 400px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid oklch(0.27 0 0);border-radius:10px;background:oklch(0.16 0 0)}',
+      '.shb-ptb-clip{flex:0 1 400px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid oklch(0.27 0.006 286);border-radius:10px;background:oklch(0.16 0.006 286)}',
       '.shb-ptb-clip video{width:100%;height:100%;object-fit:contain;display:block}',
-      '.shb-ptb-nc{display:none;flex-direction:column;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.62 0 0)}',
-      '.shb-ptb-nc .shb-ico{color:oklch(0.5 0 0)}',
+      '.shb-ptb-nc{display:none;flex-direction:column;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.62 0.006 286)}',
+      '.shb-ptb-nc .shb-ico{color:oklch(0.5 0.006 286)}',
       '.shb-ptb-noclip video{display:none}',
       '.shb-ptb-noclip .shb-ptb-nc{display:flex}',
       '.shb-ptb-info{flex:none;display:flex;flex-direction:column;gap:12px}',
       '.shb-ptb-top{display:flex;align-items:center;gap:12px}',
-      '.shb-ptb-top > .shb-ico{flex:none;color:oklch(0.96 0 0)}',
-      '.shb-ptb-top > b{min-width:0;font-size:20px;font-weight:600;color:oklch(0.96 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-top > .shb-ico{flex:none;color:oklch(0.96 0.006 286)}',
+      '.shb-ptb-top > b{min-width:0;font-size:20px;font-weight:600;color:oklch(0.96 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-ptb-top .shb-ptb-key{font-size:12px;padding:5px 8px}',
-      '.shb-ptb-sw,.shb-ptb-add{flex:none;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid oklch(0.33 0 0);border-radius:5px;background:oklch(0.26 0 0);color:oklch(0.72 0 0);font-size:12.5px;font-weight:600;white-space:nowrap}',
+      '.shb-ptb-sw,.shb-ptb-add{flex:none;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid oklch(0.33 0.006 286);border-radius:5px;background:oklch(0.26 0.006 286);color:oklch(0.72 0.006 286);font-size:12.5px;font-weight:600;white-space:nowrap}',
       '.shb-ptb-sw{min-width:56px}',
       '.shb-ptb-sw.shb-on{border-color:oklch(0.6 0.08 150);background:oklch(0.29 0.04 150);color:oklch(0.88 0.09 150)}',
-      '.shb-ptb-add{color:oklch(0.94 0 0)}',
+      '.shb-ptb-add{color:oklch(0.94 0.006 286)}',
       '.shb-ptb-add.shb-on{border-color:oklch(0.55 0.09 78);color:oklch(0.9 0.08 78)}',
       '.shb-ptb-add .shb-ico{color:inherit}',
       '.shb-ptb-sw:hover,.shb-ptb-add:hover{filter:brightness(1.15)}',
       '.shb-ptb-add:disabled{opacity:.45;pointer-events:none}',
-      '.shb-ptb-desc{font-size:14px;color:oklch(0.9 0 0)}',
-      '.shb-ptb-tip{font-size:13px;line-height:1.55;color:oklch(0.76 0 0);user-select:text}',
-      '.shb-bed-hb.shb-ptb-io{display:inline-flex;align-items:center;gap:7px;border:1px solid oklch(0.3 0 0);background:oklch(0.2 0 0);font-weight:600}',
+      '.shb-ptb-desc{font-size:14px;color:oklch(0.9 0.006 286)}',
+      '.shb-ptb-tip{font-size:13px;line-height:1.55;color:oklch(0.76 0.006 286);user-select:text}',
+      '.shb-bed-hb.shb-ptb-io{display:inline-flex;align-items:center;gap:7px;border:1px solid oklch(0.3 0.006 286);background:oklch(0.2 0.006 286);font-weight:600}',
       '.shb-bed-hb.shb-ptb-io.shb-on{border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.03 78);color:oklch(0.9 0.08 78)}',
       '.shb-ptb-io .shb-ico{color:inherit}',
       /* a tool dragged out of its list: the window and its dim step aside, so every bar of the hotbox is a target */
@@ -1621,7 +1672,7 @@
       '.shb-fluid .shb-ps-txt{height:100%;padding:0 12px;font:600 12px/1 Inter,system-ui,sans-serif;color:#fff;mix-blend-mode:difference}',
       '.shb-fluid .shb-ps-num:focus{outline:1px solid rgba(255,255,255,.6);border-radius:4px}',
       '.shb-fluid .shb-x{width:18px;height:18px;left:-5px;top:-6px;background:#5c5c63;border:1.5px solid rgba(20,20,22,.95);color:#fff;font:700 13px/1 Inter,system-ui,sans-serif}',
-      '.shb-fluid .shb-editbar{gap:4px;padding:4px 4px 4px 14px;border-radius:16px;margin-bottom:8px;background:rgba(38,38,42,.72)}',
+      '.shb-fluid .shb-editbar{gap:4px;padding:4px 4px 4px 14px;border-radius:16px;margin-top:12px;background:rgba(38,38,42,.72)}',
       '.shb-fluid .shb-editbar-t{font:500 12px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.65);margin-right:6px}',
       '.shb-fluid .shb-editbar-b{padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:var(--shb-t1)}',
       '.shb-fluid .shb-editbar-b:hover{background:rgba(255,255,255,.1)}',
@@ -1744,7 +1795,7 @@
       '.shb-quiet .shb-ps-num:focus{outline:1px solid var(--shb-qblue);border-radius:3px}',
       '.shb-quiet .shb-x{width:14px;height:14px;left:-4px;top:-5px;background:#3a3a3a;border:1px solid #1f1f1f;color:#ddd;font:500 11px/1 var(--shb-mono)}',
       '.shb-quiet .shb-btn.shb-outline{outline-color:#4a4a4a}',
-      '.shb-quiet .shb-editbar{gap:2px;padding:3px 3px 3px 10px;border-radius:7px;margin-bottom:6px}',
+      '.shb-quiet .shb-editbar{gap:2px;padding:3px 3px 3px 10px;border-radius:7px;margin-top:10px}',
       '.shb-quiet .shb-editbar-t{font:500 10.5px/1 var(--shb-mono);color:#7d7d7d;margin-right:6px}',
       '.shb-quiet .shb-editbar-b{padding:6px 9px;border-radius:5px;font:500 12px/1 Inter,system-ui,sans-serif;color:#cfcfcf}',
       '.shb-quiet .shb-editbar-b:hover{background:var(--shb-qhover);color:#fff}',
@@ -6764,7 +6815,163 @@
         fn: function () { setNameOn(node, nm); var g = getGraph(); if (g) g.setDirtyCanvas(true, true); }
       };
     });
+    /* your own tools (Settings → Power Tools). Pressed, one that runs after a button adds nodes takes the
+       selection as the nodes just added */
+    utList().forEach(function (t) {
+      map['u_' + t.id] = { id: 'u_' + t.id, icon: utIcon(t), label: t.name, kbd: '', fn: function () {
+        var sel = selNodes();
+        utRun(t, 'press', node, t.when === 'added' ? (sel.length ? sel : (node ? [node] : [])) : [], null);
+      } };
+    });
     return map;
+  }
+
+  /* ---------------------------------------------------------------------
+   * YOUR OWN POWER TOOLS: Settings → Power Tools → New power tool takes a name, an icon and code pasted in.
+   * It is kept in the preferences (S.userTools: { id, name, icon, when, code }) and is a tool like the
+   * built-in ones (tool:u_<id>): dragged onto any bar, with a name, a color and a key of its own.
+   *  - The code is the body of an async function that gets app, graph, canvas, node (the one under the
+   *    hotbox), nodes (the selection), added and button (see below) and hotbox (a few helpers, utHelper).
+   *  - when 'press': it runs when its button is pressed. when 'added': it also runs by itself after a button
+   *    of the hotbox added nodes (hbAdded), with those nodes in `added` and that button in `button`; pressed,
+   *    it takes the selection as `added`.
+   *  - Code runs in a browser only once it was seen there and switched on there: UT_OK_KEY, in this browser's
+   *    own storage, keeps the very text that was accepted, and when it was to run. Saving it in Settings does that. A tool that came
+   *    with a preferences file, or whose code was changed somewhere else, is off here until its code is opened
+   *    in Settings and switched on. A shared button or group never carries a tool's code (hbPack).
+   *  - Whatever it throws is caught and shown in the status line under the tool's name.
+   * --------------------------------------------------------------------- */
+  var UT_OK_KEY = 'hotbox_tools_ok_v1';
+  var UT_ICONS = ['wand', 'sparkles', 'play', 'power', 'tools', 'star', 'label', 'save', 'copy', 'sync', 'swap', 'group', 'folder', 'video', 'model', 'palette'];
+  var UT_ARGS = ['app', 'graph', 'canvas', 'node', 'nodes', 'added', 'button', 'hotbox'];
+  var UT_OKS = null, UT_DEPTH = 0;
+
+  function utList() {
+    return Array.isArray(S.userTools) ? S.userTools : [];
+  }
+
+  function utById(id) {
+    var l = utList();
+    for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+    return null;
+  }
+
+  function utUid(t) {
+    return 'tool:u_' + t.id;
+  }
+
+  function utIcon(t) {
+    return (t && Object.prototype.hasOwnProperty.call(ICONS, t.icon)) ? t.icon : 'wand';
+  }
+
+  /* what this browser switches on is the code together with when it runs: the same code set to run by itself
+     is not what was accepted */
+  function utSig(t) {
+    return (t.when === 'added' ? 'added' : 'press') + '\n' + t.code;
+  }
+
+  /* what this browser has switched on, by tool: the text itself, so a changed one is not the same one */
+  function utOkMap() {
+    if (!UT_OKS) {
+      try { UT_OKS = JSON.parse(localStorage.getItem(UT_OK_KEY) || '{}'); } catch (e) { UT_OKS = null; }
+      if (!UT_OKS || typeof UT_OKS !== 'object' || Array.isArray(UT_OKS)) UT_OKS = {};
+    }
+    return UT_OKS;
+  }
+
+  function utOk(t) {
+    return !!t && utOkMap()[t.id] === utSig(t);
+  }
+
+  function utAccept(t, on) {
+    var m = utOkMap();
+    if (on) m[t.id] = utSig(t);
+    else delete m[t.id];
+    try { localStorage.setItem(UT_OK_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+
+  /* the pasted text as a function (an async one where the browser has them, so the code can await) */
+  function utCompile(code) {
+    var mk = null;
+    try { mk = new Function('return Object.getPrototypeOf(async function () {}).constructor')(); } catch (e) { mk = null; }
+    return (mk || Function).apply(null, UT_ARGS.concat([String(code || '')]));
+  }
+
+  /* what the code gets as `hotbox` */
+  function utHelper() {
+    return {
+      toast: function (text) { setStatus('ok', String(text)); },
+      error: function (text) { setStatus('error', String(text)); },
+      /* a paid API node */
+      isApiNode: function (n) { return !!(n && SRV.api && SRV.api[String(n.type || n.comfyClass || '')]); },
+      /* addNode(type, { after: node, at: [x, y], wire: false }): to the right of `after` and wired to it where
+         the slots fit, or at `at` (graph units), or by the pointer; it slides down to a free spot. The node,
+         or null when that type is not installed */
+      addNode: function (type, opts) {
+        opts = opts || {};
+        var g = getGraph(), c = getCanvas();
+        if (!g) return null;
+        var after = opts.after || null, vb = after ? visBox(after) : null;
+        var pos = Array.isArray(opts.at) ? [+opts.at[0] || 0, +opts.at[1] || 0] : (vb ? [vb.x + vb.w + 60, vb.y] : pasteAnchor(c));
+        var made = createNodeOrSubgraph(String(type), pos);
+        if (!made) return null;
+        try {
+          var dy = hbFreeDy(g, hbTitledBox(made), [made]);
+          if (dy && made.pos) made.pos[1] += dy;
+        } catch (e) {}
+        if (after && opts.wire !== false) { try { wireNodesSmart(after, made, vb); } catch (e) {} }
+        try { g.setDirtyCanvas(true, true); } catch (e) {}
+        return made;
+      },
+      select: function (list) {
+        var c = getCanvas();
+        try { if (c && c.selectNodes) c.selectNodes((Array.isArray(list) ? list : [list]).filter(Boolean)); } catch (e) {}
+      },
+      api: window.__hotbox
+    };
+  }
+
+  /* how: 'press' (its button), 'added' (a button added nodes) or 'test' (Test in its slot, which runs the text
+     in the slot as it stands). done(err) hears how it ended */
+  function utRun(t, how, node, added, button, done) {
+    var fin = function (err) {
+      if (err) setStatus('error', '"' + t.name + '": ' + msgOf(err));
+      if (typeof done === 'function') { try { done(err || null); } catch (e) {} }
+    };
+    if (how !== 'test' && !utOk(t)) {
+      fin(new Error('its code is off in this browser · Settings → Power Tools shows it'));
+      return;
+    }
+    var fn = null;
+    try { fn = utCompile(t.code); } catch (e) { fin(e); return; }
+    var r = null;
+    UT_DEPTH++;
+    try {
+      r = fn(getApp(), getGraph(), getCanvas(), node || null, selNodes(), added || [], button || null, utHelper());
+    } catch (e) {
+      UT_DEPTH--;
+      fin(e || new Error('it failed'));
+      return;
+    }
+    UT_DEPTH--;
+    if (r && typeof r.then === 'function') r.then(function () { fin(null); }, function (e) { fin(e || new Error('it failed')); });
+    else fin(null);
+  }
+
+  /* A button of the hotbox added nodes (a node of a bar or the drawer, a model, a saved button). The page
+     hears it (hotbox:added, detail { nodes, from, name }), and your own tools that run then get the nodes.
+     A tool that adds nodes while it runs does not set them off again */
+  function hbAdded(nodes, uid) {
+    nodes = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
+    if (!nodes.length) return;
+    var name = '';
+    try { name = hbUidLabel(uid); } catch (e) { name = ''; }
+    try { window.dispatchEvent(new CustomEvent('hotbox:added', { detail: { nodes: nodes, from: uid || '', name: name } })); } catch (e) {}
+    if (UT_DEPTH) return;
+    var btn = { uid: uid || '', name: name };
+    utList().slice().forEach(function (t) {
+      if (t.when === 'added' && utOk(t)) utRun(t, 'added', null, nodes, btn);
+    });
   }
 
   /* Power tools are the user's own extras; each can be switched off in Settings, which hides its buttons too */
@@ -6881,6 +7088,11 @@
 
   /* When a tool cannot run on this node (or the canvas): a short line saying when it does, or '' */
   function hbToolWhy(tid, node, sel) {
+    /* a tool of your own whose code this browser has not switched on */
+    if (/^u_/.test(tid)) {
+      var own = utById(tid.slice(2));
+      return (own && !utOk(own)) ? 'its code is off in this browser · Settings → Power Tools shows it' : '';
+    }
     if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
       return 'works on a node: open the hotbox over one';
     }
@@ -7021,8 +7233,8 @@
         cls: isAdd ? 'shb-btn-pri' : 'shb-swapi',
         run: function () {
           hbReady(mType).then(function () {
-            if (isPair) addModelPair(sel, mType);
-            else if (isAdd) addModel(node, mType);
+            if (isPair) hbAdded(addModelPair(sel, mType), u);
+            else if (isAdd) hbAdded(addModel(node, mType), u);
             else swapSelected(node, mType);
           });
         }
@@ -7064,8 +7276,7 @@
         cls: 'shb-btn-pri',
         run: function () {
           hbReady(nType).then(function () {
-            if (isPair) addModelPair(sel, nType);
-            else addModel(node, nType);
+            hbAdded(isPair ? addModelPair(sel, nType) : addModel(node, nType), u);
           });
         }
       };
@@ -8325,11 +8536,18 @@
     return r.width ? r : null;
   }
 
-  /* While a button is dragged in edit mode, the edit bar is the place to drop it to take it off its bar */
+  /* While a button is dragged in edit mode, the edit bar (under the bottom bar) is the place to drop it to take
+     it off its bar. A group's list that is open over it is in front of it: there the button goes into the list */
   function hbOverTrash(x, y) {
     var eb = HB.el && HB.editMode ? HB.el.querySelector('.shb-editbar') : null;
     var r = eb && eb.getBoundingClientRect();
-    return !!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8);
+    if (!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8)) return false;
+    var lists = HB.el.querySelectorAll('.shb-grp-show > .shb-gdrop');
+    for (var i = 0; i < lists.length; i++) {
+      var b = lists[i].getBoundingClientRect();
+      if (b.width && x >= b.left - 6 && x <= b.right + 6 && y >= b.top - 10 && y <= b.bottom + 6) return false;
+    }
+    return true;
   }
 
   function hbTrashHot(on) {
@@ -8898,7 +9116,7 @@
       });
       var eb = HB.el.querySelector('.shb-editbar');
       if (eb) {
-        eb.animate([{ transform: fl ? 'translateY(10px) scale(.9)' : 'translateY(4px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+        eb.animate([{ transform: fl ? 'translateY(-10px) scale(.9)' : 'translateY(-4px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
           { duration: fl ? 140 : 100, easing: fl ? 'cubic-bezier(.34,1.56,.64,1)' : 'cubic-bezier(.2,0,0,1)' });
       }
     } catch (e) {}
@@ -9907,10 +10125,10 @@
       return '<div class="shb-card-hd"><span class="shb-hd-t">' + esc(title) + '</span>' + (note || '') + '</div>';
     }
 
-    /* TOP ZONE: edit toolbar (edit mode only) + favorites dock [1]..[N] + its category shortcut + context bar */
+    /* TOP ZONE: favorites dock [1]..[N] + its category shortcut + context bar */
     var dc = hbDockCat();
     var dcInfo = HB_CATS[dc];
-    var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' + hbEditBarHTML() +
+    var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' +
       '<div class="shb-bar shb-dock">' +
         ((!isAdd || isPair) ? '<span class="shb-dock-mode' + (isPair ? '' : ' shb-dock-swap') + '" title="' + (isPair ? 'Adds the model and wires both selected loaders' : 'The numbered buttons swap the selected model in place') + '">' +
           ico('swap', 13) + '<span>' + (isPair ? 'Wire ' + sel.length : 'Swap') + '</span>' +
@@ -10016,7 +10234,7 @@
       : '';
 
     /* BOTTOM ZONE: action bar (actions, then pinned nodes, then the drop gap) + the standalone "+"
-       with its category dial beside it */
+       with its category dial beside it; and under them, in edit mode only, the edit bar */
     var actItems = botItems.filter(function (it) { return it.kind === 'tool'; });
     var pinItems = botItems.filter(function (it) { return it.kind !== 'tool'; });
     var dialHTML = '<div class="shb-dial"><div class="shb-dial-in">' +
@@ -10049,6 +10267,7 @@
         '<button type="button" class="shb-plus' + (HB.drawer ? ' shb-plus-on' : '') + '" data-hb-plus title="Add any node (+) · Hover for categories · Drop a node here to pin it">' + ico('plus', fl ? 22 : 18) + '</button>' +
       '</div>' +
       '</div>' +
+      hbEditBarHTML() +
     '</div>';
 
     /* Which category lives at the end of the dock */
@@ -11363,8 +11582,8 @@
         var sel = selNodes();
         hbClose();
         hbReady(mType).then(function () {
-          if (sel.length >= 2 && ndAdds(n)) addModelPair(sel, mType);
-          else if (ndAdds(n)) addModel(n, mType);
+          if (sel.length >= 2 && ndAdds(n)) hbAdded(addModelPair(sel, mType), 'model:' + mType);
+          else if (ndAdds(n)) hbAdded(addModel(n, mType), 'model:' + mType);
           else swapSelected(n, mType);
         });
         return;
@@ -11396,7 +11615,9 @@
         var cType = cr.getAttribute('data-hb-create');
         var nC = HB.node;
         hbClose();
-        nmLearn(cType, nC, hbCreate(cType, nC));
+        var cMade = hbCreate(cType, nC);
+        nmLearn(cType, nC, cMade);
+        hbAdded(cMade, 'node:' + cType);
         return;
       }
 
@@ -12976,6 +13197,7 @@
           } catch (e) {}
         } else if (src && tries < 10) setTimeout(function () { plug(tries + 1); }, 120);
       })(0);
+      hbAdded(made, 'tpl:' + tpl.id);
     }, Math.max(0, h.duration - 60));
     h.finished.then(function () {
       setTimeout(function () {
@@ -13158,6 +13380,10 @@
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
    * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
+  /* "Edit its nodes…" in the button editor (the button in the side panel, a double-click on a card and the hint
+     in the footer) is put away for now: Edit on a clean canvas is the way in from there. The node editor itself
+     is as it was, and a right-click on a button still opens it. true brings the three back */
+  var BRW_EDIT_NODES = false;
   var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 },
     /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
        the dock and the context bar, the kind of node last picked for each */
@@ -13415,7 +13641,7 @@
   }
 
   function brwPillTint(uid) {
-    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0 0)')));
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0.006 286)')));
   }
 
   /* What else could go on this bar. Before anything is typed, what suits it: for a swap bar the models to
@@ -13426,7 +13652,7 @@
   function brwMore(q) {
     var c = brwCtx(), bar = BRW.bar, have = brwBarList(), list = [], title = '', like = null;
     var power = {};
-    POWER_TOOLS.forEach(function (pt) { power[pt.uid] = 1; });
+    ptAll().forEach(function (pt) { power[pt.uid] = 1; });
     if (bar === 'bot') {
       /* the bottom bar: the twelve have their own lane; a name typed finds any other tool, and any node to pin */
       if (!q) return null;
@@ -13683,7 +13909,7 @@
   }
 
   function brwTint(uid) {
-    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : 'oklch(0.62 0 0)');
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : 'oklch(0.62 0.006 286)');
   }
 
   function brwNodeNames(tp) {
@@ -13694,7 +13920,7 @@
   function brwNodeDot(title) {
     var s = String(title || '').toLowerCase();
     for (var i = 0; i < BRW_NODE_HUE.length; i++) if (s.indexOf(BRW_NODE_HUE[i][0]) >= 0) return 'oklch(0.74 0.14 ' + BRW_NODE_HUE[i][1] + ')';
-    return 'oklch(0.66 0 0)';
+    return 'oklch(0.66 0.006 286)';
   }
 
   function brwCanEdit(uid) {
@@ -13729,17 +13955,17 @@
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
               '<div class="shb-bed-mapcol">' +
-                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · type in the node to pick another · click a bar to edit it · drag its buttons along it, or off it · its + adds</small></div>' +
+                '<div class="shb-bed-cap" title="The hotbox as it opens on a node. Type in the node to pick another, click a bar to edit it, and drag its buttons along it or off it; its + adds">The hotbox <small>click a bar to edit it</small></div>' +
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
             '</div>' +
-            '<div class="shb-bed-libcap">Your saved buttons <small>drag a button to another group · drag a group by its name up onto the bar · click one to edit it · drag the background to slide along</small></div>' +
+            '<div class="shb-bed-libcap" title="Drag a button to another group, or a group by its name up onto the bar. Click one to edit it. Drag the background to slide along">Your saved buttons <small>drag to arrange · click one to edit it</small></div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
           '<div class="shb-bed-insp" data-bed-insp hidden></div>' +
         '</div>' +
         '<div class="shb-bed-ft">' +
-          [['drag', 'move'], ['dbl-click', 'edit nodes'], ['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']].map(function (h) {
+          [['drag', 'move']].concat(BRW_EDIT_NODES ? [['dbl-click', 'edit nodes']] : [], [['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']]).map(function (h) {
             return '<span><kbd>' + h[0] + '</kbd>' + h[1] + '</span>';
           }).join('') +
           '<span class="shb-bed-sp"></span><span class="shb-bed-saved"><i></i><span data-bed-saved></span></span>' +
@@ -13776,7 +14002,7 @@
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
     bg.addEventListener('click', brwClick);
     bg.addEventListener('dblclick', function (ev) {
-      var c = ev.target && ev.target.closest ? ev.target.closest('[data-bed-card]') : null;
+      var c = BRW_EDIT_NODES && ev.target && ev.target.closest ? ev.target.closest('[data-bed-card]') : null;
       if (c && brwCanEdit(c.getAttribute('data-bed-card'))) tplEditOpen(c.getAttribute('data-bed-card').slice(4));
     });
     bg.addEventListener('pointerdown', brwDown);
@@ -14019,11 +14245,12 @@
     var more = null;
     try { more = brwMore(''); } catch (e) { more = null; }
     if (more && more.uids.length) tabs.push({ id: 'more', label: more.title, n: more.total });
-    var pts = POWER_TOOLS.filter(function (pt) { return hbToolOn(pt.uid.slice(5)); }).map(function (pt) { return pt.uid; });
+    var ptl = ptAll();
+    var pts = ptl.filter(function (pt) { return hbToolOn(pt.uid.slice(5)); }).map(function (pt) { return pt.uid; });
     if (pts.length) tabs.push({ id: 'pt', label: 'Power tools', n: pts.filter(function (u) { return have.indexOf(u) >= 0; }).length + ' of ' + pts.length });
     var found = [];
     if (q) {
-      POWER_TOOLS.forEach(function (pt) {
+      ptl.forEach(function (pt) {
         if (hbToolOn(pt.uid.slice(5)) && (pt.name + ' ' + pt.desc + ' ' + pt.keys).toLowerCase().indexOf(q) >= 0) found.push(pt.uid);
       });
       var hit = null;
@@ -14218,7 +14445,7 @@
         '</div></div>' : '') +
       '</div>' +
       '<div class="shb-bed-iact">' +
-        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON or bring back an older version. It stays the same button">✎ Edit its nodes…</button>' : '') +
+        (canEdit && BRW_EDIT_NODES ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON or bring back an older version. It stays the same button">✎ Edit its nodes…</button>' : '') +
         (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="canvas" title="Opens a new tab with only this button\'s nodes, to change them with ComfyUI itself. A bar stays there: Save button keeps them in this same button and closes the tab">↗ Edit on a clean canvas</button>' : '') +
         (tp ? brwShareHTML() : '') +
         '<div class="shb-bed-two">' +
@@ -16105,6 +16332,8 @@
       var items = [];
       (g.items || []).forEach(function (k) {
         if (/^grp:/.test(k)) return;
+        /* a tool of your own stays here: its code never travels in a pack, and its name alone is no button */
+        if (/^tool:u_/.test(k)) return;
         var to = /^tpl:/.test(k) ? tpl(k) : k;
         if (!to || items.indexOf(to) >= 0) return;
         /* tools, nodes and models travel by name: every Hotbox has them */
@@ -16162,7 +16391,7 @@
         grps.forEach(function (g) {
           var gid = String(g.id);
           var items = g.items.map(String).filter(function (u, i, all) {
-            return all.indexOf(u) === i && !/^grp:/.test(u) && (!/^tpl:/.test(u) || tplById(u.slice(4)));
+            return all.indexOf(u) === i && !/^grp:/.test(u) && !/^tool:u_/.test(u) && (!/^tpl:/.test(u) || tplById(u.slice(4)));
           });
           var mine = S.hbGroups[gid];
           if (mine) {
@@ -16714,6 +16943,14 @@
       tip: 'Select a group (with its label) or any nodes and choose how many copies: they stack below or to the right, and each one moves the letter on (A → B, C, D…) in its group titles, labels, Set / Get names, texts and file names (Save Video, Save EXR, OCIO Read / Write, Crop_A_v → Crop_B_v). A file picked from a list moves on when that file is there (jacket_A.png → jacket_B.png). Every name that moves is listed first and can be switched off; numbers (IMAGE_1 → IMAGE_2) can be switched on. Wires coming in from outside stay plugged into the same nodes, and one Ctrl+Z takes all the copies back.' }
   ];
 
+  /* the built-in ones and your own, as the button editor lists them */
+  function ptAll() {
+    return POWER_TOOLS.concat(utList().map(function (t) {
+      return { uid: utUid(t), icon: utIcon(t), name: t.name, keys: '', own: true,
+        desc: t.when === 'added' ? 'Yours · after a button adds nodes' : 'Yours · when pressed', tip: '' };
+    }));
+  }
+
   /* One floating tooltip for anything that carries data-tip (it lives on body, so a scrolling modal never clips it) */
   var TIP = null;
   function tipHide() {
@@ -17057,6 +17294,7 @@
 
     function closeSettings() {
       HB.binding = false;
+      utGrabEnd();
       tipHide();
       if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
       var tb = document.getElementById(PANEL_ID + '-topbar-btn');
@@ -17097,6 +17335,10 @@
         tip: 'What the bar buttons do in edit mode (long-press any button). Still: nothing moves; a fine line around the bars and "Editing" in the edit bar say it. Clicking here previews it.' }
     };
     var ptOpen = false, sbOpen = false, dirEdit = false, libAdd = false;
+    /* the power tool of your own being written, if any: { id ('new' for one that is not saved yet), name, icon,
+       when, code, key, msg, tone, icons, arm }; and the key its slot is waiting for */
+    var ut = null, utGrab = null;
+    var UT_NOTE = 'Your code gets app, graph, node, nodes, added and hotbox. It runs in your ComfyUI: paste only code you trust.';
     libRefresh(true).then(function () { if (wrap.parentNode) render(); });
 
     function cycleCur(key) {
@@ -17122,6 +17364,245 @@
         '<span class="shb-cycle-dots">' + CFG.versions.map(function (v, j) { return '<i' + (j === i ? ' class="shb-on"' : '') + '></i>'; }).join('') + '</span>' +
         ico('sync', 12) +
       '</button>';
+    }
+
+    /* ---- your own power tools (see YOUR OWN POWER TOOLS) ---- */
+    function utDraft(t) {
+      if (!t) return { id: 'new', name: '', icon: 'wand', when: 'press', code: '', key: '', msg: '', tone: '' };
+      var off = !utOk(t);
+      return { id: t.id, name: hbBtnName(utUid(t), t.name), icon: utIcon(t), when: t.when, code: t.code, key: hbKeyFor(utUid(t)),
+        msg: off ? 'This code came with the preferences, or was changed somewhere else. Read it before you switch it on: it runs in your ComfyUI.' : '',
+        tone: off ? 'warn' : '' };
+    }
+
+    function utRowsHTML() {
+      var out = '<div class="shb-pt-row shb-ut-new' + (ut && ut.id === 'new' ? ' shb-on' : '') + '" data-ut-new data-tip="A power tool of your own: give it a name and paste its code. It is kept in your Hotbox preferences and goes onto any bar like the others">' +
+        ico('plus', 15) + '<span class="shb-pt-name">New power tool<small>Paste your own code</small></span></div>';
+      if (ut && ut.id === 'new') out += utSlotHTML();
+      utList().forEach(function (t) {
+        var ok = utOk(t), uid = utUid(t), key = hbKeyName(hbKeyFor(uid));
+        out += '<div class="shb-pt-row' + (ok ? '' : ' shb-ut-off') + '" data-st-ptuid="' + esc(uid) + '" data-tip="' +
+            esc(ok ? 'A tool of your own · drag it onto any hotbox bar'
+              : 'This tool came with the preferences, or its code was changed somewhere else. It does not run in this browser until you look at its code and switch it on') + '">' +
+          '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
+          ico(utIcon(t), 15) +
+          '<span class="shb-pt-name">' + esc(hbBtnName(uid, t.name)) + '<small>' +
+            (ok ? (t.when === 'added' ? 'After a button adds nodes' : 'When pressed') : 'Came with the settings · off here') + '</small></span>' +
+          (ok ? (key ? '<span class="shb-pt-key">' + esc(key) + '</span>' : '') + '<span class="shb-ut-tag">Yours</span>' +
+              '<button type="button" class="shb-ut-ib' + (ut && ut.id === t.id ? ' shb-on' : '') + '" data-ut-edit="' + esc(t.id) + '" aria-label="Edit" data-tip="Its name, icon, key and code">' + ico('edit', 14) + '</button>'
+            : '<button type="button" class="shb-ut-tag shb-ut-warn" data-ut-edit="' + esc(t.id) + '">Review code</button>') +
+        '</div>';
+        if (ut && ut.id === t.id) out += utSlotHTML();
+      });
+      return out;
+    }
+
+    function utSlotHTML() {
+      var d = ut, t = d.id === 'new' ? null : utById(d.id);
+      var review = !!(t && !utOk(t) && t.code === d.code);
+      return '<div class="shb-ut-slot" data-ut-slot>' +
+        '<div class="shb-ut-top">' +
+          '<button type="button" class="shb-ut-ib' + (d.icons ? ' shb-on' : '') + '" data-ut-icons aria-label="Icon" data-tip="Its icon in the bars">' + ico(d.icon, 15) + '</button>' +
+          '<input type="text" class="shb-ut-in" data-ut-name spellcheck="false" maxlength="40" placeholder="Name" value="' + esc(d.name) + '">' +
+          '<button type="button" class="shb-ut-key' + (utGrab ? ' shb-on' : '') + '" data-ut-key data-tip="A key of its own: click, then press one key (Backspace clears it). It answers while the hotbox is open and the tool is on a bar">' +
+            (utGrab ? '…' : esc(hbKeyName(d.key) || 'Key')) + '</button>' +
+        '</div>' +
+        (d.icons ? '<div class="shb-ut-icons">' + UT_ICONS.map(function (n) {
+          return '<button type="button" class="' + (n === d.icon ? 'shb-on' : '') + '" data-ut-pick="' + n + '" aria-label="' + n + '">' + ico(n, 15) + '</button>';
+        }).join('') + '</div>' : '') +
+        '<div class="shb-ut-lab">Runs</div>' +
+        '<div class="shb-ut-seg">' +
+          '<button type="button" class="' + (d.when === 'added' ? '' : 'shb-on') + '" data-ut-when="press" data-tip="It runs when its button is pressed">When pressed</button>' +
+          '<button type="button" class="' + (d.when === 'added' ? 'shb-on' : '') + '" data-ut-when="added" data-tip="It also runs by itself each time a button of the hotbox adds nodes (a node, a model, a saved button): the nodes are in added, and the button in button. Pressed, it takes the selection as added">After a button adds nodes</button>' +
+        '</div>' +
+        '<div class="shb-ut-lab">Code</div>' +
+        '<textarea class="shb-ut-code" data-ut-code spellcheck="false" rows="7" placeholder="hotbox.toast(nodes.length + \' selected\')">\n' + esc(d.code) + '</textarea>' +
+        '<div class="shb-ut-note' + (d.tone ? ' shb-' + d.tone : '') + '" data-ut-note>' + esc(d.msg || UT_NOTE) + '</div>' +
+        '<div class="shb-ut-act">' +
+          '<button type="button" class="shb-btn" data-ut-test data-tip="Runs the code as it stands here, on the node under the hotbox and the selection">' + ico('play', 12) + '<span>Test</span></button>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-ut-save>' + ico('check', 12) + '<span>' + (review ? 'Switch on' : 'Save') + '</span></button>' +
+          '<span style="flex:1"></span>' +
+          (t ? '<button type="button" class="shb-ut-ib shb-red' + (d.arm ? ' shb-on' : '') + '" data-ut-del aria-label="Delete" data-tip="Delete this tool: it leaves every bar too">' + (d.arm ? 'Delete?' : ico('trash', 14)) + '</button>' : '') +
+          '<button type="button" class="shb-ut-ib" data-ut-close aria-label="Close" data-tip="Close without saving">✕</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    /* Settings drawn again where it was: the same scroll, the code box as tall as it was left */
+    function utDraw(focus) {
+      var box = wrap.querySelector('.shb-settings'), top = box ? box.scrollTop : 0;
+      var ta = wrap.querySelector('[data-ut-code]');
+      if (ut && ta) { ut.h = ta.offsetHeight; ut.sc = ta.scrollTop; }
+      render();
+      box = wrap.querySelector('.shb-settings');
+      if (box) box.scrollTop = top;
+      var f = focus ? wrap.querySelector(focus) : null;
+      if (f) { try { f.focus(); } catch (e) {} }
+    }
+
+    function utGrabEnd() {
+      if (utGrab && HB.keyGrab === utGrab) HB.keyGrab = null;
+      utGrab = null;
+    }
+
+    /* its key: the next key pressed is it (Esc keeps what it had, Backspace clears it) */
+    function utGrabKey() {
+      if (utGrab) { utGrabEnd(); utDraw(''); return; }
+      utGrab = function (ev) {
+        var k = String(ev.key || ''), kl = k.toLowerCase();
+        if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(k)) return;
+        utGrabEnd();
+        if (!ut || !wrap.parentNode) return;
+        ut.msg = '';
+        ut.tone = '';
+        if (k === 'Backspace' || k === 'Delete') ut.key = '';
+        else if (k === 'Escape') ut.msg = '';
+        else if (ev.ctrlKey || ev.altKey || ev.metaKey || !((kl.length === 1 && kl !== ' ') || /^f([1-9]|1[0-2])$/.test(kl))) {
+          ut.msg = 'One key on its own, without Ctrl or Alt: a letter, a number, a sign or F1–F12.';
+          ut.tone = 'bad';
+        } else if (hbIsKey(ev) && !S.hbMods) {
+          ut.msg = hbKeyName(kl) + ' opens and closes the hotbox: pick another key.';
+          ut.tone = 'bad';
+        } else ut.key = kl;
+        utDraw('');
+      };
+      HB.keyGrab = utGrab;
+      utDraw('');
+    }
+
+    /* Test: the text in the slot as it stands, on the node under the hotbox and the selection */
+    function utTest() {
+      var d = ut;
+      if (!d) return;
+      utGrabEnd();
+      var code = String(d.code || '');
+      if (!code.trim()) { d.msg = 'Paste its code first.'; d.tone = 'bad'; utDraw('[data-ut-code]'); return; }
+      var sel = selNodes(), node = HB.node || sel[0] || null;
+      var added = d.when === 'added' ? (sel.length ? sel : (node ? [node] : [])) : [];
+      d.msg = 'Running…';
+      d.tone = '';
+      utDraw('');
+      utRun({ id: '', name: d.name || 'New power tool', when: d.when, code: code }, 'test', node, added, { uid: '', name: 'Test' }, function (err) {
+        if (ut !== d || !wrap.parentNode) return;
+        d.msg = err ? msgOf(err) : 'It ran with no error' + (d.when === 'added' ? ' · added held ' + added.length + (added.length === 1 ? ' node' : ' nodes') : '') + '.';
+        d.tone = err ? 'bad' : 'good';
+        utDraw('');
+      });
+    }
+
+    /* Save: the tool is kept in the preferences, and this browser has seen its code and switches it on */
+    function utSave() {
+      var d = ut;
+      if (!d) return;
+      utGrabEnd();
+      var name = String(d.name || '').replace(/\s+/g, ' ').trim().slice(0, 40), code = String(d.code || '');
+      var bad = !name ? 'Give it a name.' : (!code.trim() ? 'Paste its code first.' : '');
+      if (!bad) { try { utCompile(code); } catch (e) { bad = 'The code does not read: ' + msgOf(e); } }
+      if (bad) { d.msg = bad; d.tone = 'bad'; utDraw(!name ? '[data-ut-name]' : '[data-ut-code]'); return; }
+      var t = d.id === 'new' ? null : utById(d.id), isNew = !t;
+      var review = !!(t && !utOk(t) && t.code === code);
+      if (!Array.isArray(S.userTools)) S.userTools = [];
+      if (!t) {
+        t = { id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6).replace(/[^a-z0-9]/g, '') };
+        S.userTools.push(t);
+      }
+      t.name = name;
+      t.icon = d.icon;
+      t.when = d.when === 'added' ? 'added' : 'press';
+      t.code = code;
+      utAccept(t, true);
+      var uid = utUid(t);
+      if (!S.customKeys || typeof S.customKeys !== 'object') S.customKeys = {};
+      if (d.key) {
+        Object.keys(S.customKeys).forEach(function (u) { if (S.customKeys[u] === d.key) delete S.customKeys[u]; });
+        S.customKeys[uid] = d.key;
+      } else delete S.customKeys[uid];
+      /* a name it was given on a bar gives way to the one written here */
+      if (S.customLabels) delete S.customLabels[uid];
+      save();
+      ut = null;
+      if (HB.el) hbPaint();
+      if (BRW.el) brwRender();
+      utDraw('');
+      setStatus('ok', '✓ "' + t.name + '" ' + (isNew ? 'is a power tool now · drag it onto a bar' : (review ? 'is switched on in this browser' : 'saved')));
+    }
+
+    function utDelete(id) {
+      var t = utById(id);
+      if (!t) return;
+      utGrabEnd();
+      var uid = utUid(t);
+      var strip = function (l) { return Array.isArray(l) ? l.filter(function (u) { return u !== uid; }) : l; };
+      S.userTools = utList().filter(function (x) { return x !== t; });
+      S.customBotBar = strip(S.customBotBar);
+      Object.keys(S.customToolsBar || {}).forEach(function (k) { S.customToolsBar[k] = strip(S.customToolsBar[k]); });
+      Object.keys(S.customAddBySig || {}).forEach(function (k) { S.customAddBySig[k] = strip(S.customAddBySig[k]); });
+      Object.keys(S.hbGroups && typeof S.hbGroups === 'object' ? S.hbGroups : {}).forEach(function (k) {
+        if (S.hbGroups[k] && Array.isArray(S.hbGroups[k].items)) S.hbGroups[k].items = strip(S.hbGroups[k].items);
+      });
+      ['customLabels', 'customColors', 'customFill', 'customKeys', 'customIcons'].forEach(function (k) { if (S[k] && typeof S[k] === 'object') delete S[k][uid]; });
+      if (S.hbKeep && typeof S.hbKeep === 'object') {
+        Object.keys(S.hbKeep).forEach(function (k) { if (k.slice(k.indexOf(':') + 1) === uid) delete S.hbKeep[k]; });
+      }
+      utAccept(t, false);
+      save();
+      ut = null;
+      if (HB.el) hbPaint();
+      if (BRW.el) brwRender();
+      utDraw('');
+      setStatus('ok', 'Deleted the power tool "' + t.name + '"');
+    }
+
+    function utWire() {
+      var nw = wrap.querySelector('[data-ut-new]');
+      if (nw) {
+        nw.onclick = function () {
+          utGrabEnd();
+          ut = (ut && ut.id === 'new') ? null : utDraft(null);
+          utDraw(ut ? '[data-ut-name]' : '');
+        };
+      }
+      Array.prototype.forEach.call(wrap.querySelectorAll('[data-ut-edit]'), function (b) {
+        b.onclick = function () {
+          var id = b.getAttribute('data-ut-edit');
+          utGrabEnd();
+          ut = (ut && ut.id === id) ? null : utDraft(utById(id));
+          utDraw('');
+        };
+      });
+      var slot = wrap.querySelector('[data-ut-slot]');
+      if (!slot || !ut) return;
+      var nm = slot.querySelector('[data-ut-name]'), ta = slot.querySelector('[data-ut-code]');
+      nm.oninput = function () { ut.name = nm.value; };
+      ta.oninput = function () { ut.code = ta.value; };
+      ta.onmouseup = function () { ut.h = ta.offsetHeight; };
+      ta.onscroll = function () { ut.sc = ta.scrollTop; };
+      if (ut.h) ta.style.height = ut.h + 'px';
+      if (ut.sc) ta.scrollTop = ut.sc;
+      /* Tab writes two spaces instead of leaving the code */
+      ta.onkeydown = function (ev) {
+        if (ev.key !== 'Tab' || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        var a = ta.selectionStart, z = ta.selectionEnd;
+        ta.value = ta.value.slice(0, a) + '  ' + ta.value.slice(z);
+        ta.selectionStart = ta.selectionEnd = a + 2;
+        ut.code = ta.value;
+      };
+      var on = function (sel, fn) {
+        Array.prototype.forEach.call(slot.querySelectorAll(sel), function (b) { b.onclick = function () { fn(b); }; });
+      };
+      on('[data-ut-icons]', function () { ut.icons = !ut.icons; utDraw(''); });
+      on('[data-ut-pick]', function (b) { ut.icon = b.getAttribute('data-ut-pick'); ut.icons = false; utDraw(''); });
+      on('[data-ut-when]', function (b) { ut.when = b.getAttribute('data-ut-when') === 'added' ? 'added' : 'press'; utDraw(''); });
+      on('[data-ut-key]', utGrabKey);
+      on('[data-ut-test]', utTest);
+      on('[data-ut-save]', utSave);
+      on('[data-ut-close]', function () { utGrabEnd(); ut = null; utDraw(''); });
+      on('[data-ut-del]', function () {
+        if (!ut.arm) { ut.arm = true; utDraw(''); return; }
+        utDelete(ut.id);
+      });
     }
 
     function setLabel(icon, text, top) {
@@ -17268,7 +17749,7 @@
             '<div class="shb-set-sec">' +
               '<div class="shb-set-row">' +
                 '<button type="button" class="shb-btn shb-btn-pri shb-ptmenu" data-st-ptmenu data-tip="Drag any of them onto any hotbox bar, and it stays there. On a node it does not work on it is dimmed, and a click says when it works (hover one to see what it does). Icons Only is in this list too">' +
-                  '<span class="shb-ptmenu-v">' + POWER_TOOLS.length + ' tools<small>drag one onto a bar</small></span>' +
+                  '<span class="shb-ptmenu-v">' + (POWER_TOOLS.length + utList().length) + ' tools<small>drag one onto a bar</small></span>' +
                   ico(ptOpen ? 'chevDown' : 'chevRight', 13) +
                 '</button>' +
                 '<button type="button" class="shb-btn shb-btn-pri shb-set-ib" data-st-ptb aria-label="Tool Guide" data-tip="Tool Guide · what every power tool does, each with a short clip of it at work, its key, a switch that turns it off and a button that puts it on your bottom bar">' + ico('guide', 15) + '</button>' +
@@ -17279,6 +17760,7 @@
                   '<span class="shb-pt-name">Icons Only<small>In the bars a tool is its icon; its name and key show on hover</small></span>' +
                   '<span class="shb-sw' + (S.hbIconsOnly ? ' shb-on' : '') + '"></span>' +
                 '</div>' +
+                utRowsHTML() +
                 POWER_TOOLS.map(function (pt) {
                   return '<div class="shb-pt-row" data-st-ptuid="' + esc(pt.uid) + '" data-tip="' + esc(pt.tip) + '">' +
                     '<span class="shb-pt-grip">' + ico('grip', 13) + '</span>' +
@@ -17398,6 +17880,7 @@
       if (brwBtn) brwBtn.onclick = function () { brwOpen(); };
       var ptbBtn = wrap.querySelector('[data-st-ptb]');
       if (ptbBtn) ptbBtn.onclick = function () { ptbOpen(); };
+      utWire();
       var pasteBtn = wrap.querySelector('[data-st-paste]');
       if (pasteBtn) pasteBtn.onclick = function () { brwOpen(); brwPasteOpen(); };
       var dirB = wrap.querySelector('[data-st-dir]');
@@ -17554,7 +18037,7 @@
     /* Power tools and saved buttons are dragged from here straight onto a hotbox bar */
     wrap.addEventListener('pointerdown', function (e) {
       var row = (e.button === 0 && e.target && e.target.closest) ? e.target.closest('[data-st-ptuid]') : null;
-      if (!row || e.target.closest('[data-st-tpldel]')) return;
+      if (!row || e.target.closest('[data-st-tpldel]') || e.target.closest('[data-ut-edit]')) return;
       e.preventDefault();
       if (!HB.el) hbOpen();
       clearDrawerDrag();
