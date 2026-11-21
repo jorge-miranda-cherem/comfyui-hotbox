@@ -257,6 +257,17 @@ window.addEventListener('hotbox:close', function () { myPanel.style.visibility =
 
 `window.__hotbox.isOpen()` tells you the current state.
 
+Hotbox also fires `hotbox:added` each time one of its buttons adds nodes to the canvas: a node from a bar or
+from the drawer, a model, a saved button. `event.detail` is `{ nodes, from, name }`: the nodes just added,
+the uid of the button (`node:<type>`, `model:<type>` or `tpl:<id>`) and its name. A tool that wants every
+new API node to come with something of its own does it there:
+
+```js
+window.addEventListener('hotbox:added', function (e) {
+  e.detail.nodes.forEach(function (node) { /* add what goes with it */ });
+});
+```
+
 ---
 
 ## 8. Checklist before you ship

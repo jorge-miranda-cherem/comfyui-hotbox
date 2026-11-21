@@ -126,6 +126,27 @@ The clips are the files in `js/clips`. A page that carries Hotbox **without its 
 
 Without either, the browser says a tool has no clip yet and everything else works.
 
+### Your own power tools
+**Settings → Power Tools → New power tool** (the first row of the list) opens a slot right there: an icon, a name, a key, when it runs, and a box to **paste code** into. **Save** keeps it in your Hotbox preferences, and from then on it is a power tool like the others: drag its row onto any bar, give it a color or rename it in edit mode, find it under **Power tools** in the button editor. The pencil on its row opens the slot again; the trash in the slot (click it twice) deletes the tool and takes it off every bar.
+
+- **The code** is the body of an async function, so it can `await`. It gets `app` (ComfyUI's app), `graph`, `canvas`, `node` (the node under the hotbox, or `null`), `nodes` (the selection), `added` and `button` (see below), and `hotbox`, a few helpers: `hotbox.toast(text)` and `hotbox.error(text)` write in Hotbox's status line; `hotbox.isApiNode(node)` says whether a node is a paid API node; `hotbox.addNode(type, { after: node, at: [x, y], wire: false })` adds a node to the right of `after` and wires it to it where the slots fit (or at `at`, or by the pointer), slid down to a free spot, and returns it, or `null` when that type is not installed; `hotbox.select(nodes)` selects; `hotbox.api` is `window.__hotbox`.
+- **Runs → When pressed**: it runs when its button is pressed (or its key, while the hotbox is open and the tool is on a bar).
+- **Runs → After a button adds nodes**: it also runs by itself each time a button of the hotbox adds nodes (a node from a bar or from the drawer, a model, a saved button). `added` holds those nodes and `button` is `{ uid, name }` of the button that added them. Pressed, it takes the selection as `added`. Nodes the tool adds itself do not set it off again.
+- **Test** runs the code as it stands in the slot, without saving it. What a tool throws, at once or later, is caught and shown in the status line under its name; the hotbox goes on working.
+
+```js
+// After a button adds nodes: a Save Image after every API node a button brings in
+for (const n of added) {
+  if (hotbox.isApiNode(n)) hotbox.addNode('SaveImage', { after: n });
+}
+```
+
+**The code runs in your ComfyUI, with everything a page can do there: paste only code you trust.** Three things keep someone else's code from running unseen:
+
+- **It is switched on per browser.** Saving a tool in Settings switches it on in that browser. A tool that arrives another way (a preferences file loaded with **Load from File…**, preferences kept in one place for several people, or the same tool with its code or its **Runs** changed somewhere else) shows as **Came with the settings · off here**: its button is dimmed and does nothing, and it does not run by itself, until you open **Review code**, read it and press **Switch on**.
+- **A shared button or group never carries it.** **Copy to share**, **Send** and a pack (`window.__hotbox.pack`) leave your own tools out, name and code. To give one to someone, copy its code: they paste it into a slot of their own, where they see it.
+- A page beside Hotbox that wants to do something when nodes are added needs no pasted code: it listens to `hotbox:added` (see [Custom Bar](#-custom-bar-for-extension-authors)).
+
 ---
 
 ## ⚙️ Settings
@@ -285,7 +306,7 @@ window.__hotboxBars['my-tool'] = {
 };
 ```
 
-The whole contract (every item type, how each one behaves, icons, style rules and a worked example) is in **[CUSTOM_BAR.md](../CUSTOM_BAR.md)**. Hotbox also fires `hotbox:open` and `hotbox:close` on `window`, so a tool that shows the same buttons elsewhere can step aside while the hotbox is up.
+The whole contract (every item type, how each one behaves, icons, style rules and a worked example) is in **[CUSTOM_BAR.md](../CUSTOM_BAR.md)**. Hotbox also fires `hotbox:open` and `hotbox:close` on `window`, so a tool that shows the same buttons elsewhere can step aside while the hotbox is up, and `hotbox:added` each time one of its buttons adds nodes (`event.detail` is `{ nodes, from, name }`: the nodes, the button's uid such as `node:SaveImage`, `model:…` or `tpl:…`, and its name).
 
 ---
 

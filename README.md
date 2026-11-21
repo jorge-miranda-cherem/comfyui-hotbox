@@ -89,6 +89,8 @@ presses <kbd>Ctrl</kbd>+<kbd>V</kbd> in ComfyUI, and a card asks before adding i
 Drag a button from one bar to another, or a power tool straight out of Settings. It stays where you put it, and
 where it does not apply it is dimmed.
 
+**Your own power tools**: the first row of **Settings → Power Tools** opens a slot to paste code into, and it becomes a tool like the others, pressed from a bar or run by itself after a button adds nodes ([how](docs/REFERENCE.md#your-own-power-tools)).
+
 The **Tool Guide** (the book button in **Settings → Power Tools**) shows every power tool with a short clip of what it does, its key, a switch
 that turns it off and a button that puts it on your bottom bar. **Icons Only**, in that list and on from the start, leaves the tools in the
 bars as icons alone: the name shows when the pointer is on one.
