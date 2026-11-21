@@ -120,7 +120,7 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 1. **Drag any button**, with no need to hold it first. It lifts from the point you took it by; nothing in the bars moves while it is in your hand, and a bright line marks where it will land.
 2. **Into a group**: take it to the middle of the group, which lights up. Rest there and its list opens: pick the place in it, the first one too.
 3. **Two buttons, one group**: rest a button on the middle of another until it lights up, and let go.
-4. **Take one off the bar**: hold a button (or click the ✎) for edit mode, then drag it to the red **Remove** strip. <kbd>Ctrl</kbd>+<kbd>Z</kbd> puts it back, and only that: the canvas keeps its own undo.
+4. **Take one off the bar**: hold a button (or click the ✎) for edit mode, then drag it to the red **Remove** strip under the bottom bar. <kbd>Ctrl</kbd>+<kbd>Z</kbd> puts it back, and only that: the canvas keeps its own undo.
 5. Let go away from the bars, or press <kbd>Esc</kbd>, and the button goes back where it was.
 
 ## 11. The button editor

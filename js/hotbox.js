@@ -796,8 +796,9 @@
       '.shb-zone-bot{transform:translate(-50%,0);align-items:center}',
       '.shb-zone-left{transform:translate(-100%,-50%);align-items:flex-end}',
       '.shb-zone-right{transform:translate(0,-50%);align-items:flex-start}',
-      /* the bottom bar and its "+" ride one row, so the "+" stays centered on the bar when the Custom Bar sits above it */
-      '.shb-botrow{position:relative;display:flex;justify-content:center}',
+      /* the bottom bar and its "+" ride one row, so the "+" stays centered on the bar when the Custom Bar sits above it;
+         the row is in front of the edit bar under it, which a group's list drops over */
+      '.shb-botrow{position:relative;z-index:1;display:flex;justify-content:center}',
       '.shb-botrow > .shb-plus-wrap{position:absolute;left:100%;top:50%;margin-left:12px;transform:translateY(-50%);display:flex}',
       '.shb-zone-bot.shb-plus-left .shb-botrow > .shb-plus-wrap{left:auto;right:100%;margin-left:0;margin-right:12px}',
       /* Custom Bar: buttons other extensions hand to the hotbox (window.__hotboxBars), above the bottom bar */
@@ -1144,67 +1145,69 @@
       '.shb-brw-tools .shb-btn.shb-na{opacity:.5}',
       /* The button editor (Settings → Button Editor): the look of the studio tools it sits beside —
          neutral greys, an amber accent for what is picked and where a drop lands, each button its own color */
-      '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(900px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0 0);border:1px solid oklch(0.3 0 0);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0 0);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
+      /* The grays of these windows (the button editor, the Tool Guide, the paste offer) are the hotbox's own
+         gray, oklch(L 0.006 286): beside its bars, which are drawn in here, a pure gray reads a little red */
+      '.shb-modal.shb-bed{position:relative;width:calc(var(--shb-bed-w,min(1360px*var(--shb-bed-z,1),96vw))/var(--shb-bed-z,1));height:calc(var(--shb-bed-h,min(900px*var(--shb-bed-z,1),92vh))/var(--shb-bed-z,1));min-width:min(900px,98vw/var(--shb-bed-z,1));min-height:min(520px,96vh/var(--shb-bed-z,1));max-width:calc(98vw/var(--shb-bed-z,1));max-height:calc(96vh/var(--shb-bed-z,1));flex:none;transform:scale(var(--shb-bed-z,1));padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;background:oklch(0.225 0.006 286);border:1px solid oklch(0.3 0.006 286);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);color:oklch(0.86 0.006 286);font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:none;transition:width .2s cubic-bezier(.2,.8,.2,1),height .2s cubic-bezier(.2,.8,.2,1)}',
       /* its size is yours: the corner stretches it, the arrows beside Done fill the screen, and the four A's
          make everything in it larger (--shb-bed-z: the window is laid out that much smaller and scaled up, so
          what is measured on screen and where the pointer is stay in the same pixels) */
       '.shb-modal.shb-bed.shb-bed-max{width:calc(98vw/var(--shb-bed-z,1));height:calc(96vh/var(--shb-bed-z,1))}',
-      '.shb-bed-zs{flex:none;display:flex;align-items:center;gap:1px;height:26px;padding:2px;border-radius:5px;background:oklch(0.2 0 0);border:1px solid oklch(0.29 0 0)}',
-      '.shb-bed-zs button{width:22px;height:20px;padding:0;border:0;border-radius:3px;background:transparent;color:oklch(0.55 0 0);font-weight:600;line-height:1;display:grid;place-items:center}',
-      '.shb-bed-zs button:hover{background:oklch(0.27 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-zs{flex:none;display:flex;align-items:center;gap:1px;height:26px;padding:2px;border-radius:5px;background:oklch(0.2 0.006 286);border:1px solid oklch(0.29 0.006 286)}',
+      '.shb-bed-zs button{width:22px;height:20px;padding:0;border:0;border-radius:3px;background:transparent;color:oklch(0.55 0.006 286);font-weight:600;line-height:1;display:grid;place-items:center}',
+      '.shb-bed-zs button:hover{background:oklch(0.27 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-zs button.shb-on{background:oklch(0.3 0.03 78);color:oklch(0.87 0.12 78)}',
       '.shb-modal.shb-bed.shb-bed-sizing{transition:none}',
-      '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0 0);cursor:nwse-resize;touch-action:none;transition:color .12s}',
+      '.shb-bed-grip{position:absolute;right:0;bottom:0;z-index:3;width:20px;height:20px;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 4px 0;color:oklch(0.42 0.006 286);cursor:nwse-resize;touch-action:none;transition:color .12s}',
       '.shb-bed-grip:hover,.shb-bed-sizing .shb-bed-grip{color:oklch(0.82 0.13 78)}',
       '.shb-bed-grip svg{display:block}',
       '.shb-bed *{box-sizing:border-box}',
       '.shb-bed ::-webkit-scrollbar{width:8px;height:8px}',
-      '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0 0);border-radius:4px}',
+      '.shb-bed ::-webkit-scrollbar-thumb{background:oklch(0.34 0.006 286);border-radius:4px}',
       '.shb-bed ::-webkit-scrollbar-track{background:transparent}',
       '.shb-bed button{font-family:inherit;cursor:pointer}',
       '.shb-bed button:disabled{cursor:default}',
       '.shb-bed kbd,.shb-bed-kc,.shb-bed-cnt,.shb-bed-key,.shb-bed-n,.shb-bed-lab em,.shb-bed-pill em{font-family:"IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;font-style:normal}',
-      '.shb-bed-hd{height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;border-bottom:1px solid oklch(0.27 0 0)}',
+      '.shb-bed-hd{height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;border-bottom:1px solid oklch(0.27 0.006 286)}',
       '.shb-bed-mark{width:9px;height:9px;border-radius:2px;background:oklch(0.82 0.13 78);flex:none}',
-      '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0 0)}',
-      '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0 0)}',
-      '.shb-bed-t2{color:oklch(0.8 0 0)}',
+      '.shb-bed-hd > b{font-weight:600;color:oklch(0.92 0.006 286)}',
+      '.shb-bed-hd > i{font-style:normal;color:oklch(0.45 0.006 286)}',
+      '.shb-bed-t2{color:oklch(0.8 0.006 286)}',
       /* a narrow window (or large text in it): the count goes first, then the search box gets shorter, then
          the title; the buttons never do */
       '.shb-bed-hd > b,.shb-bed-t2{flex:0 .001 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.shb-bed-hd > button,.shb-bed-hd > .shb-bed-two,.shb-bed-hd > [data-bed-extra]{flex:none}',
       '.shb-bed-hd button{white-space:nowrap}',
-      '.shb-bed-sum{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:oklch(0.5 0 0);margin-left:4px;white-space:nowrap}',
+      '.shb-bed-sum{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:oklch(0.5 0.006 286);margin-left:4px;white-space:nowrap}',
       '.shb-bed-sp{flex:1}',
-      '.shb-bed-find{flex:0 10 260px;min-width:64px;height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0 0);border-radius:5px;background:oklch(0.2 0 0);color:oklch(0.5 0 0);cursor:text}',
+      '.shb-bed-find{flex:0 10 260px;min-width:64px;height:30px;width:260px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid oklch(0.3 0.006 286);border-radius:5px;background:oklch(0.2 0.006 286);color:oklch(0.5 0.006 286);cursor:text}',
       '.shb-bed-find:focus-within{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0 0);font:inherit;user-select:text}',
-      '.shb-bed-find input::placeholder{color:oklch(0.5 0 0)}',
-      '.shb-bed-kc{font-size:10px;line-height:1;color:oklch(0.5 0 0);padding:2px 5px;border-radius:3px;background:oklch(0.27 0 0)}',
-      '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0 0);font-size:12.5px}',
-      '.shb-bed-hb:hover{background:oklch(0.28 0 0)}',
-      '.shb-bed-hb:disabled{color:oklch(0.42 0 0);background:transparent}',
-      '.shb-bed-hb.shb-bed-ib{width:30px;padding:0;display:grid;place-items:center;color:oklch(0.66 0 0)}',
-      '.shb-bed-hb.shb-bed-ib:hover{color:oklch(0.95 0 0)}',
+      '.shb-bed-find input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.92 0.006 286);font:inherit;user-select:text}',
+      '.shb-bed-find input::placeholder{color:oklch(0.5 0.006 286)}',
+      '.shb-bed-kc{font-size:10px;line-height:1;color:oklch(0.5 0.006 286);padding:2px 5px;border-radius:3px;background:oklch(0.27 0.006 286)}',
+      '.shb-bed-hb{height:30px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.86 0.006 286);font-size:12.5px}',
+      '.shb-bed-hb:hover{background:oklch(0.28 0.006 286)}',
+      '.shb-bed-hb:disabled{color:oklch(0.42 0.006 286);background:transparent}',
+      '.shb-bed-hb.shb-bed-ib{width:30px;padding:0;display:grid;place-items:center;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-hb.shb-bed-ib:hover{color:oklch(0.95 0.006 286)}',
       '.shb-bed-done{height:30px;padding:0 16px;border:0;border-radius:4px;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-size:12.5px;font-weight:600}',
       '.shb-bed-done:hover{background:oklch(0.87 0.12 78)}',
       '.shb-bed-mid{flex:1;min-height:0;display:flex}',
       '.shb-bed-main{flex:1;min-width:0;display:flex;flex-direction:column}',
-      '.shb-bed-barbox{flex:none;display:flex;flex-direction:column;gap:11px;padding:12px 18px 11px;border-bottom:1px solid oklch(0.27 0 0);background:oklch(0.205 0 0)}',
+      '.shb-bed-barbox{flex:none;display:flex;flex-direction:column;gap:11px;padding:12px 18px 11px;border-bottom:1px solid oklch(0.27 0.006 286);background:oklch(0.205 0.006 286)}',
       /* the map of the hotbox: its three bars around a node. The one picked is the one the strip beside it
          edits; the node says which kind of node the dock and the context bar are for */
       /* the hotbox itself, in the editor: its three bars with their own buttons (drawn by the hotbox's own code,
          under its theme), a row each with its name beside it. The one being edited is lit; a click on another
          picks it. Nothing in it answers the pointer but the rows */
       '.shb-bed-mapcol{flex:none;min-width:0;display:flex;flex-direction:column;gap:7px}',
-      '.shb-bed-map{display:flex;flex-direction:column;gap:4px;max-height:300px;padding:8px 12px;border-radius:8px;background:oklch(0.17 0 0);border:1px solid oklch(0.27 0 0);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
+      '.shb-bed-map{display:flex;flex-direction:column;gap:4px;max-height:300px;padding:8px 12px;border-radius:8px;background:oklch(0.17 0.006 286);border:1px solid oklch(0.27 0.006 286);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
       '.shb-bed-real{display:flex;flex-direction:column;gap:4px;font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg);user-select:none}',
       '.shb-bed-rrow{display:flex;align-items:center;gap:12px;padding:3px 8px 3px 6px;border-radius:10px;border:1.5px solid transparent;cursor:pointer;opacity:.62;transition:opacity .12s,border-color .12s,background .12s}',
-      '.shb-bed-rrow:hover{opacity:.96;border-color:oklch(0.42 0 0);background:oklch(0.21 0 0)}',
-      '.shb-bed-rrow.shb-on{opacity:1;cursor:default;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
+      '.shb-bed-rrow:hover{opacity:.96;border-color:oklch(0.42 0.006 286);background:oklch(0.21 0.006 286)}',
+      '.shb-bed-rrow.shb-on{opacity:1;cursor:default;border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .16)}',
       '.shb-bed-rlbl{flex:none;width:104px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;font-family:Inter,system-ui,sans-serif}',
-      '.shb-bed-rlbl b{font-size:12px;font-weight:600;color:oklch(0.88 0 0)}',
-      '.shb-bed-rlbl small{font-size:10.5px;font-weight:400;color:oklch(0.58 0 0);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-rlbl b{font-size:12px;font-weight:600;color:oklch(0.88 0.006 286)}',
+      '.shb-bed-rlbl small{font-size:10.5px;font-weight:400;color:oklch(0.58 0.006 286);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-rlbl em{display:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;border-radius:999px;background:oklch(0.82 0.13 78);color:oklch(0.22 0.04 78)}',
       '.shb-bed-rrow.shb-on .shb-bed-rlbl em{display:inline-block}',
       '.shb-bed-rrow.shb-on .shb-bed-rlbl b{color:oklch(0.93 0.07 85)}',
@@ -1215,10 +1218,10 @@
       '.shb-bed-real .shb-botrow{max-width:100%}',
       '.shb-bed-real .shb-gdrop,.shb-bed-real .shb-x,.shb-bed-real .shb-dial{display:none !important}',
       '.shb-bed-real .shb-plus-wrap{position:static !important;inset:auto !important;transform:none !important;translate:none !important;margin:0 0 0 10px !important;display:flex;align-items:center}',
-      '.shb-bed-rnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.52 0 0);padding:5px 9px}',
+      '.shb-bed-rnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.52 0.006 286);padding:5px 9px}',
       /* the bar being edited and what can go on it are one amber frame: the row with the bar's own buttons (each
          one dragged along it, and taken off with the × that shows under the pointer), then the palette */
-      '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .3)}',
+      '.shb-bed-rzone{display:flex;flex-direction:column;gap:6px;padding:5px 8px 8px 6px;border-radius:10px;border:1.5px solid oklch(0.82 0.13 78);background:oklch(0.3 0.045 78 / .16)}',
       '.shb-bed-rzone > .shb-bed-rrow.shb-on{border-color:transparent;background:transparent;padding:0 0 0 0}',
       '.shb-bed-rrow.shb-on .shb-bed-ebar,.shb-bed-rrow.shb-on .shb-bed-epill,.shb-bed-rrow.shb-on .shb-bed-erm{pointer-events:auto !important}',
       /* the + of the bar being edited opens Add to this bar under it, and closes it (the hotbox's own + for the
@@ -1227,8 +1230,8 @@
       '.shb-bed-prow{display:flex;justify-content:center;align-items:center;max-width:100%}',
       /* the + of the bottom bar while another bar is the one being edited: it is the hotbox's, so it stays, but
          gray, since it is not the one that adds here */
-      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus{background:oklch(0.3 0 0) !important;border-color:oklch(0.4 0 0) !important;box-shadow:none !important}',
-      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus .shb-ico{color:oklch(0.62 0 0) !important}',
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus{background:oklch(0.3 0.006 286) !important;border-color:oklch(0.4 0.006 286) !important;box-shadow:none !important}',
+      '.shb-bed-real .shb-bed-rrow:not(.shb-on) .shb-plus .shb-ico{color:oklch(0.62 0.006 286) !important}',
       /* the + is pressed and Add to this bar unfolds out of it: by itself a moment after the window opens (it is
          held shut until then), and again whenever the + opens it or another bar is picked. The unfolding is
          played by script (brwPalPlay) */
@@ -1238,10 +1241,10 @@
       '.shb-bed-epill{position:relative;display:inline-flex;align-items:center;border-radius:10px;cursor:grab;touch-action:none}',
       '.shb-bed-epill.shb-on{outline:1.5px solid oklch(0.82 0.13 78);outline-offset:1px}',
       '.shb-bed-epill.shb-hot{outline:2px solid oklch(0.82 0.13 78);outline-offset:1px;background:oklch(0.36 0.05 78 / .5)}',
-      '.shb-bed-epill > .shb-bed-erm{position:absolute;top:-7px;right:-5px;width:17px;height:17px;margin:0;padding:0;border-radius:50%;background:oklch(0.42 0 0);border:1.5px solid oklch(0.16 0 0);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;opacity:0;transition:opacity .1s,background .1s;z-index:3;cursor:pointer}',
+      '.shb-bed-epill > .shb-bed-erm{position:absolute;top:-7px;right:-5px;width:17px;height:17px;margin:0;padding:0;border-radius:50%;background:oklch(0.42 0.006 286);border:1.5px solid oklch(0.16 0.006 286);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;opacity:0;transition:opacity .1s,background .1s;z-index:3;cursor:pointer}',
       '.shb-bed-epill:hover > .shb-bed-erm,.shb-bed-epill.shb-on > .shb-bed-erm{opacity:1}',
       '.shb-bed-epill > .shb-bed-erm:hover{background:oklch(0.5 0.16 25);color:#fff}',
-      '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0 0);color:oklch(0.6 0 0);font-size:12px;white-space:nowrap}',
+      '.shb-bed-egonel{height:28px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:oklch(0.24 0.006 286);color:oklch(0.6 0.006 286);font-size:12px;white-space:nowrap}',
       '.shb-bed-gpill{font:500 12.5px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;color:var(--shb-fg);background:transparent !important;box-shadow:none !important}',
       '.shb-bed-gpill .shb-bed-erm,.shb-bed-gpill .shb-gdrop,.shb-bed-gpill .shb-x{display:none !important}',
       /* the palette is a box of its own that hangs from the bar: a solid ground, an edge in the hotbox's blue (the
@@ -1252,212 +1255,212 @@
       '.shb-bed-palhd > b{flex:none;height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 9px 0 6px;border-radius:999px;background:oklch(0.64 0.16 250);color:#fff;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}',
       '.shb-bed-palhd > b .shb-ico{stroke-width:2.6}',
       '.shb-bed-ptabs{display:inline-flex;gap:4px;flex:none}',
-      '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0 0);border-radius:6px;background:oklch(0.22 0 0);color:oklch(0.72 0 0);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
-      '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0 0)}',
-      '.shb-bed-ptab:hover{background:oklch(0.27 0 0)}',
+      '.shb-bed-ptab{height:24px;padding:0 9px;border:1px solid oklch(0.33 0.006 286);border-radius:6px;background:oklch(0.22 0.006 286);color:oklch(0.72 0.006 286);font:500 11.5px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:pointer}',
+      '.shb-bed-ptab em{font-style:normal;margin-left:6px;font-size:10.5px;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-ptab:hover{background:oklch(0.27 0.006 286)}',
       '.shb-bed-ptab.shb-on{border-color:oklch(0.7 0.14 250);background:oklch(0.32 0.07 250);color:oklch(0.95 0.03 250)}',
       '.shb-bed-ptab.shb-on em{color:oklch(0.84 0.07 250)}',
       '.shb-bed-find.shb-bed-addfind{flex:1 1 200px;width:auto;height:26px;min-width:120px}',
       '.shb-bed-find.shb-bed-addfind:focus-within{border-color:oklch(0.7 0.14 250)}',
-      '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
-      '.shb-bed-preset:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-preset{flex:none;height:22px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0.006 286);font:400 11px/1 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.shb-bed-preset:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-palx{flex:none;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0.03 250);font:400 16px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
       '.shb-bed-palx:hover{background:oklch(0.3 0.05 250);color:#fff}',
       '.shb-bed-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;max-height:var(--shb-bed-chh,60px);overflow-y:auto;scrollbar-width:thin}',
-      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0 0);background:transparent;color:oklch(0.66 0 0);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
+      '.shb-bed-chip{flex:none;max-width:260px;height:26px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid oklch(0.32 0.006 286);background:transparent;color:oklch(0.66 0.006 286);font:500 12px/1 Inter,system-ui,sans-serif;white-space:nowrap;cursor:grab;touch-action:none;user-select:none;transition:all .12s}',
       '.shb-bed-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-chip > i{flex:none;width:7px;height:7px;border-radius:2px}',
-      '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0 0)}',
-      '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0 0)}',
-      '.shb-bed-chip:hover{background:oklch(0.28 0 0);border-color:oklch(0.6 0 0)}',
-      '.shb-bed-chip.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-chip > .shb-ico{flex:none;color:oklch(0.72 0.006 286)}',
+      '.shb-bed-chip > u{flex:none;text-decoration:none;font-size:13px;line-height:1;color:oklch(0.6 0.006 286)}',
+      '.shb-bed-chip:hover{background:oklch(0.28 0.006 286);border-color:oklch(0.6 0.006 286)}',
+      '.shb-bed-chip.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
       '.shb-bed-chip.shb-on > u{color:oklch(0.86 0.13 78);font-weight:700;font-size:12px}',
-      '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0 0)}',
-      '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0 0);padding:4px 2px}',
+      '.shb-bed-chip.shb-bed-ghost{border-style:solid;background:oklch(0.3 0.006 286)}',
+      '.shb-bed-palnone{font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:oklch(0.55 0.006 286);padding:4px 2px}',
       /* apart from all that, your own: the lanes of the saved buttons and their groups */
-      '.shb-bed-libcap{flex:none;display:flex;align-items:baseline;gap:8px;padding:10px 18px 0;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
-      '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-libcap{flex:none;display:flex;align-items:baseline;gap:8px;padding:10px 18px 0;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-libcap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0.006 286);overflow:hidden;text-overflow:ellipsis}',
       '.shb-bed-libcap + .shb-bed-lanes{padding-top:8px}',
       '.shb-bed-rnoderow{display:flex;justify-content:center;padding:1px 8px 1px 122px}',
-      '.shb-bed-mnode{width:min(520px,100%);height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0 0);border-radius:8px;box-sizing:border-box}',
+      '.shb-bed-mnode{width:min(520px,100%);height:36px;display:flex;align-items:center;gap:2px;padding:0 4px;border:1px dashed oklch(0.38 0.006 286);border-radius:8px;box-sizing:border-box}',
       /* its name is in a field: type another node's name there and the hotbox is drawn for that one */
-      '.shb-bed-nfind{flex:1;min-width:0;height:26px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid oklch(0.34 0 0);border-radius:6px;background:oklch(0.2 0 0);cursor:text;font:500 12px/1.2 Inter,system-ui,sans-serif;transition:border-color .12s,background .12s}',
-      '.shb-bed-nfind:hover{border-color:oklch(0.5 0 0)}',
-      '.shb-bed-nfind:focus-within{border-color:oklch(0.82 0.13 78);background:oklch(0.17 0 0)}',
-      '.shb-bed-nfind > .shb-ico{flex:none;color:oklch(0.66 0 0)}',
-      '.shb-bed-nfind input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:none;color:oklch(0.94 0 0);font:inherit;text-overflow:ellipsis;user-select:text}',
-      '.shb-bed-nfind input::placeholder{color:oklch(0.5 0 0);font-weight:400}',
-      '.shb-bed-nfind small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.6 0 0);white-space:nowrap}',
-      '.shb-bed-nfind em{flex:none;font-style:normal;font-size:10.5px;font-weight:400;color:oklch(0.5 0 0);white-space:nowrap;padding-left:8px;border-left:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-nfind{flex:1;min-width:0;height:26px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid oklch(0.34 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);cursor:text;font:500 12px/1.2 Inter,system-ui,sans-serif;transition:border-color .12s,background .12s}',
+      '.shb-bed-nfind:hover{border-color:oklch(0.5 0.006 286)}',
+      '.shb-bed-nfind:focus-within{border-color:oklch(0.82 0.13 78);background:oklch(0.17 0.006 286)}',
+      '.shb-bed-nfind > .shb-ico{flex:none;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-nfind input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:none;color:oklch(0.94 0.006 286);font:inherit;text-overflow:ellipsis;user-select:text}',
+      '.shb-bed-nfind input::placeholder{color:oklch(0.5 0.006 286);font-weight:400}',
+      '.shb-bed-nfind small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.6 0.006 286);white-space:nowrap}',
+      '.shb-bed-nfind em{flex:none;font-style:normal;font-size:10.5px;font-weight:400;color:oklch(0.5 0.006 286);white-space:nowrap;padding-left:8px;border-left:1px solid oklch(0.32 0.006 286)}',
       '.shb-bed-nfind:focus-within small,.shb-bed-nfind:focus-within em{display:none}',
       /* what the field finds, under it: the kinds there are, then every node with that name */
-      '.shb-bed-ndd{position:absolute;z-index:8;display:flex;flex-direction:column;gap:1px;padding:5px;box-sizing:border-box;border-radius:9px;border:1px solid oklch(0.42 0 0);background:oklch(0.19 0 0);box-shadow:0 14px 34px rgba(0,0,0,.55);overflow-y:auto;scrollbar-width:thin;font-family:Inter,system-ui,sans-serif}',
+      '.shb-bed-ndd{position:absolute;z-index:8;display:flex;flex-direction:column;gap:1px;padding:5px;box-sizing:border-box;border-radius:9px;border:1px solid oklch(0.42 0.006 286);background:oklch(0.19 0.006 286);box-shadow:0 14px 34px rgba(0,0,0,.55);overflow-y:auto;scrollbar-width:thin;font-family:Inter,system-ui,sans-serif}',
       '.shb-bed-ndd[hidden]{display:none}',
-      '.shb-bed-ndcap{flex:none;padding:4px 8px 3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.5 0 0)}',
-      '.shb-bed-ndr{flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:oklch(0.9 0 0);font:500 12px/1 Inter,system-ui,sans-serif;text-align:left;cursor:pointer}',
+      '.shb-bed-ndcap{flex:none;padding:4px 8px 3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-ndr{flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:oklch(0.9 0.006 286);font:500 12px/1 Inter,system-ui,sans-serif;text-align:left;cursor:pointer}',
       '.shb-bed-ndr span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-ndr small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.55 0 0)}',
-      '.shb-bed-ndr:hover{background:oklch(0.26 0 0)}',
-      '.shb-bed-ndr.shb-hot{background:oklch(0.3 0.045 78 / .7);color:oklch(0.97 0 0)}',
+      '.shb-bed-ndr small{flex:none;font-size:10.5px;font-weight:400;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-ndr:hover{background:oklch(0.26 0.006 286)}',
+      '.shb-bed-ndr.shb-hot{background:oklch(0.3 0.045 78 / .7);color:oklch(0.97 0.006 286)}',
       '.shb-bed-ndr.shb-hot small{color:oklch(0.78 0.06 85)}',
-      '.shb-bed-ndnone{flex:none;padding:8px;font-size:11.5px;color:oklch(0.55 0 0)}',
+      '.shb-bed-ndnone{flex:none;padding:8px;font-size:11.5px;color:oklch(0.55 0.006 286)}',
       /* a power tool's card in the lane of the twelve: lit while it is on the bar in the strip */
-      '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0 0);font-size:16px;line-height:1}',
-      '.shb-bed-mnode button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-mnode button{width:26px;height:26px;flex:none;border:0;border-radius:6px;padding:0;background:transparent;color:oklch(0.72 0.006 286);font-size:16px;line-height:1}',
+      '.shb-bed-mnode button:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-mnode button:disabled{visibility:hidden}',
       '.shb-bed-cap b{font-weight:600;color:oklch(0.82 0.13 78)}',
-      '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0 0);font-size:11px;letter-spacing:0;text-transform:none}',
-      '.shb-bed-cap button:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
-      '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0 0);font-size:13px;line-height:1}',
+      '.shb-bed-cap button{margin-left:auto;flex:none;height:20px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:oklch(0.62 0.006 286);font-size:11px;letter-spacing:0;text-transform:none}',
+      '.shb-bed-cap button:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
+      '.shb-bed-prm{flex:none;width:16px;height:16px;margin:0 -5px 0 0;padding:0;border:0;border-radius:50%;background:transparent;color:oklch(0.55 0.006 286);font-size:13px;line-height:1}',
       '.shb-bed-prm:hover{background:oklch(0.36 0.07 25);color:oklch(0.92 0.06 25)}',
       '.shb-bed-lane.shb-bed-extra{background:oklch(0.235 0.018 78);border:1px dashed oklch(0.5 0.08 78)}',
       '.shb-bed-card.shb-bed-addc{cursor:pointer}',
       '.shb-bed-where{display:flex;flex-wrap:wrap;gap:6px}',
-      '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
-      '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0 0);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-cap{display:flex;align-items:baseline;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-cap small{font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:oklch(0.45 0.006 286);overflow:hidden;text-overflow:ellipsis}',
       /* like the hotbox's own bar, it folds into rows when it is long: every pill stays in sight, to drop on */
       '.shb-bed-g{font-size:12px;line-height:1;color:var(--shb-tint)}',
       '.shb-bed-lanes{flex:1;min-height:0;display:flex;gap:12px;padding:16px 18px;overflow-x:auto;overflow-y:hidden;cursor:grab}',
       '.shb-bed-lanes.shb-bed-panning,.shb-bed-lanes.shb-bed-panning *{cursor:grabbing !important;user-select:none}',
-      '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0 0);border:1px solid oklch(0.29 0 0);transition:background .14s,border-color .14s}',
+      '.shb-bed-lane{width:268px;flex:none;display:flex;flex-direction:column;min-height:0;border-radius:8px;background:oklch(0.235 0.006 286);border:1px solid oklch(0.29 0.006 286);transition:background .14s,border-color .14s}',
       '.shb-bed-lane.shb-on{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0 0);border-color:oklch(0.27 0 0)}',
+      '.shb-bed-lane.shb-bed-loose{background:oklch(0.215 0.006 286);border-color:oklch(0.27 0.006 286)}',
       '.shb-bed-lane.shb-hot{background:oklch(0.25 0.012 78);border-color:oklch(0.6 0.1 78)}',
-      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0 0);border-radius:8px 8px 0 0;cursor:grab}',
-      '.shb-bed-lhd:hover{background:oklch(0.26 0 0)}',
-      '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0 0)}',
+      '.shb-bed-lhd{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-bottom:1px solid oklch(0.27 0.006 286);border-radius:8px 8px 0 0;cursor:grab}',
+      '.shb-bed-lhd:hover{background:oklch(0.26 0.006 286)}',
+      '.shb-bed-lane.shb-on > .shb-bed-lhd{background:oklch(0.27 0.006 286)}',
       '.shb-bed-loose > .shb-bed-lhd{cursor:default;background:transparent}',
-      '.shb-bed-sq{width:10px;height:10px;border-radius:3px;background:var(--shb-tint,oklch(0.45 0 0));flex:none}',
-      '.shb-bed-lhd b{flex:1;min-width:0;font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0 0)}',
-      '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0 0);font-size:10px;color:oklch(0.6 0 0);white-space:nowrap}',
+      '.shb-bed-sq{width:10px;height:10px;border-radius:3px;background:var(--shb-tint,oklch(0.45 0.006 286));flex:none}',
+      '.shb-bed-lhd b{flex:1;min-width:0;font-size:13px;font-weight:600;color:oklch(0.94 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-cnt{font-size:11px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-place{height:18px;display:flex;align-items:center;padding:0 7px;border-radius:999px;border:1px solid oklch(0.33 0.006 286);font-size:10px;color:oklch(0.6 0.006 286);white-space:nowrap}',
       '.shb-bed-place.shb-bar{color:oklch(0.82 0.1 78)}',
       /* a group that is on no bar: its tag puts it on the one being edited (blue, as what adds) */
       '.shb-bed-place.shb-bed-put{border:1px dashed oklch(0.62 0.12 250);background:transparent;color:oklch(0.8 0.1 250);font-family:inherit;cursor:pointer}',
       '.shb-bed-place.shb-bed-put:hover{border-style:solid;background:oklch(0.32 0.07 250);color:#fff}',
       '.shb-bed-lbody{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}',
-      '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0 0);box-shadow:inset 0 0 0 1px oklch(0.3 0 0);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
-      '.shb-bed-card:hover{background:oklch(0.28 0 0)}',
-      '.shb-bed-card.shb-on{background:oklch(0.31 0 0);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
+      '.shb-bed-card{position:relative;flex:none;display:flex;align-items:center;gap:9px;height:46px;padding:0 10px 0 12px;border-radius:6px;background:oklch(0.255 0.006 286);box-shadow:inset 0 0 0 1px oklch(0.3 0.006 286);cursor:grab;touch-action:none;transition:background .12s,box-shadow .12s,opacity .12s}',
+      '.shb-bed-card:hover{background:oklch(0.28 0.006 286)}',
+      '.shb-bed-card.shb-on{background:oklch(0.31 0.006 286);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
       '.shb-bed-card.shb-dim{opacity:.28}',
       '.shb-bed-src{opacity:.35 !important}',
       '.shb-bed-card::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--shb-tint)}',
       '.shb-bed-ico{flex:none;display:inline-grid;place-items:center;min-width:14px;font-size:13px;line-height:1;color:var(--shb-tint)}',
       '.shb-bed-ico .shb-ico{color:inherit !important}',
       '.shb-bed-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
-      '.shb-bed-ct b{font-size:12.5px;font-weight:500;color:oklch(0.9 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-card.shb-on .shb-bed-ct b{color:oklch(0.99 0 0)}',
-      '.shb-bed-ct small{font-size:11px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-key{flex:none;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:3px;border:1px solid oklch(0.36 0 0);font-size:10px;color:oklch(0.8 0 0)}',
-      '.shb-bed-n{flex:none;font-size:10px;line-height:1.6;padding:0 6px;border-radius:999px;background:oklch(0.3 0 0);color:oklch(0.7 0 0)}',
-      '.shb-bed-lib{flex:none;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid oklch(0.36 0 0);color:oklch(0.62 0 0)}',
-      '.shb-bed-empty{flex:none;height:86px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(0.36 0 0);border-radius:6px;font-size:12px;color:oklch(0.5 0 0)}',
-      '.shb-bed-hint{flex:none;margin-top:4px;padding:10px 12px;border-radius:6px;background:oklch(0.21 0 0);font-size:11.5px;line-height:1.5;color:oklch(0.55 0 0)}',
-      '.shb-bed-hint kbd{font-size:10.5px;padding:0 4px;border-radius:3px;background:oklch(0.3 0 0);color:oklch(0.85 0 0)}',
-      '.shb-bed-new{width:200px;flex:none;border:1px dashed oklch(0.36 0 0);border-radius:8px;background:transparent;color:oklch(0.62 0 0);font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:background .14s,border-color .14s}',
-      '.shb-bed-new:hover{background:oklch(0.25 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-ct b{font-size:12.5px;font-weight:500;color:oklch(0.9 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-card.shb-on .shb-bed-ct b{color:oklch(0.99 0.006 286)}',
+      '.shb-bed-ct small{font-size:11px;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-key{flex:none;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:3px;border:1px solid oklch(0.36 0.006 286);font-size:10px;color:oklch(0.8 0.006 286)}',
+      '.shb-bed-n{flex:none;font-size:10px;line-height:1.6;padding:0 6px;border-radius:999px;background:oklch(0.3 0.006 286);color:oklch(0.7 0.006 286)}',
+      '.shb-bed-lib{flex:none;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid oklch(0.36 0.006 286);color:oklch(0.62 0.006 286)}',
+      '.shb-bed-empty{flex:none;height:86px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(0.36 0.006 286);border-radius:6px;font-size:12px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-hint{flex:none;margin-top:4px;padding:10px 12px;border-radius:6px;background:oklch(0.21 0.006 286);font-size:11.5px;line-height:1.5;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-hint kbd{font-size:10.5px;padding:0 4px;border-radius:3px;background:oklch(0.3 0.006 286);color:oklch(0.85 0.006 286)}',
+      '.shb-bed-new{width:200px;flex:none;border:1px dashed oklch(0.36 0.006 286);border-radius:8px;background:transparent;color:oklch(0.62 0.006 286);font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:background .14s,border-color .14s}',
+      '.shb-bed-new:hover{background:oklch(0.25 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-new.shb-hot{border-color:oklch(0.7 0.11 78);background:oklch(0.26 0.02 78)}',
       '.shb-bed-new span{font-size:20px;line-height:1}',
-      '.shb-bed-new small{font-size:11px;color:oklch(0.48 0 0)}',
+      '.shb-bed-new small{font-size:11px;color:oklch(0.48 0.006 286)}',
       '.shb-bed-fresh .shb-bed-card{animation:shbBedRise .18s ease-out}',
       '.shb-bed-line{position:fixed;left:0;top:0;z-index:7;border-radius:2px;background:oklch(0.82 0.13 78);pointer-events:none;opacity:0}',
       '.shb-bed-line.shb-on{opacity:1}',
       '.shb-bed-ghost,.shb-bed-ghost *{box-sizing:border-box}',
-      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0 0) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
+      '.shb-bed-ghost{position:fixed !important;left:0;top:0;z-index:6;transform-origin:0 0;margin:0 !important;pointer-events:none;opacity:.96 !important;box-shadow:0 12px 28px rgba(0,0,0,.5),inset 0 0 0 1px oklch(0.42 0.006 286) !important;animation:none !important;transition:none !important;font:400 12.5px/1.35 "IBM Plex Sans",Inter,system-ui,sans-serif}',
       /* a button of the bar held outside it: letting go takes it off */
-      '.shb-bed-ghost.shb-bed-off{opacity:1 !important;background:oklch(0.24 0 0) !important;border-radius:10px;outline:1.5px solid oklch(0.62 0.17 25);outline-offset:1px}',
+      '.shb-bed-ghost.shb-bed-off{opacity:1 !important;background:oklch(0.24 0.006 286) !important;border-radius:10px;outline:1.5px solid oklch(0.62 0.17 25);outline-offset:1px}',
       '.shb-bed-ghost.shb-bed-off::after{content:"Off the bar";position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;padding:3px 8px;border-radius:999px;background:oklch(0.5 0.16 25);color:#fff;font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;white-space:nowrap}',
       /* a group, held by the head of its lane: its color and its name, no wider than they are */
-      '.shb-bed-ghost.shb-bed-ghead{width:auto !important;max-width:240px;height:32px !important;padding:0 12px 0 10px;border:1px solid oklch(0.5 0 0);border-radius:8px;background:oklch(0.27 0 0)}',
+      '.shb-bed-ghost.shb-bed-ghead{width:auto !important;max-width:240px;height:32px !important;padding:0 12px 0 10px;border:1px solid oklch(0.5 0.006 286);border-radius:8px;background:oklch(0.27 0.006 286)}',
       '.shb-bed-ghead .shb-bed-place,.shb-bed-ghead .shb-bed-cnt{display:none}',
       /* the panel on the right is there only while a button or a group is picked (or something is being pasted
          or sent): the rest of the time its room is the picture's and the lanes' */
-      '.shb-bed-insp{position:relative;width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0 0);background:oklch(0.215 0 0)}',
+      '.shb-bed-insp{position:relative;width:320px;flex:none;display:flex;flex-direction:column;border-left:1px solid oklch(0.27 0.006 286);background:oklch(0.215 0.006 286)}',
       '.shb-bed-insp[hidden]{display:none}',
-      '.shb-bed-ix{position:absolute;top:11px;right:11px;z-index:2;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.58 0 0);font:400 17px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
-      '.shb-bed-ix:hover{background:oklch(0.3 0 0);color:oklch(0.96 0 0)}',
+      '.shb-bed-ix{position:absolute;top:11px;right:11px;z-index:2;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:oklch(0.58 0.006 286);font:400 17px/1 Inter,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer}',
+      '.shb-bed-ix:hover{background:oklch(0.3 0.006 286);color:oklch(0.96 0.006 286)}',
       '.shb-bed-ibody{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}',
       '.shb-bed-f{display:flex;flex-direction:column;gap:8px}',
-      '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0 0)}',
-      '.shb-bed-lab em{color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-bed-name{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:6px;background:oklch(0.25 0 0);border:1px solid oklch(0.32 0 0)}',
+      '.shb-bed-lab{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:oklch(0.6 0.006 286)}',
+      '.shb-bed-lab em{color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bed-name{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:6px;background:oklch(0.25 0.006 286);border:1px solid oklch(0.32 0.006 286)}',
       '.shb-bed-name:focus-within{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0 0);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
+      '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0.006 286);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
       '.shb-bed-name .shb-bed-ico{font-size:15px}',
       '.shb-bed-name .shb-bed-sq{width:11px;height:11px}',
       '.shb-bed-sws{display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
       '.shb-bed-sw{width:24px;height:24px;border:0;border-radius:6px;padding:0;transition:transform .1s}',
       '.shb-bed-sw:hover{transform:scale(1.12)}',
-      '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0 0),0 0 0 4px oklch(0.92 0 0)}',
-      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0 0)}',
-      '.shb-bed-fill.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
+      '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0.006 286),0 0 0 4px oklch(0.92 0.006 286)}',
+      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-fill.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
       '.shb-bed-fill:disabled{opacity:.4}',
       '.shb-bed-gl{display:flex;gap:4px}',
-      '.shb-bed-gl button{width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0 0);font-size:14px;line-height:1;padding:0}',
-      '.shb-bed-gl button:hover{background:oklch(0.3 0 0)}',
-      '.shb-bed-gl button.shb-on{background:oklch(0.32 0 0);color:var(--shb-tint)}',
-      '.shb-bed-keyb{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font-size:12.5px;text-align:left;transition:border-color .12s}',
+      '.shb-bed-gl button{width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:oklch(0.62 0.006 286);font-size:14px;line-height:1;padding:0}',
+      '.shb-bed-gl button:hover{background:oklch(0.3 0.006 286)}',
+      '.shb-bed-gl button.shb-on{background:oklch(0.32 0.006 286);color:var(--shb-tint)}',
+      '.shb-bed-keyb{height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid oklch(0.32 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);color:oklch(0.9 0.006 286);font-size:12.5px;text-align:left;transition:border-color .12s}',
       '.shb-bed-keyb.shb-on{border-color:oklch(0.82 0.13 78)}',
-      '.shb-bed-keyb kbd{min-width:24px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:4px;border:1px solid oklch(0.4 0 0);background:oklch(0.27 0 0);font-size:11.5px;color:inherit}',
-      '.shb-bed-keyb span{flex:1;color:oklch(0.55 0 0)}',
+      '.shb-bed-keyb kbd{min-width:24px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:4px;border:1px solid oklch(0.4 0.006 286);background:oklch(0.27 0.006 286);font-size:11.5px;color:inherit}',
+      '.shb-bed-keyb span{flex:1;color:oklch(0.55 0.006 286)}',
       '.shb-bed-keyb.shb-on span{color:oklch(0.85 0.12 78)}',
       '.shb-bed-warn{font-size:11.5px;line-height:1.4;color:oklch(0.78 0.13 60)}',
       '.shb-bed-tags{display:flex;flex-wrap:wrap;gap:5px}',
-      '.shb-bed-tag{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0 0);border-radius:999px;background:transparent;color:oklch(0.66 0 0);font-size:12px;transition:all .12s}',
-      '.shb-bed-tag.shb-on{background:oklch(0.32 0 0);border-color:oklch(0.5 0 0);color:oklch(0.97 0 0)}',
-      '.shb-bed-tag i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0 0))}',
-      '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0 0)}',
-      '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0 0);font-size:12px;color:oklch(0.78 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-tag{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;color:oklch(0.66 0.006 286);font-size:12px;transition:all .12s}',
+      '.shb-bed-tag.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
+      '.shb-bed-tag i{width:7px;height:7px;border-radius:2px;background:var(--shb-tint,oklch(0.45 0.006 286))}',
+      '.shb-bed-nodes{border-radius:6px;overflow:hidden;border:1px solid oklch(0.29 0.006 286)}',
+      '.shb-bed-nodes div{height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid oklch(0.26 0.006 286);font-size:12px;color:oklch(0.78 0.006 286);white-space:nowrap;overflow:hidden}',
       '.shb-bed-nodes div:last-child{border-bottom:0}',
       '.shb-bed-nodes i{width:6px;height:6px;border-radius:2px;flex:none}',
-      '.shb-bed-nodes .shb-more{font-size:11.5px;color:oklch(0.5 0 0)}',
-      '.shb-bed-pl{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid oklch(0.3 0 0);border-radius:6px;background:transparent;text-align:left;transition:all .12s}',
-      '.shb-bed-pl:hover{border-color:oklch(0.42 0 0)}',
+      '.shb-bed-nodes .shb-more{font-size:11.5px;color:oklch(0.5 0.006 286)}',
+      '.shb-bed-pl{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid oklch(0.3 0.006 286);border-radius:6px;background:transparent;text-align:left;transition:all .12s}',
+      '.shb-bed-pl:hover{border-color:oklch(0.42 0.006 286)}',
       '.shb-bed-pl.shb-on{background:oklch(0.27 0.01 78);border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-pl > i{width:14px;height:14px;border-radius:50%;border:1.5px solid oklch(0.45 0 0);flex:none}',
+      '.shb-bed-pl > i{width:14px;height:14px;border-radius:50%;border:1.5px solid oklch(0.45 0.006 286);flex:none}',
       '.shb-bed-pl.shb-on > i{border:4px solid oklch(0.82 0.13 78)}',
-      '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0 0)}',
-      '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0 0)}',
+      '.shb-bed-pl > span{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12.5px;color:oklch(0.92 0.006 286)}',
+      '.shb-bed-pl small{font-size:11px;color:oklch(0.52 0.006 286)}',
       '.shb-bed-two{display:flex;gap:6px}',
-      '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0 0);font-size:11.5px;line-height:1.55;color:oklch(0.55 0 0)}',
-      '.shb-bed-note b{font-weight:400;color:oklch(0.8 0 0)}',
-      '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0 0)}',
-      '.shb-bed-ab{height:32px;border:1px solid oklch(0.36 0 0);border-radius:5px;background:transparent;color:oklch(0.92 0 0);font-size:12.5px}',
-      '.shb-bed-ab:hover{background:oklch(0.28 0 0)}',
+      '.shb-bed-note{padding:10px 12px;border-radius:6px;background:oklch(0.2 0.006 286);font-size:11.5px;line-height:1.55;color:oklch(0.55 0.006 286)}',
+      '.shb-bed-note b{font-weight:400;color:oklch(0.8 0.006 286)}',
+      '.shb-bed-iact{flex:none;display:flex;flex-direction:column;gap:6px;padding:12px 18px 14px;border-top:1px solid oklch(0.27 0.006 286)}',
+      '.shb-bed-ab{height:32px;border:1px solid oklch(0.36 0.006 286);border-radius:5px;background:transparent;color:oklch(0.92 0.006 286);font-size:12.5px}',
+      '.shb-bed-ab:hover{background:oklch(0.28 0.006 286)}',
       '.shb-bed-ab.shb-pri{border-color:oklch(0.6 0.1 78);color:oklch(0.88 0.11 78)}',
       '.shb-bed-ab:disabled{opacity:.4;background:transparent}',
-      '.shb-bed-tb{flex:1;height:28px;border:0;border-radius:4px;background:transparent;color:oklch(0.66 0 0);font-size:12px}',
-      '.shb-bed-tb:hover{background:oklch(0.28 0 0);color:oklch(0.95 0 0)}',
+      '.shb-bed-tb{flex:1;height:28px;border:0;border-radius:4px;background:transparent;color:oklch(0.66 0.006 286);font-size:12px}',
+      '.shb-bed-tb:hover{background:oklch(0.28 0.006 286);color:oklch(0.95 0.006 286)}',
       '.shb-bed-tb.shb-red{color:oklch(0.7 0.13 25)}',
       '.shb-bed-tb.shb-red:hover{background:oklch(0.3 0.06 25);color:oklch(0.9 0.08 25)}',
-      '.shb-bed-none{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;font-size:13px;color:oklch(0.62 0 0)}',
-      '.shb-bed-none small{font-size:11.5px;line-height:1.6;color:oklch(0.48 0 0)}',
-      '.shb-bed-ta{width:100%;height:130px;resize:none;border:1px solid oklch(0.32 0 0);border-radius:6px;background:oklch(0.2 0 0);color:oklch(0.9 0 0);font:400 11px/1.4 "IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;padding:8px;outline:none;user-select:text;word-break:break-all}',
+      '.shb-bed-none{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;font-size:13px;color:oklch(0.62 0.006 286)}',
+      '.shb-bed-none small{font-size:11.5px;line-height:1.6;color:oklch(0.48 0.006 286)}',
+      '.shb-bed-ta{width:100%;height:130px;resize:none;border:1px solid oklch(0.32 0.006 286);border-radius:6px;background:oklch(0.2 0.006 286);color:oklch(0.9 0.006 286);font:400 11px/1.4 "IBM Plex Mono","JetBrains Mono",ui-monospace,Consolas,monospace;padding:8px;outline:none;user-select:text;word-break:break-all}',
       '.shb-bed-ta:focus{border-color:oklch(0.55 0.09 78)}',
-      '.shb-bed-ft{height:36px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid oklch(0.27 0 0);font-size:11.5px;color:oklch(0.5 0 0);white-space:nowrap;overflow:hidden}',
+      '.shb-bed-ft{height:36px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid oklch(0.27 0.006 286);font-size:11.5px;color:oklch(0.5 0.006 286);white-space:nowrap;overflow:hidden}',
       '.shb-bed-ft > span{display:flex;align-items:center;gap:5px}',
-      '.shb-bed-ft kbd{height:18px;display:flex;align-items:center;padding:0 6px;border-radius:3px;background:oklch(0.28 0 0);color:oklch(0.8 0 0);font-size:10.5px}',
-      '.shb-bed-saved{color:oklch(0.6 0 0)}',
+      '.shb-bed-ft kbd{height:18px;display:flex;align-items:center;padding:0 6px;border-radius:3px;background:oklch(0.28 0.006 286);color:oklch(0.8 0.006 286);font-size:10.5px}',
+      '.shb-bed-saved{color:oklch(0.6 0.006 286)}',
       '.shb-bed-saved i{width:6px;height:6px;border-radius:50%;background:oklch(0.72 0.15 150)}',
-      '.shb-bed-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:14px;height:38px;padding:0 8px 0 16px;border-radius:8px;background:oklch(0.3 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px;color:oklch(0.94 0 0);white-space:nowrap;animation:shbBedToast .16s ease-out}',
+      '.shb-bed-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:14px;height:38px;padding:0 8px 0 16px;border-radius:8px;background:oklch(0.3 0.006 286);border:1px solid oklch(0.38 0.006 286);box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12.5px;color:oklch(0.94 0.006 286);white-space:nowrap;animation:shbBedToast .16s ease-out}',
       '.shb-bed-toast.shb-plain{padding-right:16px}',
       '.shb-bed-toast button{height:26px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:oklch(0.85 0.12 78);font-size:12.5px;font-weight:600}',
-      '.shb-bed-toast button:hover{background:oklch(0.36 0 0)}',
+      '.shb-bed-toast button:hover{background:oklch(0.36 0.006 286)}',
       '@keyframes shbBedToast{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}',
       '@keyframes shbBedRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
       /* a saved button's own sign, picked in the button editor, where its sparkles were */
       '.shb-glyph{font-style:normal;font-weight:400;line-height:1;color:oklch(0.82 0.11 300)}',
       '.shb-tinted > .shb-tpl-ico .shb-glyph,.shb-pt-row[style*="--shb-tint"] .shb-tpl-ico .shb-glyph{color:var(--shb-tint)}',
       /* buttons someone sent: a card asks before anything is added (window.__hotbox.offer) */
-      '.shb-offer{position:fixed;right:18px;bottom:18px;z-index:2147483200;width:330px;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:8px;background:oklch(0.26 0 0);border:1px solid oklch(0.38 0 0);box-shadow:0 14px 40px rgba(0,0,0,.5);font:400 12.5px/1.45 "IBM Plex Sans",Inter,system-ui,sans-serif;color:oklch(0.9 0 0);animation:shbBedRise .18s ease-out}',
+      '.shb-offer{position:fixed;right:18px;bottom:18px;z-index:2147483200;width:330px;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:8px;background:oklch(0.26 0.006 286);border:1px solid oklch(0.38 0.006 286);box-shadow:0 14px 40px rgba(0,0,0,.5);font:400 12.5px/1.45 "IBM Plex Sans",Inter,system-ui,sans-serif;color:oklch(0.9 0.006 286);animation:shbBedRise .18s ease-out}',
       '.shb-offer *{box-sizing:border-box}',
       '.shb-offer-t{display:flex;align-items:center;gap:9px}',
-      '.shb-offer-t b{font-weight:600;color:oklch(0.96 0 0)}',
-      '.shb-offer-b{display:flex;flex-direction:column;gap:3px;color:oklch(0.86 0 0)}',
-      '.shb-offer-b small{font-size:11.5px;color:oklch(0.58 0 0);overflow:hidden;text-overflow:ellipsis}',
-      '.shb-offer-a{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:30px;font-size:12px;color:oklch(0.7 0 0)}',
-      '.shb-offer-a button{height:30px;padding:0 12px;border:1px solid oklch(0.38 0 0);border-radius:5px;background:transparent;color:oklch(0.86 0 0);font:inherit;cursor:pointer}',
-      '.shb-offer-a button:hover{background:oklch(0.32 0 0)}',
+      '.shb-offer-t b{font-weight:600;color:oklch(0.96 0.006 286)}',
+      '.shb-offer-b{display:flex;flex-direction:column;gap:3px;color:oklch(0.86 0.006 286)}',
+      '.shb-offer-b small{font-size:11.5px;color:oklch(0.58 0.006 286);overflow:hidden;text-overflow:ellipsis}',
+      '.shb-offer-a{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:30px;font-size:12px;color:oklch(0.7 0.006 286)}',
+      '.shb-offer-a button{height:30px;padding:0 12px;border:1px solid oklch(0.38 0.006 286);border-radius:5px;background:transparent;color:oklch(0.86 0.006 286);font:inherit;cursor:pointer}',
+      '.shb-offer-a button:hover{background:oklch(0.32 0.006 286)}',
       '.shb-offer-a button.shb-pri{border:0;background:oklch(0.82 0.13 78);color:oklch(0.2 0.02 78);font-weight:600}',
       '.shb-offer-a button.shb-pri:hover{background:oklch(0.87 0.12 78)}',
       /* The nodes of a saved button */
@@ -1531,40 +1534,40 @@
          smaller, and comes forward under the pointer and while the button is on. Less padding keeps the bars as
          tall as they were. A tool's row in a card reads the same way */
       /* The Tool Guide, the power tools browser (Settings → Power Tools → Tool Guide): the button editor's window, with its own list and panel */
-      '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0 0);overflow-y:auto}',
-      '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0 0);text-align:left;cursor:grab;touch-action:none;user-select:none}',
-      '.shb-ptb-row:hover{background:oklch(0.26 0 0)}',
+      '.shb-ptb-list{width:420px;flex:none;display:flex;flex-direction:column;gap:3px;padding:12px;border-right:1px solid oklch(0.27 0.006 286);overflow-y:auto}',
+      '.shb-ptb-row{height:53px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:oklch(0.86 0.006 286);text-align:left;cursor:grab;touch-action:none;user-select:none}',
+      '.shb-ptb-row:hover{background:oklch(0.26 0.006 286)}',
       '.shb-ptb-row.shb-on{background:oklch(0.3 0.03 78);box-shadow:inset 0 0 0 1.5px oklch(0.82 0.13 78)}',
       '.shb-ptb-row.shb-off{opacity:.5}',
-      '.shb-ptb-row > .shb-ico{flex:none;color:oklch(0.94 0 0)}',
+      '.shb-ptb-row > .shb-ico{flex:none;color:oklch(0.94 0.006 286)}',
       '.shb-ptb-nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
-      '.shb-ptb-nm b{font-size:13px;font-weight:600;color:oklch(0.94 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-ptb-nm small{font-size:11.5px;color:oklch(0.7 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.shb-ptb-key{flex:none;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:oklch(0.84 0 0);background:oklch(0.26 0 0);border:1px solid oklch(0.33 0 0);border-radius:4px;padding:4px 6px;white-space:nowrap}',
-      '.shb-ptb-none{padding:18px 12px;color:oklch(0.62 0 0)}',
+      '.shb-ptb-nm b{font-size:13px;font-weight:600;color:oklch(0.94 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-nm small{font-size:11.5px;color:oklch(0.7 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-key{flex:none;font:500 11px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:oklch(0.84 0.006 286);background:oklch(0.26 0.006 286);border:1px solid oklch(0.33 0.006 286);border-radius:4px;padding:4px 6px;white-space:nowrap}',
+      '.shb-ptb-none{padding:18px 12px;color:oklch(0.62 0.006 286)}',
       '.shb-ptb-det{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 26px;overflow-y:auto}',
-      '.shb-ptb-clip{flex:0 1 400px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid oklch(0.27 0 0);border-radius:10px;background:oklch(0.16 0 0)}',
+      '.shb-ptb-clip{flex:0 1 400px;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid oklch(0.27 0.006 286);border-radius:10px;background:oklch(0.16 0.006 286)}',
       '.shb-ptb-clip video{width:100%;height:100%;object-fit:contain;display:block}',
-      '.shb-ptb-nc{display:none;flex-direction:column;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.62 0 0)}',
-      '.shb-ptb-nc .shb-ico{color:oklch(0.5 0 0)}',
+      '.shb-ptb-nc{display:none;flex-direction:column;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.62 0.006 286)}',
+      '.shb-ptb-nc .shb-ico{color:oklch(0.5 0.006 286)}',
       '.shb-ptb-noclip video{display:none}',
       '.shb-ptb-noclip .shb-ptb-nc{display:flex}',
       '.shb-ptb-info{flex:none;display:flex;flex-direction:column;gap:12px}',
       '.shb-ptb-top{display:flex;align-items:center;gap:12px}',
-      '.shb-ptb-top > .shb-ico{flex:none;color:oklch(0.96 0 0)}',
-      '.shb-ptb-top > b{min-width:0;font-size:20px;font-weight:600;color:oklch(0.96 0 0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ptb-top > .shb-ico{flex:none;color:oklch(0.96 0.006 286)}',
+      '.shb-ptb-top > b{min-width:0;font-size:20px;font-weight:600;color:oklch(0.96 0.006 286);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.shb-ptb-top .shb-ptb-key{font-size:12px;padding:5px 8px}',
-      '.shb-ptb-sw,.shb-ptb-add{flex:none;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid oklch(0.33 0 0);border-radius:5px;background:oklch(0.26 0 0);color:oklch(0.72 0 0);font-size:12.5px;font-weight:600;white-space:nowrap}',
+      '.shb-ptb-sw,.shb-ptb-add{flex:none;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid oklch(0.33 0.006 286);border-radius:5px;background:oklch(0.26 0.006 286);color:oklch(0.72 0.006 286);font-size:12.5px;font-weight:600;white-space:nowrap}',
       '.shb-ptb-sw{min-width:56px}',
       '.shb-ptb-sw.shb-on{border-color:oklch(0.6 0.08 150);background:oklch(0.29 0.04 150);color:oklch(0.88 0.09 150)}',
-      '.shb-ptb-add{color:oklch(0.94 0 0)}',
+      '.shb-ptb-add{color:oklch(0.94 0.006 286)}',
       '.shb-ptb-add.shb-on{border-color:oklch(0.55 0.09 78);color:oklch(0.9 0.08 78)}',
       '.shb-ptb-add .shb-ico{color:inherit}',
       '.shb-ptb-sw:hover,.shb-ptb-add:hover{filter:brightness(1.15)}',
       '.shb-ptb-add:disabled{opacity:.45;pointer-events:none}',
-      '.shb-ptb-desc{font-size:14px;color:oklch(0.9 0 0)}',
-      '.shb-ptb-tip{font-size:13px;line-height:1.55;color:oklch(0.76 0 0);user-select:text}',
-      '.shb-bed-hb.shb-ptb-io{display:inline-flex;align-items:center;gap:7px;border:1px solid oklch(0.3 0 0);background:oklch(0.2 0 0);font-weight:600}',
+      '.shb-ptb-desc{font-size:14px;color:oklch(0.9 0.006 286)}',
+      '.shb-ptb-tip{font-size:13px;line-height:1.55;color:oklch(0.76 0.006 286);user-select:text}',
+      '.shb-bed-hb.shb-ptb-io{display:inline-flex;align-items:center;gap:7px;border:1px solid oklch(0.3 0.006 286);background:oklch(0.2 0.006 286);font-weight:600}',
       '.shb-bed-hb.shb-ptb-io.shb-on{border-color:oklch(0.82 0.13 78);background:oklch(0.3 0.03 78);color:oklch(0.9 0.08 78)}',
       '.shb-ptb-io .shb-ico{color:inherit}',
       /* a tool dragged out of its list: the window and its dim step aside, so every bar of the hotbox is a target */
@@ -1621,7 +1624,7 @@
       '.shb-fluid .shb-ps-txt{height:100%;padding:0 12px;font:600 12px/1 Inter,system-ui,sans-serif;color:#fff;mix-blend-mode:difference}',
       '.shb-fluid .shb-ps-num:focus{outline:1px solid rgba(255,255,255,.6);border-radius:4px}',
       '.shb-fluid .shb-x{width:18px;height:18px;left:-5px;top:-6px;background:#5c5c63;border:1.5px solid rgba(20,20,22,.95);color:#fff;font:700 13px/1 Inter,system-ui,sans-serif}',
-      '.shb-fluid .shb-editbar{gap:4px;padding:4px 4px 4px 14px;border-radius:16px;margin-bottom:8px;background:rgba(38,38,42,.72)}',
+      '.shb-fluid .shb-editbar{gap:4px;padding:4px 4px 4px 14px;border-radius:16px;margin-top:12px;background:rgba(38,38,42,.72)}',
       '.shb-fluid .shb-editbar-t{font:500 12px/1 Inter,system-ui,sans-serif;color:rgba(235,235,245,.65);margin-right:6px}',
       '.shb-fluid .shb-editbar-b{padding:8px 11px;border-radius:12px;font:600 12px/1 Inter,system-ui,sans-serif;color:var(--shb-t1)}',
       '.shb-fluid .shb-editbar-b:hover{background:rgba(255,255,255,.1)}',
@@ -1744,7 +1747,7 @@
       '.shb-quiet .shb-ps-num:focus{outline:1px solid var(--shb-qblue);border-radius:3px}',
       '.shb-quiet .shb-x{width:14px;height:14px;left:-4px;top:-5px;background:#3a3a3a;border:1px solid #1f1f1f;color:#ddd;font:500 11px/1 var(--shb-mono)}',
       '.shb-quiet .shb-btn.shb-outline{outline-color:#4a4a4a}',
-      '.shb-quiet .shb-editbar{gap:2px;padding:3px 3px 3px 10px;border-radius:7px;margin-bottom:6px}',
+      '.shb-quiet .shb-editbar{gap:2px;padding:3px 3px 3px 10px;border-radius:7px;margin-top:10px}',
       '.shb-quiet .shb-editbar-t{font:500 10.5px/1 var(--shb-mono);color:#7d7d7d;margin-right:6px}',
       '.shb-quiet .shb-editbar-b{padding:6px 9px;border-radius:5px;font:500 12px/1 Inter,system-ui,sans-serif;color:#cfcfcf}',
       '.shb-quiet .shb-editbar-b:hover{background:var(--shb-qhover);color:#fff}',
@@ -8325,11 +8328,18 @@
     return r.width ? r : null;
   }
 
-  /* While a button is dragged in edit mode, the edit bar is the place to drop it to take it off its bar */
+  /* While a button is dragged in edit mode, the edit bar (under the bottom bar) is the place to drop it to take
+     it off its bar. A group's list that is open over it is in front of it: there the button goes into the list */
   function hbOverTrash(x, y) {
     var eb = HB.el && HB.editMode ? HB.el.querySelector('.shb-editbar') : null;
     var r = eb && eb.getBoundingClientRect();
-    return !!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8);
+    if (!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8)) return false;
+    var lists = HB.el.querySelectorAll('.shb-grp-show > .shb-gdrop');
+    for (var i = 0; i < lists.length; i++) {
+      var b = lists[i].getBoundingClientRect();
+      if (b.width && x >= b.left - 6 && x <= b.right + 6 && y >= b.top - 10 && y <= b.bottom + 6) return false;
+    }
+    return true;
   }
 
   function hbTrashHot(on) {
@@ -8898,7 +8908,7 @@
       });
       var eb = HB.el.querySelector('.shb-editbar');
       if (eb) {
-        eb.animate([{ transform: fl ? 'translateY(10px) scale(.9)' : 'translateY(4px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+        eb.animate([{ transform: fl ? 'translateY(-10px) scale(.9)' : 'translateY(-4px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
           { duration: fl ? 140 : 100, easing: fl ? 'cubic-bezier(.34,1.56,.64,1)' : 'cubic-bezier(.2,0,0,1)' });
       }
     } catch (e) {}
@@ -9907,10 +9917,10 @@
       return '<div class="shb-card-hd"><span class="shb-hd-t">' + esc(title) + '</span>' + (note || '') + '</div>';
     }
 
-    /* TOP ZONE: edit toolbar (edit mode only) + favorites dock [1]..[N] + its category shortcut + context bar */
+    /* TOP ZONE: favorites dock [1]..[N] + its category shortcut + context bar */
     var dc = hbDockCat();
     var dcInfo = HB_CATS[dc];
-    var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' + hbEditBarHTML() +
+    var topHTML = '<div class="shb-zone shb-zone-top" data-zone="top">' +
       '<div class="shb-bar shb-dock">' +
         ((!isAdd || isPair) ? '<span class="shb-dock-mode' + (isPair ? '' : ' shb-dock-swap') + '" title="' + (isPair ? 'Adds the model and wires both selected loaders' : 'The numbered buttons swap the selected model in place') + '">' +
           ico('swap', 13) + '<span>' + (isPair ? 'Wire ' + sel.length : 'Swap') + '</span>' +
@@ -10016,7 +10026,7 @@
       : '';
 
     /* BOTTOM ZONE: action bar (actions, then pinned nodes, then the drop gap) + the standalone "+"
-       with its category dial beside it */
+       with its category dial beside it; and under them, in edit mode only, the edit bar */
     var actItems = botItems.filter(function (it) { return it.kind === 'tool'; });
     var pinItems = botItems.filter(function (it) { return it.kind !== 'tool'; });
     var dialHTML = '<div class="shb-dial"><div class="shb-dial-in">' +
@@ -10049,6 +10059,7 @@
         '<button type="button" class="shb-plus' + (HB.drawer ? ' shb-plus-on' : '') + '" data-hb-plus title="Add any node (+) · Hover for categories · Drop a node here to pin it">' + ico('plus', fl ? 22 : 18) + '</button>' +
       '</div>' +
       '</div>' +
+      hbEditBarHTML() +
     '</div>';
 
     /* Which category lives at the end of the dock */
@@ -13158,6 +13169,10 @@
    * in the bar). Drag to move, every change saves itself, and Undo / Redo take it back and forth.
    * Sending a button or a group to someone (14e) shows here only when a page, or a preference, turns it on.
    * --------------------------------------------------------------------- */
+  /* "Edit its nodes…" in the button editor (the button in the side panel, a double-click on a card and the hint
+     in the footer) is put away for now: Edit on a clean canvas is the way in from there. The node editor itself
+     is as it was, and a right-click on a button still opens it. true brings the three back */
+  var BRW_EDIT_NODES = false;
   var BRW = { el: null, q: '', sel: null, drag: null, noClick: 0, toastT: 0, saved: 0, last: '', lastTop: null, grab: null, panel: null, inspFor: '', win: { w: 0, h: 0, max: false, z: 1 },
     /* the bar the strip edits: 'bot' (the bottom bar), 'add' (the dock) or 'tools' (the context bar); and, for
        the dock and the context bar, the kind of node last picked for each */
@@ -13415,7 +13430,7 @@
   }
 
   function brwPillTint(uid) {
-    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0 0)')));
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : (/^model:/.test(uid) ? 'oklch(0.72 0.12 250)' : (/^node:/.test(uid) ? 'oklch(0.74 0.12 150)' : 'oklch(0.62 0.006 286)')));
   }
 
   /* What else could go on this bar. Before anything is typed, what suits it: for a swap bar the models to
@@ -13683,7 +13698,7 @@
   }
 
   function brwTint(uid) {
-    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : 'oklch(0.62 0 0)');
+    return barTint(uid) || (/^tpl:/.test(uid) ? 'oklch(0.78 0.12 300)' : 'oklch(0.62 0.006 286)');
   }
 
   function brwNodeNames(tp) {
@@ -13694,7 +13709,7 @@
   function brwNodeDot(title) {
     var s = String(title || '').toLowerCase();
     for (var i = 0; i < BRW_NODE_HUE.length; i++) if (s.indexOf(BRW_NODE_HUE[i][0]) >= 0) return 'oklch(0.74 0.14 ' + BRW_NODE_HUE[i][1] + ')';
-    return 'oklch(0.66 0 0)';
+    return 'oklch(0.66 0.006 286)';
   }
 
   function brwCanEdit(uid) {
@@ -13729,17 +13744,17 @@
           '<div class="shb-bed-main">' +
             '<div class="shb-bed-barbox">' +
               '<div class="shb-bed-mapcol">' +
-                '<div class="shb-bed-cap">The hotbox <small>as it opens on a node · type in the node to pick another · click a bar to edit it · drag its buttons along it, or off it · its + adds</small></div>' +
+                '<div class="shb-bed-cap" title="The hotbox as it opens on a node. Type in the node to pick another, click a bar to edit it, and drag its buttons along it or off it; its + adds">The hotbox <small>click a bar to edit it</small></div>' +
                 '<div class="shb-bed-map" data-bed-map></div>' +
               '</div>' +
             '</div>' +
-            '<div class="shb-bed-libcap">Your saved buttons <small>drag a button to another group · drag a group by its name up onto the bar · click one to edit it · drag the background to slide along</small></div>' +
+            '<div class="shb-bed-libcap" title="Drag a button to another group, or a group by its name up onto the bar. Click one to edit it. Drag the background to slide along">Your saved buttons <small>drag to arrange · click one to edit it</small></div>' +
             '<div class="shb-bed-lanes" data-bed-lanes></div>' +
           '</div>' +
           '<div class="shb-bed-insp" data-bed-insp hidden></div>' +
         '</div>' +
         '<div class="shb-bed-ft">' +
-          [['drag', 'move'], ['dbl-click', 'edit nodes'], ['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']].map(function (h) {
+          [['drag', 'move']].concat(BRW_EDIT_NODES ? [['dbl-click', 'edit nodes']] : [], [['G', 'new group'], ['Del', 'delete'], ['Ctrl Z', 'undo'], ['/', 'find']]).map(function (h) {
             return '<span><kbd>' + h[0] + '</kbd>' + h[1] + '</span>';
           }).join('') +
           '<span class="shb-bed-sp"></span><span class="shb-bed-saved"><i></i><span data-bed-saved></span></span>' +
@@ -13776,7 +13791,7 @@
     bg.addEventListener('mousedown', function (ev) { if (ev.target === bg) brwClose(); });
     bg.addEventListener('click', brwClick);
     bg.addEventListener('dblclick', function (ev) {
-      var c = ev.target && ev.target.closest ? ev.target.closest('[data-bed-card]') : null;
+      var c = BRW_EDIT_NODES && ev.target && ev.target.closest ? ev.target.closest('[data-bed-card]') : null;
       if (c && brwCanEdit(c.getAttribute('data-bed-card'))) tplEditOpen(c.getAttribute('data-bed-card').slice(4));
     });
     bg.addEventListener('pointerdown', brwDown);
@@ -14218,7 +14233,7 @@
         '</div></div>' : '') +
       '</div>' +
       '<div class="shb-bed-iact">' +
-        (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON or bring back an older version. It stays the same button">✎ Edit its nodes…</button>' : '') +
+        (canEdit && BRW_EDIT_NODES ? '<button type="button" class="shb-bed-ab" data-bed-act="nodes" title="Change a node\'s values or title, take a node out, edit the JSON or bring back an older version. It stays the same button">✎ Edit its nodes…</button>' : '') +
         (canEdit ? '<button type="button" class="shb-bed-ab" data-bed-act="canvas" title="Opens a new tab with only this button\'s nodes, to change them with ComfyUI itself. A bar stays there: Save button keeps them in this same button and closes the tab">↗ Edit on a clean canvas</button>' : '') +
         (tp ? brwShareHTML() : '') +
         '<div class="shb-bed-two">' +
