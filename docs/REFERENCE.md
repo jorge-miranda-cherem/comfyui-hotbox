@@ -106,6 +106,7 @@ Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `Imag
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | In edit mode and in the button editor: take back the last change to the bars, groups and saved buttons (in the editor, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> does it again). |
 | a key of your own | Any bar button can have one: right-click it → **Key**. |
 | <kbd>Alt</kbd>+<kbd>Z</kbd> | **Magnifier** — big live prompt editor · **Visual Crop editor** on crop nodes · **Paint Studio** on paint / `LoadImage` nodes. |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> · <kbd>Ctrl</kbd>+<kbd>H</kbd> | In the Magnifier (or its search button): **find**, and **find and replace**. Every match shows on the text; <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd> step through them, **Aa** matches case, **ab** whole words; in the replace field <kbd>Enter</kbd> replaces the current one and <kbd>Ctrl</kbd>+<kbd>Enter</kbd> all of them. <kbd>Ctrl</kbd>+<kbd>Z</kbd> in the text takes a replace back; <kbd>Esc</kbd> goes back to the text. |
 | <kbd>Alt</kbd>+<kbd>N</kbd> | **Label Studio** — rich canvas titles/notes (`Label (rgthree)` when installed, otherwise `MarkdownNote` / `Note` / `Group`). |
 | <kbd>Alt</kbd>+<kbd>R</kbd> | **Load in Canvas** — hand the selected node's render to a new `Load Image` (or `Load Video` for videos). |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | **Render Selected** — queue only the selected output nodes (or the outputs downstream of the selection). Nothing selected renders nothing. |
