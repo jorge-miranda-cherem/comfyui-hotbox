@@ -1848,6 +1848,30 @@
       '.shb-modal-bg{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font:400 12.5px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--shb-fg)}',
       '.shb-modal{width:min(540px,94vw);max-height:90vh;overflow-y:auto;background:var(--shb-bg);border:1px solid var(--shb-border);border-radius:8px;padding:16px 18px;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}',
       '.shb-modal-t{font:600 14px/1.2 Inter,system-ui,sans-serif;color:var(--shb-fg);display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #333333}',
+      /* Magnifier: find and replace */
+      '.shb-lf{display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-bottom:1px solid #333333;background:var(--shb-bg,#222222);font:500 12px/1.3 Inter,system-ui,sans-serif;color:var(--shb-fg-muted,#9a9a9a)}',
+      '.shb-lf-r{display:flex;align-items:center;gap:6px}',
+      '.shb-lf-f{position:relative;display:flex;flex:0 1 440px;min-width:140px}',
+      '.shb-lf-f input{flex:1;min-width:0;box-sizing:border-box;height:30px;margin:0;padding:0 10px;border-radius:5px;border:1px solid #3c3c3c;background:#181818;color:var(--shb-fg,#e2e2e2);font:400 14px/1 Inter,system-ui,sans-serif;outline:none}',
+      '.shb-lf-f input:focus{border-color:#5c94f0}',
+      '.shb-lf-f input::placeholder{color:#6a6a6a}',
+      '.shb-lf-f.shb-lf-opts input{padding-right:64px}',
+      '.shb-lf-f.shb-lf-bad input{border-color:#8a463e}',
+      '.shb-lf button{box-sizing:border-box;height:30px;min-width:30px;margin:0;padding:0 10px;border:1px solid #3c3c3c;border-radius:5px;background:#262626;color:#9a9a9a;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font:600 12px/1 Inter,system-ui,sans-serif}',
+      '.shb-lf button:hover:not(:disabled){background:#2e2e2e;color:#e2e2e2}',
+      '.shb-lf button:disabled{opacity:.4;cursor:default}',
+      '.shb-lf .shb-lf-ic{padding:0}',
+      '.shb-lf .shb-lf-tg{min-width:24px;width:24px;padding:0;border-color:transparent;background:transparent}',
+      '.shb-lf .shb-lf-opt{position:absolute;top:4px;height:22px;min-width:26px;padding:0 4px;border-color:transparent;background:transparent;font:600 12px/1 Inter,system-ui,sans-serif}',
+      '.shb-lf .shb-lf-opt.shb-on{background:#383838;border-color:#5c94f0;color:#ffffff}',
+      '.shb-lf .shb-lf-x{margin-left:auto;border-color:transparent;background:transparent;font:400 18px/1 Inter,system-ui,sans-serif}',
+      '.shb-lf-sp{flex:0 0 24px}',
+      '.shb-lf-n{min-width:78px;white-space:nowrap;color:#8a8a8a;font:500 12.5px/1 Inter,system-ui,sans-serif}',
+      '.shb-lf-n.shb-lf-bad{color:#e7a39a}',
+      '.shb-lf-mirror{position:absolute;left:0;top:0;z-index:0;overflow:hidden;pointer-events:none;color:transparent}',
+      '.shb-lf-mirror > div{position:relative;box-sizing:border-box;margin:0;border:0;white-space:pre-wrap;overflow-wrap:break-word;color:transparent}',
+      '.shb-lf-mirror mark{color:transparent;background:rgba(234,179,8,.24);border-radius:2px}',
+      '.shb-lf-mirror mark.shb-lf-cur{background:rgba(245,158,11,.55);box-shadow:0 0 0 1px rgba(251,191,36,.95)}',
       /* Replicate */
       '.shb-rep .shb-modal-t > span:first-child{display:inline-flex;align-items:center;gap:8px}',
       '.shb-rep-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
@@ -5984,6 +6008,278 @@
     if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
   }
 
+  /* Find and replace in the Magnifier: a row under its head (its search button, Ctrl+F, Ctrl+H). The text stays a
+     plain textarea, with its own undo, spellcheck and selection; the matches are painted on a copy of the text laid
+     right behind it (same font, padding and wrap), so all of them show while the cursor is in the find field.
+     Replacing goes through the textarea's own editing, so Ctrl+Z takes a replace back. What was searched last is
+     kept while the page is open */
+  var LUPA_FIND = { q: '', rep: '', mc: false, ww: false };
+  var LUPA_FIND_MAX = 5000;
+  var LUPA_FIND_COPY = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'wordSpacing',
+    'tabSize', 'textIndent', 'textTransform', 'whiteSpace', 'wordBreak', 'overflowWrap', 'fontFeatureSettings',
+    'fontVariantLigatures', 'fontKerning', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
+
+  function lupaMatches(text, q, mc, ww) {
+    var out = [];
+    if (!q) return out;
+    var body = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re = null;
+    try {
+      re = new RegExp(ww ? '(?<![\\p{L}\\p{N}_])' + body + '(?![\\p{L}\\p{N}_])' : body, 'gu' + (mc ? '' : 'i'));
+    } catch (e) {
+      try { re = new RegExp(body, 'g' + (mc ? '' : 'i')); } catch (e2) { return out; }
+    }
+    var m;
+    while (out.length < LUPA_FIND_MAX && (m = re.exec(text))) {
+      if (!m[0].length) { re.lastIndex++; continue; }
+      out.push([m.index, m.index + m[0].length]);
+    }
+    return out;
+  }
+
+  function lupaFindMake(area, ta, headBtn) {
+    var F = LUPA_FIND;
+    var st = { on: false, rep: false, list: [], cur: -1, anchor: 0, note: '', busy: false };
+
+    var mirror = document.createElement('div');
+    mirror.className = 'shb-lf-mirror';
+    mirror.style.display = 'none';
+    var inner = document.createElement('div');
+    mirror.appendChild(inner);
+    area.insertBefore(mirror, ta);
+
+    var bar = document.createElement('div');
+    bar.className = 'shb-lf';
+    bar.style.display = 'none';
+    bar.innerHTML =
+      '<div class="shb-lf-r">' +
+        '<button type="button" class="shb-lf-tg" data-lf="tg" title="Replace (Ctrl+H)"></button>' +
+        '<span class="shb-lf-f shb-lf-opts"><input data-lf="q" type="text" spellcheck="false" autocomplete="off" placeholder="Find">' +
+          '<button type="button" class="shb-lf-opt" data-lf="mc" title="Match case (Alt+C)" style="right:32px">Aa</button>' +
+          '<button type="button" class="shb-lf-opt" data-lf="ww" title="Whole word (Alt+W)" style="right:4px"><u>ab</u></button></span>' +
+        '<span class="shb-lf-n" data-lf="n"></span>' +
+        '<button type="button" class="shb-lf-ic" data-lf="prev" title="Previous (Shift+Enter)">' + ico('chevUp', 16) + '</button>' +
+        '<button type="button" class="shb-lf-ic" data-lf="next" title="Next (Enter)">' + ico('chevDown', 16) + '</button>' +
+        '<button type="button" class="shb-lf-x" data-lf="x" title="Close (Esc)">\u00d7</button>' +
+      '</div>' +
+      '<div class="shb-lf-r" data-lf="rrow" style="display:none">' +
+        '<span class="shb-lf-sp"></span>' +
+        '<span class="shb-lf-f"><input data-lf="r" type="text" spellcheck="false" autocomplete="off" placeholder="Replace with"></span>' +
+        '<button type="button" data-lf="one" title="Replace this one (Enter)">Replace</button>' +
+        '<button type="button" data-lf="all" title="Replace all (Ctrl+Enter)">All</button>' +
+      '</div>';
+    function q(k) { return bar.querySelector('[data-lf="' + k + '"]'); }
+    var qIn = q('q'), rIn = q('r');
+    qIn.value = F.q;
+    rIn.value = F.rep;
+
+    function lay() {
+      var cs = null;
+      try { cs = getComputedStyle(ta); } catch (e) { cs = null; }
+      if (cs) LUPA_FIND_COPY.forEach(function (p) { inner.style[p] = cs[p]; });
+      mirror.style.width = ta.clientWidth + 'px';
+      mirror.style.height = ta.clientHeight + 'px';
+    }
+    function scrollSync() { inner.style.transform = 'translateY(' + (-ta.scrollTop) + 'px)'; }
+
+    /* the matches; the current one is the first that starts at or after `at` */
+    function find(at) {
+      st.list = (st.on && F.q) ? lupaMatches(ta.value, F.q, F.mc, F.ww) : [];
+      st.cur = st.list.length ? 0 : -1;
+      for (var i = 0; i < st.list.length; i++) { if (st.list[i][0] >= (at || 0)) { st.cur = i; break; } }
+    }
+    function pick() {
+      var m = st.list[st.cur];
+      if (!m) return;
+      st.anchor = m[0];
+      try { ta.setSelectionRange(m[0], m[1]); } catch (e) {}
+    }
+    function reveal() {
+      var mk = inner.querySelector('mark.shb-lf-cur');
+      if (!mk) return;
+      var top = mk.offsetTop, h = mk.offsetHeight || 20, ch = ta.clientHeight;
+      if (top < ta.scrollTop + 6 || top + h > ta.scrollTop + ch - 6) ta.scrollTop = Math.max(0, Math.round(top - ch / 3));
+    }
+    function paint(scroll) {
+      var show = st.on && !!F.q && st.list.length > 0;
+      mirror.style.display = show ? '' : 'none';
+      if (show) {
+        lay();
+        var t = ta.value, h = '', p = 0;
+        st.list.forEach(function (m, i) {
+          h += esc(t.slice(p, m[0])) + '<mark' + (i === st.cur ? ' class="shb-lf-cur"' : '') + '>' + esc(t.slice(m[0], m[1])) + '</mark>';
+          p = m[1];
+        });
+        inner.innerHTML = h + esc(t.slice(p)) + '\u200b';
+        if (scroll) reveal();
+        scrollSync();
+      }
+      var none = !!F.q && !st.list.length;
+      var n = q('n');
+      n.textContent = st.note || (!F.q ? '' : none ? 'No results'
+        : (st.cur + 1) + ' of ' + st.list.length + (st.list.length >= LUPA_FIND_MAX ? '+' : ''));
+      n.classList.toggle('shb-lf-bad', none && !st.note);
+      qIn.parentNode.classList.toggle('shb-lf-bad', none);
+      q('prev').disabled = q('next').disabled = q('one').disabled = q('all').disabled = !st.list.length;
+      q('mc').classList.toggle('shb-on', !!F.mc);
+      q('ww').classList.toggle('shb-on', !!F.ww);
+      q('tg').innerHTML = ico(st.rep ? 'chevDown' : 'chevRight', 16);
+      q('rrow').style.display = st.rep ? '' : 'none';
+      if (headBtn) {
+        headBtn.style.background = st.on ? '#383838' : '#262626';
+        headBtn.style.borderColor = st.on ? '#5c94f0' : '#3c3c3c';
+        headBtn.style.color = st.on ? '#ffffff' : '#9a9a9a';
+      }
+    }
+    function go(d) {
+      if (!st.list.length) return;
+      st.note = '';
+      var m = st.list[st.cur], a = ta.selectionStart, b = ta.selectionEnd, i;
+      if (m && m[0] === a && m[1] === b) {
+        st.cur = (st.cur + d + st.list.length) % st.list.length;
+      } else if (d > 0) {
+        /* the cursor moved in the text since: step on from where it is now */
+        st.cur = 0;
+        for (i = 0; i < st.list.length; i++) { if (st.list[i][0] >= a) { st.cur = i; break; } }
+      } else {
+        st.cur = st.list.length - 1;
+        for (i = st.list.length - 1; i >= 0; i--) { if (st.list[i][1] <= a) { st.cur = i; break; } }
+      }
+      pick();
+      paint(true);
+    }
+    /* an edit made through the textarea itself, so its undo keeps it */
+    function edit(a, b, txt) {
+      st.busy = true;
+      var ok = false;
+      try {
+        ta.focus();
+        ta.setSelectionRange(a, b);
+        ok = txt ? document.execCommand('insertText', false, txt) : document.execCommand('delete', false);
+      } catch (e) { ok = false; }
+      if (!ok) {
+        try { ta.setRangeText(txt, a, b, 'end'); } catch (e) { ta.value = ta.value.slice(0, a) + txt + ta.value.slice(b); }
+        try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+      }
+      st.busy = false;
+    }
+    function replaceOne() {
+      var m = st.list[st.cur];
+      if (!m) return;
+      var r = rIn.value;
+      edit(m[0], m[1], r);
+      st.note = '';
+      find(m[0] + r.length);
+      pick();
+      paint(true);
+      rIn.focus();
+    }
+    function replaceAll() {
+      if (!st.list.length) return;
+      var t = ta.value, r = rIn.value, out = '', p = 0, n = st.list.length;
+      st.list.forEach(function (m) { out += t.slice(p, m[0]) + r; p = m[1]; });
+      out += t.slice(p);
+      if (out !== t) {
+        var top = ta.scrollTop;
+        edit(0, t.length, out);
+        try { ta.setSelectionRange(0, 0); } catch (e) {}
+        ta.scrollTop = top;
+      }
+      find(0);
+      st.note = n + ' replaced';
+      paint(false);
+      rIn.focus();
+    }
+    function open(withRep) {
+      var sel = '';
+      try { sel = ta.value.slice(ta.selectionStart, ta.selectionEnd); } catch (e) { sel = ''; }
+      if (sel && sel.length <= 200 && sel.indexOf('\n') < 0) { F.q = sel; qIn.value = sel; }
+      st.on = true;
+      if (withRep) st.rep = true;
+      st.note = '';
+      bar.style.display = '';
+      find(ta.selectionStart || 0);
+      pick();
+      paint(true);
+      var f = withRep && F.q ? rIn : qIn;
+      try { f.focus(); f.select(); } catch (e) {}
+    }
+    function close(back) {
+      st.on = false;
+      st.note = '';
+      bar.style.display = 'none';
+      paint(false);
+      if (back) { try { ta.focus(); } catch (e) {} }
+    }
+    function keys(e, which) {
+      var k = e.key, mod = e.ctrlKey || e.metaKey;
+      e.stopPropagation();
+      if (k === 'Escape') { e.preventDefault(); close(true); return; }
+      if (mod && !e.altKey && e.code === 'KeyF') { e.preventDefault(); qIn.focus(); qIn.select(); return; }
+      if (mod && !e.altKey && e.code === 'KeyH') { e.preventDefault(); st.rep = true; paint(false); rIn.focus(); rIn.select(); return; }
+      if (e.altKey && !mod && (e.code === 'KeyC' || e.code === 'KeyW')) {
+        e.preventDefault();
+        if (e.code === 'KeyC') F.mc = !F.mc; else F.ww = !F.ww;
+        st.note = '';
+        find(st.anchor);
+        pick();
+        paint(true);
+        return;
+      }
+      if (k === 'F3') { e.preventDefault(); go(e.shiftKey ? -1 : 1); return; }
+      if (k === 'Enter') {
+        e.preventDefault();
+        if (which === 'r') { if (mod) replaceAll(); else replaceOne(); }
+        else go(e.shiftKey ? -1 : 1);
+      }
+    }
+
+    /* the bar's buttons keep the cursor where it is (in a field) */
+    bar.addEventListener('mousedown', function (e) {
+      if (e.target.closest && e.target.closest('button')) e.preventDefault();
+    });
+    bar.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-lf]') : null;
+      if (!b) return;
+      e.stopPropagation();
+      var k = b.getAttribute('data-lf');
+      if (k === 'tg') { st.rep = !st.rep; paint(false); (st.rep ? rIn : qIn).focus(); }
+      else if (k === 'mc' || k === 'ww') { F[k] = !F[k]; st.note = ''; find(st.anchor); pick(); paint(true); }
+      else if (k === 'prev') go(-1);
+      else if (k === 'next') go(1);
+      else if (k === 'x') close(true);
+      else if (k === 'one') replaceOne();
+      else if (k === 'all') replaceAll();
+    });
+    qIn.addEventListener('input', function () { F.q = qIn.value; st.note = ''; find(st.anchor); pick(); paint(true); });
+    rIn.addEventListener('input', function () { F.rep = rIn.value; });
+    qIn.addEventListener('keydown', function (e) { keys(e, 'q'); });
+    rIn.addEventListener('keydown', function (e) { keys(e, 'r'); });
+    ta.addEventListener('scroll', scrollSync);
+    try {
+      new ResizeObserver(function () { if (st.on && F.q) paint(false); }).observe(ta);
+    } catch (e) {}
+    paint(false);
+
+    return {
+      bar: bar,
+      isOn: function () { return st.on; },
+      open: open,
+      close: close,
+      toggle: function () { if (st.on) close(true); else open(false); },
+      go: function (d) { if (st.on && F.q) go(d); else open(false); },
+      /* the text changed (typed in, or undone): the current match stays where it was */
+      textChanged: function () {
+        if (st.busy || !st.on || !F.q) return;
+        var m = st.list[st.cur];
+        st.note = '';
+        find(m ? m[0] : 0);
+        paint(false);
+      },
+      refresh: function () { if (st.on && F.q) paint(false); }
+    };
+  }
+
   function lupaClose() {
     var el = LUPA.el, src = LUPA.src, ta = LUPA.ta;
     var at = ta ? [ta.selectionStart, ta.selectionEnd] : null;
@@ -6026,7 +6322,17 @@
     var ta = document.createElement('textarea');
     ta.spellcheck = true;
     ta.value = text;
-    ta.style.cssText = 'flex:1;border:0;outline:0;resize:none;margin:0;padding:18px 22px;background:#181818;color:var(--shb-fg,#e2e2e2);font:400 ' + lupaPx() + 'px/1.55 Inter,-apple-system,Segoe UI,sans-serif';
+    ta.style.cssText = 'position:relative;z-index:1;flex:1;width:100%;height:100%;box-sizing:border-box;border:0;outline:0;resize:none;margin:0;padding:18px 22px;background:transparent;color:var(--shb-fg,#e2e2e2);font:400 ' + lupaPx() + 'px/1.55 Inter,-apple-system,Segoe UI,sans-serif';
+    var area = document.createElement('div');
+    area.style.cssText = 'position:relative;flex:1;min-height:0;display:flex;overflow:hidden;background:#181818';
+    area.appendChild(ta);
+
+    var findBtn = document.createElement('button');
+    findBtn.innerHTML = ico('search', 14);
+    findBtn.title = 'Find and replace (Ctrl+F · Ctrl+H)';
+    findBtn.style.cssText = 'border:1px solid #3c3c3c;border-radius:5px;width:30px;height:24px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;background:#262626;color:#9a9a9a';
+    var finder = lupaFindMake(area, ta, findBtn);
+    findBtn.onclick = function (ev) { ev.stopPropagation(); finder.toggle(); };
 
     function paintBoxes() {
       var custom = /^\d+x\d+$/.test(String(S.lupaWH || ''));
@@ -6046,7 +6352,7 @@
         ev.stopPropagation();
         S.lupaBox = i; S.lupaWH = ''; save();
         lupaBoxSize(box); paintBoxes();
-        try { ta.focus(); } catch (e) {}
+        if (!finder.isOn()) { try { ta.focus(); } catch (e) {} }
       };
       boxes.appendChild(b);
     });
@@ -6069,7 +6375,8 @@
         ev.stopPropagation();
         S.lupaSize = i; save();
         ta.style.fontSize = px + 'px'; paintSizes();
-        try { ta.focus(); } catch (e) {}
+        finder.refresh();
+        if (!finder.isOn()) { try { ta.focus(); } catch (e) {} }
       };
       sizes.appendChild(b);
     });
@@ -6080,12 +6387,18 @@
     done.textContent = 'Done';
     done.onclick = lupaClose;
 
+    /* the head's buttons leave the cursor where it is (in the text, or in Find) */
+    head.addEventListener('mousedown', function (e) {
+      if (e.target.closest && e.target.closest('button')) e.preventDefault();
+    });
     head.appendChild(cap);
+    head.appendChild(findBtn);
     head.appendChild(boxes);
     head.appendChild(sizes);
     head.appendChild(done);
     box.appendChild(head);
-    box.appendChild(ta);
+    box.appendChild(finder.bar);
+    box.appendChild(area);
 
     var grip = document.createElement('div');
     grip.title = 'Drag to resize window';
@@ -6117,9 +6430,16 @@
     document.body.appendChild(wrap);
     LUPA.el = wrap; LUPA.ta = ta; LUPA.src = src; LUPA.w = t.w || null; LUPA.node = t.node || null;
 
-    ta.oninput = function () { lupaWrite(ta.value); };
+    ta.oninput = function () { lupaWrite(ta.value); finder.textChanged(); };
     ta.onkeydown = function (e) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); lupaClose(); return; }
+      var mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.altKey && !e.shiftKey && (e.code === 'KeyF' || e.code === 'KeyH')) {
+        e.preventDefault(); e.stopPropagation();
+        finder.open(e.code === 'KeyH');
+        return;
+      }
+      if (e.key === 'F3') { e.preventDefault(); e.stopPropagation(); finder.go(e.shiftKey ? -1 : 1); return; }
       e.stopPropagation();
     };
     wrap.addEventListener('mousedown', function (e) {
@@ -16918,7 +17238,7 @@
      there, dimmed on the nodes it does not work on (hbKeep). */
   var POWER_TOOLS = [
     { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
-      tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
+      tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
     { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
