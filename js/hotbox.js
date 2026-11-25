@@ -949,6 +949,25 @@
       '.shb-editbar-trash{position:absolute;inset:0;z-index:3;display:none;align-items:center;justify-content:center;gap:8px;border-radius:inherit;background:rgba(92,36,32,.97);color:#ffd9d3;font:600 12px/1 Inter,system-ui,sans-serif;box-shadow:inset 0 0 0 1px rgba(224,112,95,.55)}',
       '.shb-dragging .shb-editbar-trash{display:flex}',
       '.shb-editbar-trash.shb-hot{background:#a8433a;color:#fff;box-shadow:inset 0 0 0 2px #ffb3a6}',
+      /* a saved button of your own can also go for good: a small section at the end of that strip */
+      '.shb-editbar-del{position:absolute;top:0;bottom:0;right:0;width:190px;z-index:3;display:none;align-items:center;justify-content:center;gap:7px;border-radius:inherit;border-top-left-radius:0;border-bottom-left-radius:0;background:rgba(46,16,16,.98);color:#ff9b8c;font:600 12px/1 Inter,system-ui,sans-serif;box-shadow:inset 0 0 0 1px rgba(255,120,100,.7);white-space:nowrap}',
+      '.shb-editbar-del::before{content:"";position:absolute;left:0;top:7px;bottom:7px;border-left:1px solid rgba(255,155,140,.35)}',
+      '.shb-dragging.shb-drag-own .shb-editbar-del{display:flex}',
+      '.shb-dragging.shb-drag-own .shb-editbar-trash{right:190px;border-top-right-radius:0;border-bottom-right-radius:0}',
+      '.shb-editbar-del.shb-hot{background:#c4362a;color:#fff;box-shadow:inset 0 0 0 2px #ffcabf}',
+      '.shb-editbar-del.shb-hot::before{display:none}',
+      /* with a button in the hand the strip is all the edit bar shows (nothing shows through it) */
+      '.shb-dragging .shb-editbar > :not(.shb-editbar-trash):not(.shb-editbar-del){visibility:hidden}',
+      /* right after one went for good: what went, in place of the hint (the bar keeps its width), and Undo lit
+         for 10 seconds, a line in it running out */
+      '.shb-editbar-t{display:inline-grid;align-items:center}',
+      '.shb-editbar-t > *{grid-area:1/1}',
+      '.shb-editbar-noted .shb-editbar-hint{visibility:hidden}',
+      '.shb-editbar-note{justify-self:end;display:inline-flex;align-items:center;gap:7px;min-width:0;max-width:100%;overflow:hidden;font:600 12px/1 Inter,system-ui,sans-serif;color:#ffcabf}',
+      '.shb-editbar-note > span{overflow:hidden;text-overflow:ellipsis}',
+      '.shb-editbar-note b{color:#fff;font-weight:600}',
+      '.shb-editbar .shb-editbar-b.shb-editbar-lit,.shb-editbar .shb-editbar-b.shb-editbar-lit:hover{position:relative;overflow:hidden;background:#64a8f0;color:#fff}',
+      '.shb-editbar-left{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(255,255,255,.8);transform-origin:left center;pointer-events:none}',
       /* the place a dragged button will take: an empty slot, drawn where it lands */
       '.shb-item-wrap.shb-drag-src > .shb-btn{background:rgba(92,148,240,.16) !important;box-shadow:inset 0 0 0 1.5px rgba(110,165,245,.95) !important;border-color:transparent !important;outline:none !important}',
       '.shb-item-wrap.shb-drag-src > .shb-btn > *{visibility:hidden}',
@@ -10037,17 +10056,39 @@
     var eb = HB.el && HB.editMode ? HB.el.querySelector('.shb-editbar') : null;
     var r = eb && eb.getBoundingClientRect();
     if (!(r && r.width && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8)) return false;
+    return !hbOverOpenList(x, y);
+  }
+
+  function hbOverOpenList(x, y) {
     var lists = HB.el.querySelectorAll('.shb-grp-show > .shb-gdrop');
     for (var i = 0; i < lists.length; i++) {
       var b = lists[i].getBoundingClientRect();
-      if (b.width && x >= b.left - 6 && x <= b.right + 6 && y >= b.top - 10 && y <= b.bottom + 6) return false;
+      if (b.width && x >= b.left - 6 && x <= b.right + 6 && y >= b.top - 10 && y <= b.bottom + 6) return true;
     }
-    return true;
+    return false;
   }
 
-  function hbTrashHot(on) {
+  /* the small "Delete for good" section at the end of that strip, there only while a saved button of your own is
+     in the hand: it deletes that saved button itself, from every bar and group (Undo brings it back) */
+  function hbOverDel(x, y) {
+    var d = HB.el && HB.editMode ? HB.el.querySelector('.shb-editbar-del') : null;
+    var r = d && d.getBoundingClientRect();
+    if (!(r && r.width && x >= r.left && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8)) return false;
+    return !hbOverOpenList(x, y);
+  }
+
+  /* a saved button of your own (not one of a shared library) */
+  function hbOwnTpl(uid) {
+    var m = /^tpl:(.+)$/.exec(String(uid || ''));
+    var t = m && tplById(m[1]);
+    return t && !t.lib ? t : null;
+  }
+
+  function hbTrashHot(on, del) {
     var t = HB.el && HB.el.querySelector('.shb-editbar-trash');
     if (t) t.classList.toggle('shb-hot', !!on);
+    var d = HB.el && HB.el.querySelector('.shb-editbar-del');
+    if (d) d.classList.toggle('shb-hot', !!del);
   }
 
   /* ---------------------------------------------------------------------
@@ -10504,16 +10545,77 @@
     if (i >= 0) HB_MODALS.splice(i, 1);
   }
 
+  /* A saved button deleted for good from the edit bar: the bar says which, and its Undo stays lit for 10 seconds.
+     It goes out sooner once that is no longer the last change (Undo took it back, or something else changed) */
+  var HB_DEL_NOTE_MS = 10000;
+  function hbDelNoteStart(name) {
+    hbDelNoteEnd();
+    HB.delNote = { name: name, t0: Date.now(), step: HB_UNDO[HB_UNDO.length - 1] || null, fresh: true };
+    HB.delNoteT = setTimeout(hbDelNoteEnd, HB_DEL_NOTE_MS);
+  }
+
+  function hbDelNoteOn() {
+    var n = HB.delNote;
+    if (!n) return null;
+    if (Date.now() - n.t0 >= HB_DEL_NOTE_MS || !n.step || HB_UNDO[HB_UNDO.length - 1] !== n.step) { hbDelNoteEnd(); return null; }
+    return n;
+  }
+
+  function hbDelNoteEnd() {
+    if (HB.delNoteT) clearTimeout(HB.delNoteT);
+    HB.delNoteT = 0;
+    if (!HB.delNote) return;
+    HB.delNote = null;
+    var eb = HB.el && HB.el.querySelector('.shb-editbar');
+    if (!eb) return;
+    var n = eb.querySelector('.shb-editbar-note');
+    var u = eb.querySelector('.shb-editbar-lit');
+    function off() {
+      eb.classList.remove('shb-editbar-noted');
+      if (n && n.parentNode) n.parentNode.removeChild(n);
+      if (u) {
+        u.classList.remove('shb-editbar-lit');
+        u.title = 'Take back the last change (Ctrl+Z)';
+        var l = u.querySelector('.shb-editbar-left');
+        if (l) l.parentNode.removeChild(l);
+      }
+    }
+    try { if (n) n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished.then(off, off); else off(); } catch (e) { off(); }
+  }
+
+  /* after the edit bar is drawn: the line in Undo runs out over what is left of the 10 seconds; when it just
+     happened the note comes in and Undo gives a little bump (by script: CSS animations do not play under
+     reduced motion) */
+  function hbDelNoteAnim() {
+    var n = HB.delNote, eb = n && HB.el && HB.el.querySelector('.shb-editbar-noted');
+    if (!eb) return;
+    var l = eb.querySelector('.shb-editbar-left'), u = eb.querySelector('.shb-editbar-lit'), m = eb.querySelector('.shb-editbar-note');
+    var left = Math.max(0, HB_DEL_NOTE_MS - (Date.now() - n.t0));
+    try {
+      if (l) l.animate([{ transform: 'scaleX(' + (left / HB_DEL_NOTE_MS) + ')' }, { transform: 'scaleX(0)' }], { duration: left, easing: 'linear', fill: 'forwards' });
+      if (n.fresh) {
+        n.fresh = false;
+        if (m) m.animate([{ opacity: 0, transform: 'translateX(8px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.2,0,0,1)' });
+        if (u) u.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 320, delay: 60, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      }
+    } catch (e) {}
+  }
+
   function hbEditBarHTML() {
     var fl = hbIsFluid();
     var hid = HB.editMode ? hbHiddenHere() : 0;
     var un = HB.editMode ? hbUndoLeft() : 0;
-    return '<div class="shb-editbar">' +
+    var note = HB.editMode ? hbDelNoteOn() : null;
+    return '<div class="shb-editbar' + (note ? ' shb-editbar-noted' : '') + '">' +
       '<span class="shb-editbar-tag"><i></i>Editing</span>' +
-      '<span class="shb-editbar-t">' + (fl ? 'Drag to move · rest on a button to group · click for name, color and key · × removes'
+      '<span class="shb-editbar-t"><span class="shb-editbar-hint">' + (fl ? 'Drag to move · rest on a button to group · click for name, color and key · × removes'
         : 'drag = move · rest on a button = group · click = name, color, key · × = remove') + '</span>' +
+        (note ? '<span class="shb-editbar-note">' + ico('trash', 13) + '<span>Deleted <b>' + esc(note.name) + '</b> for good</span></span>' : '') + '</span>' +
       '<span class="shb-editbar-trash" data-hb-trash>' + ico('trash', 14) + '<span>Drop here to remove</span></span>' +
-      '<button type="button" class="shb-editbar-b" data-hb-act="editundo"' + (un ? '' : ' disabled') + ' title="Take back the last change (Ctrl+Z)">Undo</button>' +
+      '<span class="shb-editbar-del" data-hb-del>' + ico('trash', 14) + '<span>Delete for good</span></span>' +
+      '<button type="button" class="shb-editbar-b' + (note ? ' shb-editbar-lit' : '') + '" data-hb-act="editundo"' + (un ? '' : ' disabled') +
+        ' title="' + (note ? 'Bring back &quot;' + esc(note.name) + '&quot;, where it was (Ctrl+Z)' : 'Take back the last change (Ctrl+Z)') + '">Undo' +
+        (note ? '<i class="shb-editbar-left"></i>' : '') + '</button>' +
       (hid ? '<button type="button" class="shb-editbar-b' + (HB.editAll ? ' shb-editbar-on' : '') + '" data-hb-act="editall" title="' +
         esc(hid + (hid === 1 ? ' button does' : ' buttons do') + ' not apply to this node, so ' + (hid === 1 ? 'it stays' : 'they stay') +
           ' hidden and the bars do not move when edit mode starts · show ' + (hid === 1 ? 'it' : 'them') + ' to move, rename or remove ' + (hid === 1 ? 'it' : 'them') + ' too') + '">' +
@@ -10914,6 +11016,7 @@
 
       hbPlace();
       hbSyncEditAnim();
+      hbDelNoteAnim();
       /* ...is still open after the bars are drawn again, with no flicker: holding a button inside a group to
          edit it (the hold draws the bars for edit mode) must not take that button from under the pointer. It
          closes as always once the pointer is no longer on it */
@@ -12120,8 +12223,8 @@
 
   /* a drag is over, however it ended: the edit bar and the pointer are themselves again */
   function hbDragEnd() {
-    hbTrashHot(false);
-    if (HB.el) HB.el.classList.remove('shb-dragging');
+    hbTrashHot(false, false);
+    if (HB.el) HB.el.classList.remove('shb-dragging', 'shb-drag-own');
     try { document.documentElement.classList.remove('shb-grabbing'); } catch (e) {}
   }
 
@@ -12348,6 +12451,7 @@
       LP_DRAG.active = true;
       LP_DRAG.uid = lw.getAttribute('data-hb-uid') || '';
       LP_DRAG.isGrp = /^grp:/.test(LP_DRAG.uid);
+      LP_DRAG.own = !!hbOwnTpl(LP_DRAG.uid);
       tipHide();
       /* a list that is still unfolding has its buttons in mid-air: they are put in their places first */
       Array.prototype.forEach.call(HB.el.querySelectorAll('.shb-gdrop'), function (dp) {
@@ -12357,26 +12461,29 @@
       lw.classList.add('shb-drag-src');
       try { document.documentElement.classList.add('shb-grabbing'); } catch (err) {}
       if (HB.editMode) HB.el.classList.add('shb-dragging');
+      if (HB.editMode && LP_DRAG.own) HB.el.classList.add('shb-drag-own');
     }
     e.preventDefault();
 
     var lp = LP_DRAG, dragWrap = lp.wrap;
     var mx = e.clientX, my = e.clientY;
-    var trash = hbOverTrash(mx, my);
-    var out = !trash && distToNearestBar(HB.el, mx, my) > 34 && !hbOverPlus(mx, my, 16);
+    var del = !!lp.own && hbOverDel(mx, my);
+    var trash = !del && hbOverTrash(mx, my);
+    var out = !trash && !del && distToNearestBar(HB.el, mx, my) > 34 && !hbOverPlus(mx, my, 16);
     /* outside edit mode, a saved button let go over the canvas drops its nodes there */
     var drop = /^tpl:/.test(lp.uid) && !HB.editMode;
     lp.trash = trash;
+    lp.del = del;
     lp.outside = out;
-    hbTrashHot(trash);
-    dragWrap.classList.toggle('shb-drag-gone', trash);
-    if (trash || out) {
+    hbTrashHot(trash, del);
+    dragWrap.classList.toggle('shb-drag-gone', trash || del);
+    if (trash || del || out) {
       hbDragMerge(lp, null);
       lp.tray = null;
       hbGrpHot(null);
       hbDestClear(lp);
-      ghostMove(mx, my, trash ? 'Release to take it off the bar' : (drop ? 'Release to drop the nodes here' : 'Release to put it back'),
-        trash ? 'rm' : (drop ? 'over' : ''));
+      ghostMove(mx, my, del ? 'Release to delete it for good' : trash ? 'Release to take it off the bar' : (drop ? 'Release to drop the nodes here' : 'Release to put it back'),
+        (trash || del) ? 'rm' : (drop ? 'over' : ''));
       return;
     }
     var res = hbDragPlace(lp, mx, my);
@@ -12536,8 +12643,20 @@
     }
     hbGrpHot(null);
     /* let go on the middle of a button before the two were grouped: it lands beside that one */
-    if (!lp.trash && !lp.outside && !lp.tray && !lp.merge) hbDragRestDrop(lp, e.clientX, e.clientY);
-    if (lp.trash) {
+    if (!lp.trash && !lp.del && !lp.outside && !lp.tray && !lp.merge) hbDragRestDrop(lp, e.clientX, e.clientY);
+    var delTpl = lp.del && hbOwnTpl(uid);
+    if (delTpl) {
+      /* dropped on "Delete for good": the saved button itself goes, from every bar and group; the edit bar says
+         so with Undo lit for 10 seconds (Undo or Ctrl+Z brings it back, where it was) */
+      hbMark(null);
+      hbPoof(e.clientX, e.clientY, name);
+      hbGlide(function () {
+        tplDelete(delTpl.id);
+        hbDelNoteStart(name || delTpl.name);
+        hbPaint();
+      }, uid);
+      setStatus('ok', 'Deleted "' + (name || delTpl.name) + '" for good · Undo or Ctrl+Z brings it back');
+    } else if (lp.trash) {
       /* dropped on the Remove strip */
       hbMark(null);
       hbUndoPush('taking "' + name + '" off the bar');
