@@ -7566,8 +7566,53 @@
     try { ta.focus(); } catch (e) {}
   }
 
+  /* The keys of a full-screen editor (Visual Crop, Paint Studio) go to a small editable spot that takes no text.
+     ComfyUI's history listens to the window first and takes Ctrl+Z / Ctrl+Y as an undo of the whole graph (a
+     reload, so the node the editor works on would be another object by Done) unless the focus is in a field;
+     Hotbox's own keys step aside there too, Alt+Z still closes. A press on the picture or a click on a button
+     gives the keys back to it, a field that has them keeps them. Returns what puts the keys there */
+  function edKeySink(wrap, host) {
+    var sink = document.createElement('div');
+    sink.setAttribute('data-edsink', '');
+    sink.setAttribute('contenteditable', 'true');
+    sink.setAttribute('aria-hidden', 'true');
+    sink.tabIndex = -1;
+    sink.style.cssText = 'position:fixed;left:-40px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;outline:none;caret-color:transparent';
+    ['beforeinput', 'paste', 'drop'].forEach(function (k) { sink.addEventListener(k, function (e) { e.preventDefault(); }); });
+    sink.addEventListener('input', function () { sink.textContent = ''; });
+    (host || wrap).appendChild(sink);
+    function focus() { try { sink.focus({ preventScroll: true }); } catch (e) {} }
+    /* a press on what takes no focus (the picture, the bars) puts it on the window itself */
+    wrap.addEventListener('focusin', function (ev) { if (ev.target === wrap) focus(); });
+    wrap.addEventListener('click', function (ev) {
+      if (!wrap.isConnected || (ev.target.closest && ev.target.closest('input,textarea,select,label'))) return;
+      var ae = document.activeElement;
+      if (ae && wrap.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+      focus();
+    });
+    return focus;
+  }
+
+  /* an Undo or Redo button with nothing to take back looks off */
+  function edHist(btn, n) {
+    if (!btn) return;
+    btn.disabled = !n;
+    btn.style.opacity = n ? '' : '.4';
+  }
+
+  /* the node as the graph has it now: ComfyUI's undo reloads the graph, which makes new node objects, and an
+     editor that kept the old one would write to nothing */
+  function liveNode(node, test) {
+    if (!node) return node;
+    try {
+      var g = getGraph(), live = (g && g.getNodeById) ? g.getNodeById(node.id) : null;
+      if (live && live !== node && (!test || test(live))) return live;
+    } catch (e) {}
+    return node;
+  }
+
   /* Visual Crop Editor (Alt+Z on Crop Node) */
-  var CE = { el: null, node: null, orig: null, box: null, W: 0, H: 0, lock: null, drag: null, fit: null };
+  var CE = { el: null, node: null, orig: null, box: null, W: 0, H: 0, lock: null, drag: null, fit: null, undo: [], redo: [], gest: '' };
   var CE_MIN = 16;
 
   function cropImgSrc(crop) {
@@ -7644,11 +7689,14 @@
   }
 
   function cropEditClose(keep) {
-    var el = CE.el, node = CE.node, b = CE.box, o = CE.orig;
-    CE.el = null; CE.drag = null;
+    var el = CE.el, node = liveNode(CE.node, isCropNode), b = CE.box, o = CE.orig;
+    CE.el = null; CE.drag = null; CE.undo = []; CE.redo = [];
     try { if (el) el.remove(); } catch (e) {}
     if (!node) return;
     if (!keep && o) cropRegionWrite(node, o);
+    /* the box is written as it moves; Done writes it again if the node does not hold it */
+    var nb = keep && b ? cropBox(node) : null;
+    if (nb && (nb.x !== b.x || nb.y !== b.y || nb.w !== b.w || nb.h !== b.h)) cropRegionWrite(node, b);
     var fin = keep ? b : o;
     if (fin) {
       setStatus('ok', (keep ? 'Crop applied: ' : 'Crop restored: ') + fin.x + ', ' + fin.y + ' · ' + fin.w + '×' + fin.h);
@@ -7671,7 +7719,7 @@
     CE.node = node;
     CE.orig = { x: b.x, y: b.y, w: b.w, h: b.h };
     CE.box = { x: b.x, y: b.y, w: b.w, h: b.h };
-    CE.lock = null; CE.W = 0; CE.H = 0; CE.fit = null;
+    CE.lock = null; CE.W = 0; CE.H = 0; CE.fit = null; CE.undo = []; CE.redo = []; CE.gest = '';
 
     var wrap = owns(document.createElement('div'));
     wrap.className = 'shb-modal-bg';
@@ -7688,6 +7736,8 @@
           '<select class="shb-select" data-cesize style="width:110px"><option value="">Size ▾</option>' +
             CROP_SIZES.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join('') +
           '</select>' +
+          '<button class="shb-btn" data-ceundo title="Undo (Ctrl+Z)">Undo</button>' +
+          '<button class="shb-btn" data-ceredo title="Redo (Ctrl+Shift+Z)">Redo</button>' +
           '<button class="shb-btn" data-cecancel>Cancel</button>' +
           '<button class="shb-btn shb-btn-pri" data-cedone>Done</button>' +
         '</div>' +
@@ -7703,7 +7753,7 @@
           '</div>' +
         '</div>' +
         '<div style="padding:7px 14px;border-top:1px solid #333333;color:#888888;font-size:11.5px">' +
-          'Drag inside box to move · Drag handles to resize · Arrow keys nudge 1px (Shift: 10px) · Enter/Done keeps changes · Any paired Stitch node updates automatically' +
+          'Drag inside box to move · Drag handles to resize · Arrow keys nudge 1px (Shift: 10px) · Ctrl+Z undoes, Ctrl+Shift+Z redoes · Enter/Done keeps changes · Any paired Stitch node updates automatically' +
         '</div>' +
       '</div>';
 
@@ -7711,6 +7761,7 @@
     CE.el = wrap;
     var im = wrap.querySelector('[data-ceimg]');
     var panel = wrap.querySelector('[data-cepanel]');
+    var sinkFocus = edKeySink(wrap, panel);
 
     function cePaint() {
       var bx = CE.box, f = CE.fit;
@@ -7720,6 +7771,8 @@
       var lk = wrap.querySelector('[data-celock]');
       lk.textContent = CE.lock ? '🔒 Ratio Locked' : '🔓 Free Ratio';
       lk.className = 'shb-btn' + (CE.lock ? ' shb-btn-pri' : '');
+      edHist(wrap.querySelector('[data-ceundo]'), CE.undo.length);
+      edHist(wrap.querySelector('[data-ceredo]'), CE.redo.length);
       var fr = wrap.querySelector('[data-cebox]');
       if (!fr || !f) return;
       fr.style.left = Math.round(f.ox + bx.x * f.s) + 'px';
@@ -7730,9 +7783,30 @@
 
     function ceSet(nb) {
       CE.box = nb;
+      CE.node = liveNode(CE.node, isCropNode);
       cropRegionWrite(CE.node, nb);
       cePaint();
     }
+
+    /* one undo step per gesture: a drag, a run of arrow nudges, a ratio or a size from the lists */
+    function ceMark(key) {
+      if (key && key === CE.gest) return;
+      CE.gest = key || '';
+      var b = CE.box;
+      CE.undo.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+      if (CE.undo.length > 80) CE.undo.shift();
+      CE.redo = [];
+    }
+    function ceStep(from, to) {
+      var s = from.pop();
+      if (!s) return;
+      var b = CE.box;
+      to.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+      CE.gest = '';
+      ceSet(s);
+    }
+    function ceUndo() { ceStep(CE.undo, CE.redo); }
+    function ceRedo() { ceStep(CE.redo, CE.undo); }
 
     im.onload = function () {
       CE.W = im.naturalWidth || 1024;
@@ -7759,10 +7833,12 @@
       var bx = ev.target.closest('[data-cebox]');
       if (!h && !bx) return;
       ev.preventDefault();
+      sinkFocus();
       CE.drag = {
         mode: h ? h.getAttribute('data-ceh') : 'move',
         at: stageOf(ev),
-        b0: { x: CE.box.x, y: CE.box.y, w: CE.box.w, h: CE.box.h }
+        b0: { x: CE.box.x, y: CE.box.y, w: CE.box.w, h: CE.box.h },
+        marked: false
       };
     });
     wrap.addEventListener('pointermove', function (ev) {
@@ -7770,56 +7846,73 @@
       if (!d || !f) return;
       var p = stageOf(ev);
       var dx = (p[0] - d.at[0]) / f.s, dy = (p[1] - d.at[1]) / f.s;
-      ceSet(d.mode === 'move'
+      var nb = d.mode === 'move'
         ? ceMove(d.b0, dx, dy, CE.W, CE.H)
-        : ceResize(d.b0, d.mode, dx, dy, CE.W, CE.H, CE.lock));
+        : ceResize(d.b0, d.mode, dx, dy, CE.W, CE.H, CE.lock);
+      var b = CE.box;
+      if (nb.x === b.x && nb.y === b.y && nb.w === b.w && nb.h === b.h) return;
+      if (!d.marked) { d.marked = true; ceMark(''); }
+      ceSet(nb);
     });
     wrap.addEventListener('pointerup', function () { CE.drag = null; });
     wrap.addEventListener('keydown', function (ev) {
+      var k = ev.key, mod = ev.ctrlKey || ev.metaKey;
       var step = ev.shiftKey ? 10 : 1;
-      var mv = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
-      if (ev.key === 'Escape') { ev.preventDefault(); cropEditClose(false); }
-      else if (ev.key === 'Enter') { ev.preventDefault(); cropEditClose(true); }
+      var mv = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[k];
+      ev.stopPropagation();
+      if (k === 'Escape') { ev.preventDefault(); cropEditClose(false); }
+      else if (k === 'Enter') { ev.preventDefault(); cropEditClose(true); }
+      else if (mod && (k === 'z' || k === 'Z')) { ev.preventDefault(); if (ev.shiftKey) ceRedo(); else ceUndo(); }
+      else if (mod && (k === 'y' || k === 'Y')) { ev.preventDefault(); ceRedo(); }
       else if (mv && CE.box) {
         ev.preventDefault();
-        ceSet(ceMove(CE.box, mv[0], mv[1], CE.W || 1e9, CE.H || 1e9));
-      }
-      if (ev.key !== 'z' && ev.key !== 'Z') ev.stopPropagation();
-    });
-
-    wrap.querySelector('[data-ceratio]').onchange = function () {
-      var a = this.value; this.value = '';
-      if (!a) return;
-      if (a === 'free') { CE.lock = null; cePaint(); return; }
-      cropSet(node, a, '');
-      var nb = cropBox(node);
-      if (nb) {
-        CE.lock = (CROP_R[a] || [1, 1])[0] / (CROP_R[a] || [1, 1])[1];
+        var nb = ceMove(CE.box, mv[0], mv[1], CE.W || 1e9, CE.H || 1e9);
+        if (nb.x === CE.box.x && nb.y === CE.box.y) return;
+        ceMark('nudge');
         ceSet(nb);
       }
+    });
+
+    /* a ratio or a size from the lists: one undo step, and the keys go back to the window */
+    function cePick(aspect, size) {
+      var n = CE.node = liveNode(CE.node, isCropNode);
+      cropSet(n, aspect, size);
+      var nb = cropBox(n), b = CE.box;
+      if (!nb) return;
+      if (nb.x !== b.x || nb.y !== b.y || nb.w !== b.w || nb.h !== b.h) ceMark('');
+      ceSet(nb);
+    }
+    wrap.querySelector('[data-ceratio]').onchange = function () {
+      var a = this.value; this.value = '';
+      sinkFocus();
+      if (!a) return;
+      if (a === 'free') { CE.lock = null; cePaint(); return; }
+      CE.lock = (CROP_R[a] || [1, 1])[0] / (CROP_R[a] || [1, 1])[1];
+      cePick(a, '');
     };
     wrap.querySelector('[data-cesize]').onchange = function () {
       var p = this.value; this.value = '';
+      sinkFocus();
       if (!p) return;
-      cropSet(node, '', p);
-      var nb = cropBox(node);
-      if (nb) ceSet(nb);
+      cePick('', p);
     };
     wrap.querySelector('[data-celock]').onclick = function () {
       CE.lock = CE.lock ? null : (CE.box.w / CE.box.h);
       cePaint();
     };
+    wrap.querySelector('[data-ceundo]').onclick = ceUndo;
+    wrap.querySelector('[data-ceredo]').onclick = ceRedo;
     wrap.querySelector('[data-cecancel]').onclick = function () { cropEditClose(false); };
     wrap.querySelector('[data-cedone]').onclick = function () { cropEditClose(true); };
     cePaint();
-    try { wrap.focus(); } catch (e) {}
+    sinkFocus();
     return true;
   }
 
   /* Fullscreen Paint Studio (Alt+Z on Painter Node) */
   var PE = {
     el: null, node: null, layer: null, W: 0, H: 0, view: null, fit: 1,
-    drawing: false, last: null, pan: null, space: false, undo: [], changed: 0,
+    drawing: false, last: null, pan: null, space: false, undo: [], redo: [], changed: 0,
     tool: 'brush', size: 24, color: '#ffffff', opacity: 1
   };
 
@@ -7843,8 +7936,8 @@
 
   function paintEditClose(keep) {
     if (!PE.el) return;
-    var el = PE.el, node = PE.node, layer = PE.layer, changed = PE.changed;
-    PE.el = null; PE.node = null; PE.layer = null; PE.undo = [];
+    var el = PE.el, node = liveNode(PE.node, isPainterNode), layer = PE.layer, changed = PE.changed;
+    PE.el = null; PE.node = null; PE.layer = null; PE.undo = []; PE.redo = [];
     try { if (el) el.remove(); } catch (e) {}
     if (!keep || !changed || !node || !layer) return;
     setStatus('busy', 'Uploading painted layer…');
@@ -7858,6 +7951,7 @@
         .then(function (j) {
           if (!j || !j.name) return;
           var v = (j.subfolder ? j.subfolder + '/' : '') + j.name + ' [input]';
+          node = liveNode(node, isPainterNode);
           setWidgetVal(node, 'mask', v);
           try {
             var nc = painterCanvasOf(node);
@@ -7877,7 +7971,7 @@
   function paintEditOpen(node) {
     if (!isPainterNode(node)) return false;
     if (PE.el) paintEditClose(true);
-    PE.node = node; PE.undo = []; PE.changed = 0;
+    PE.node = node; PE.undo = []; PE.redo = []; PE.changed = 0;
     var wrap = owns(document.createElement('div'));
     wrap.className = 'shb-modal-bg';
     wrap.tabIndex = -1;
@@ -7891,6 +7985,7 @@
           '<input type="range" min="1" max="300" value="' + PE.size + '" data-pesize style="width:110px;accent-color:#5c94f0">' +
           '<input type="color" value="' + PE.color + '" data-pecolor style="width:32px;height:26px;border:0;background:none;cursor:pointer">' +
           '<button class="shb-btn" data-peundo>Undo (Ctrl+Z)</button>' +
+          '<button class="shb-btn" data-peredo title="Ctrl+Y redoes too">Redo (Ctrl+Shift+Z)</button>' +
           '<button class="shb-btn" data-peclear>Clear</button>' +
           '<button class="shb-btn" data-pecancel>Cancel</button>' +
           '<button class="shb-btn shb-btn-pri" data-pedone>Done</button>' +
@@ -7907,6 +8002,7 @@
     var layer = wrap.querySelector('[data-pelayer]');
     var img = wrap.querySelector('[data-peimg]');
     PE.layer = layer;
+    var sinkFocus = edKeySink(wrap, wrap.querySelector('[data-pepanel]'));
 
     var orig = imageOrigin(getGraph(), node);
     var src = '';
@@ -7966,10 +8062,29 @@
     }
 
     var ctx = layer.getContext('2d');
+    /* undo keeps 15 steps (a stroke, a Clear); a new step ends what redo had */
+    function peSnap() { return ctx.getImageData(0, 0, layer.width, layer.height); }
+    function peHist() {
+      edHist(wrap.querySelector('[data-peundo]'), PE.undo.length);
+      edHist(wrap.querySelector('[data-peredo]'), PE.redo.length);
+    }
+    function peKeep() {
+      try { PE.undo.push(peSnap()); if (PE.undo.length > 15) PE.undo.shift(); } catch (e) {}
+      PE.redo = [];
+      peHist();
+    }
+    function peStep(from, to) {
+      var s = from.pop();
+      if (!s) return;
+      try { to.push(peSnap()); } catch (e) {}
+      ctx.putImageData(s, 0, 0);
+      peHist();
+    }
     layer.addEventListener('pointerdown', function (ev) {
       if (ev.button !== 0) return;
       ev.preventDefault();
-      try { PE.undo.push(ctx.getImageData(0, 0, layer.width, layer.height)); if (PE.undo.length > 15) PE.undo.shift(); } catch (e) {}
+      sinkFocus();
+      peKeep();
       PE.drawing = true;
       var p = toPt(ev);
       PE.last = p;
@@ -8003,28 +8118,29 @@
     wrap.querySelector('[data-petool="eraser"]').onclick = function () { PE.tool = 'eraser'; updateTools(); };
     wrap.querySelector('[data-pesize]').oninput = function () { PE.size = +this.value || 10; };
     wrap.querySelector('[data-pecolor]').oninput = function () { PE.color = this.value; PE.tool = 'brush'; updateTools(); };
-    wrap.querySelector('[data-peundo]').onclick = function () {
-      var u = PE.undo.pop();
-      if (u) ctx.putImageData(u, 0, 0);
-    };
+    wrap.querySelector('[data-peundo]').onclick = function () { peStep(PE.undo, PE.redo); };
+    wrap.querySelector('[data-peredo]').onclick = function () { peStep(PE.redo, PE.undo); };
     wrap.querySelector('[data-peclear]').onclick = function () {
+      peKeep();
       ctx.clearRect(0, 0, layer.width, layer.height);
       PE.changed++;
     };
     wrap.querySelector('[data-pecancel]').onclick = function () { paintEditClose(false); };
     wrap.querySelector('[data-pedone]').onclick = function () { paintEditClose(true); };
     wrap.addEventListener('keydown', function (ev) {
+      var mod = ev.ctrlKey || ev.metaKey;
       if (ev.key === 'Escape') { ev.preventDefault(); paintEditClose(false); }
       else if (ev.key === 'Enter') { ev.preventDefault(); paintEditClose(true); }
-      else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')) {
+      else if (mod && (ev.key === 'z' || ev.key === 'Z')) {
         ev.preventDefault();
-        var u = PE.undo.pop();
-        if (u) ctx.putImageData(u, 0, 0);
-      } else if (ev.key === 'b' || ev.key === 'B') { PE.tool = 'brush'; updateTools(); }
+        if (ev.shiftKey) peStep(PE.redo, PE.undo); else peStep(PE.undo, PE.redo);
+      } else if (mod && (ev.key === 'y' || ev.key === 'Y')) { ev.preventDefault(); peStep(PE.redo, PE.undo); }
+      else if (ev.key === 'b' || ev.key === 'B') { PE.tool = 'brush'; updateTools(); }
       else if (ev.key === 'e' || ev.key === 'E') { PE.tool = 'eraser'; updateTools(); }
       ev.stopPropagation();
     });
-    try { wrap.focus(); } catch (e) {}
+    peHist();
+    sinkFocus();
     return true;
   }
 
