@@ -53,10 +53,11 @@
     useCopyWf: true,        /* Copy Workflow: the whole workflow to the clipboard */
     useReplicate: true,     /* Replicate: copies of the selection, each with its own letter */
     useGetWf: true,         /* Get Workflow: the workflow that made a picture, a clip or EXR frames */
-    usePromptHistory: true, /* Prompt History: the prompts you ran, back with Up in the Magnifier */
+    usePromptHistory: true, /* Prompt History: the prompts you ran, back with Up in an empty prompt box */
     lupaSize: 1,
     lupaBox: 1,
     lupaWH: '',
+    lupaHist: false,        /* the Magnifier's history panel is open (false, the start: folded into a strip) */
     favImage: [],
     favVideo: [],
     favBtn: ['crop', 'rsz', 'cmp', 'prev'],
@@ -1899,6 +1900,36 @@
       '.shb-lf-mirror > div{position:relative;box-sizing:border-box;margin:0;border:0;white-space:pre-wrap;overflow-wrap:break-word;color:transparent}',
       '.shb-lf-mirror mark{color:transparent;background:rgba(234,179,8,.24);border-radius:2px}',
       '.shb-lf-mirror mark.shb-lf-cur{background:rgba(245,158,11,.55);box-shadow:0 0 0 1px rgba(251,191,36,.95)}',
+      /* Magnifier: the history on the right (its text in em, so it follows the Magnifier's font size) */
+      '.shb-ph{flex:0 0 auto;display:flex;min-height:0;border-left:1px solid #333333;background:#1d1d1d;font-family:Inter,system-ui,sans-serif;line-height:1.3;color:#c8c8c8}',
+      '.shb-ph svg{width:1.2em;height:1.2em;flex:0 0 auto}',
+      '.shb-ph-in{width:20em;max-width:34vw;display:flex;flex-direction:column;min-height:0}',
+      '.shb-ph-rail{display:none;flex-direction:column;align-items:center;gap:.4em;width:2.6em;margin:0;padding:.9em 0;border:0;background:transparent;color:#9a9a9a;cursor:pointer;font:inherit}',
+      '.shb-ph-rail:hover{background:#262626;color:#e2e2e2}',
+      '.shb-ph.shb-ph-shut .shb-ph-in{display:none}',
+      '.shb-ph.shb-ph-shut .shb-ph-rail{display:flex}',
+      '.shb-ph-hd{display:flex;align-items:center;gap:.5em;padding:.7em .5em .55em 1em;font-weight:600;color:#e2e2e2}',
+      '.shb-ph-n{font-weight:500;font-size:.85em;color:#8a8a8a}',
+      '.shb-ph-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;padding:0;border:0;border-radius:5px;background:transparent;color:#9a9a9a;cursor:pointer}',
+      '.shb-ph-x:hover{background:#2e2e2e;color:#e2e2e2}',
+      '.shb-ph-q{margin:0 .8em .6em;height:2.4em;box-sizing:border-box;padding:0 .7em;border:1px solid #3c3c3c;border-radius:5px;background:#181818;color:#e2e2e2;font:inherit;outline:none}',
+      '.shb-ph-q:focus{border-color:#5c94f0}',
+      '.shb-ph-q::placeholder{color:#6a6a6a}',
+      '.shb-ph-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 .45em .6em}',
+      '.shb-ph-row{display:flex;flex-direction:column;align-items:stretch;gap:.25em;width:100%;box-sizing:border-box;margin:0 0 2px;padding:.55em .65em;border:1px solid transparent;border-radius:6px;background:transparent;color:#c8c8c8;text-align:left;cursor:pointer;font:inherit}',
+      '.shb-ph-row:hover{background:#262626;color:#e2e2e2}',
+      '.shb-ph-row.shb-ph-on{background:#262c38;border-color:#5c94f0;color:#ffffff}',
+      '.shb-ph-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}',
+      '.shb-ph-a{font-size:.82em;color:#7a7a7a}',
+      '.shb-ph-none{padding:.8em 1em;color:#7a7a7a;line-height:1.45}',
+      /* a node's prompt box: its history button, and the history under it */
+      '.shb-phb{position:fixed;z-index:2147482990;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:0;padding:0;border:1px solid #3c3c3c;border-radius:6px;background:rgba(32,32,32,.92);color:#a0a0a0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}',
+      '.shb-phb svg{width:60%;height:60%}',
+      '.shb-phb:hover,.shb-phb.shb-on{color:#ffffff;border-color:#5c94f0;background:#262c38}',
+      '.shb-phb-pop{position:fixed;z-index:2147482995;display:flex;max-height:min(62vh,36em);border:1px solid #3c3c3c;border-radius:8px;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.55)}',
+      '.shb-phb-pop .shb-ph{border-left:0;max-height:inherit}',
+      '.shb-phb-pop .shb-ph-in{width:22em;max-width:min(90vw,30em)}',
+      '.shb-ph-pop .shb-ph-x{font-size:1.3em;line-height:1}',
       /* Replicate */
       '.shb-rep .shb-modal-t > span:first-child{display:inline-flex;align-items:center;gap:8px}',
       '.shb-rep-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
@@ -6364,7 +6395,7 @@
   /* ---------------------------------------------------------------------
    * 13. ALT+Z POWER SUITE: LUPA (PROMPT), VISUAL CROP & PAINT STUDIO
    * --------------------------------------------------------------------- */
-  var LUPA = { el: null, ta: null, src: null, w: null, node: null, drag: null, ph: null };
+  var LUPA = { el: null, ta: null, src: null, w: null, node: null, drag: null, ph: null, phPanel: null };
   var LUPA_SIZES = [16, 20, 26, 34, 44];
   var LUPA_BOXES = [
     ['720px', '62vw', '460px', '60vh'],
@@ -6850,42 +6881,25 @@
     return one.length > 72 ? one.slice(0, 71) + '\u2026' : one;
   }
 
-  /* Is the caret on the first / the last line the textarea shows? A copy of the text laid out like it says */
-  function phCaretRow(ta) {
-    var t = ta.value, at = ta.selectionStart;
-    var cs = null;
-    try { cs = getComputedStyle(ta); } catch (e) { cs = null; }
-    var m = document.createElement('div');
-    if (cs) LUPA_FIND_COPY.forEach(function (p) { m.style[p] = cs[p]; });
-    m.style.position = 'fixed'; m.style.left = '-99999px'; m.style.top = '0'; m.style.visibility = 'hidden';
-    m.style.boxSizing = 'border-box'; m.style.whiteSpace = 'pre-wrap'; m.style.overflowWrap = 'break-word';
-    m.style.width = ta.clientWidth + 'px';
-    var a = document.createElement('span'), b = document.createElement('span'), c = document.createElement('span');
-    c.textContent = '\u200b';
-    m.appendChild(a);
-    m.appendChild(document.createTextNode(t.slice(0, at)));
-    m.appendChild(b);
-    m.appendChild(document.createTextNode(t.slice(at)));
-    m.appendChild(c);
-    document.body.appendChild(m);
-    var r = { first: b.offsetTop - a.offsetTop < 2, last: c.offsetTop - b.offsetTop < 2 };
-    m.remove();
-    return r;
-  }
-
-  /* The Magnifier's walk through the history. What it puts in goes through the textarea's own editing, so
-     Ctrl+Z takes it back; going older leaves the caret at the start (the next Up goes on), newer at the end */
-  function phWalker(ta, hint) {
+  /* A walk through the history in a text box, as in Claude's message box: Up in an empty box brings back the last
+     prompt you ran, and while the box shows one of them Up and Down go on to older and newer ones (Down past the
+     newest leaves the box as it was). Anything else (typing, a click, another key) keeps that prompt there as text.
+     What it puts in goes through the box's own editing, so Ctrl+Z takes it back. `note(text)` says where the walk
+     is ('' when it stops); `moved()` is told after each step */
+  function phWalker(ta, note, moved) {
     var st = { i: -1, list: [], draft: '', busy: false };
-    var idle = hint ? hint.textContent : '';
-    function note(s) { if (hint) hint.textContent = s || idle; }
-    /* typed in, or undone: the walk starts again from what is there now */
-    ta.addEventListener('input', function () {
-      if (st.busy || st.i < 0) return;
+    function tell(s) {
+      try { if (note) note(s); } catch (e) {}
+      try { if (moved) moved(); } catch (e) {}
+    }
+    function end() {
+      if (st.i < 0) return;
       st.i = -1;
-      note('');
-    });
-    function put(text, atStart) {
+      tell('');
+    }
+    ta.addEventListener('input', function () { if (!st.busy) end(); });
+    ta.addEventListener('mousedown', end);
+    function put(text) {
       var ok = false;
       st.busy = true;
       try {
@@ -6898,41 +6912,300 @@
         try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
       }
       st.busy = false;
-      var p = atStart ? 0 : ta.value.length;
-      try { ta.setSelectionRange(p, p); } catch (e) {}
-      ta.scrollTop = atStart ? 0 : ta.scrollHeight;
+      try { ta.setSelectionRange(0, 0); } catch (e) {}
+      ta.scrollTop = 0;
+    }
+    function go(n) {
+      st.i = n;
+      put(n < 0 ? st.draft : st.list[n].t);
+      if (n < 0) { tell(''); return; }
+      tell('Prompt ' + (n + 1) + ' of ' + st.list.length + ' \u00b7 ' + phAgo(st.list[n].at) + ' \u00b7 \u2191 older \u2193 newer');
+    }
+    function begin() {
+      if (st.i >= 0) return;
+      st.list = phList().slice();
+      st.draft = ta.value;
     }
     function step(d) {
-      if (st.i < 0) {
-        var cur = ta.value;
-        st.list = phList().filter(function (e) { return e.t !== cur; });
-        st.draft = cur;
-      }
-      if (!st.list.length) {
-        note(phList().length ? 'No other prompt yet' : 'No prompts yet: each run keeps the ones it sends');
-        return;
-      }
+      begin();
+      if (!st.list.length) { tell('No prompts yet: each run keeps the prompts it sends'); return; }
       var n = st.i + d;
-      if (n >= st.list.length) { note('Prompt ' + st.list.length + ' of ' + st.list.length + ' \u00b7 the oldest'); return; }
+      if (n >= st.list.length) { tell('Prompt ' + st.list.length + ' of ' + st.list.length + ' \u00b7 the oldest'); return; }
       if (n < -1) return;
-      st.i = n;
-      put(n < 0 ? st.draft : st.list[n].t, d > 0);
-      note(n < 0 ? '' : 'Prompt ' + (n + 1) + ' of ' + st.list.length + ' \u00b7 ' + phAgo(st.list[n].at) + ' \u00b7 \u2193 newer');
+      go(n);
     }
     return {
+      walking: function () { return st.i >= 0; },
       step: step,
-      /* true when the arrow went to the history */
-      arrow: function (e) {
-        var up = e.key === 'ArrowUp';
-        if (!up && st.i < 0) return false;
-        if (ta.selectionStart !== ta.selectionEnd) return false;
-        var row = phCaretRow(ta);
-        if (up ? !row.first : !row.last) return false;
+      /* a prompt picked from a list: it goes in, and the arrows go on from it */
+      pick: function (t) {
+        begin();
+        for (var k = 0; k < st.list.length; k++) {
+          if (st.list[k].t === t) { go(k); return; }
+        }
+      },
+      /* a key in the box: true when it went to the history */
+      key: function (e) {
+        var arrow = (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+        if (!arrow) {
+          if (!/^(Shift|Control|Alt|Meta)$/.test(String(e.key || ''))) end();
+          return false;
+        }
+        if (st.i < 0 && (e.key === 'ArrowDown' || ta.value.trim())) return false;
         e.preventDefault();
-        e.stopPropagation();
-        step(up ? 1 : -1);
+        step(e.key === 'ArrowUp' ? 1 : -1);
         return true;
       }
+    };
+  }
+
+  /* a node's prompt box: a textarea you can write in, inside a node (not the Magnifier's, not a preview's) */
+  function phBoxOf(el) {
+    if (!el || String(el.tagName || '').toUpperCase() !== 'TEXTAREA' || el.readOnly || el.disabled) return null;
+    if (el === LUPA.ta || (el.closest && el.closest('.shb-modal-bg, .shb-wrap, .shb-phb-pop'))) return null;
+    return ((el.closest && el.closest('[data-node-id]')) || (el.classList && el.classList.contains('comfy-multiline-input'))) ? el : null;
+  }
+
+  function phBoxWalker(ta) {
+    return ta.__hbPh || (ta.__hbPh = phWalker(ta, function (s) { if (s) setStatus('ok', s); }));
+  }
+
+  /* Up in a node's own prompt box, without the Magnifier: the same walk, said in the status line */
+  function phBoxKey(e) {
+    var t = e.target;
+    if (!phOn() || !t || String(t.tagName || '').toUpperCase() !== 'TEXTAREA' || t.readOnly || t.disabled) return;
+    if (t === LUPA.ta || (t.closest && t.closest('.shb-modal-bg, .shb-wrap, .shb-phb-pop'))) return;
+    var w = t.__hbPh;
+    if (!w) {
+      if (e.key !== 'ArrowUp' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || t.value.trim() || !phBoxOf(t)) return;
+      w = phBoxWalker(t);
+    }
+    if (w.key(e)) e.stopPropagation();
+  }
+
+  /* The history button of a node's prompt box: one small button in the top-right corner of the box the pointer is
+     on, or the one you are writing in, following it as the canvas moves; a click opens the prompts under it */
+  var PHB = { btn: null, ta: null, pop: null, over: false, overBtn: false, raf: 0, seen: 0 };
+
+  function phbPx(ta) {
+    var fs = 12;
+    try { fs = parseFloat(getComputedStyle(ta).fontSize) || 12; } catch (e) {}
+    return fs;
+  }
+
+  function phbPlace() {
+    var ta = PHB.ta, b = PHB.btn;
+    if (!ta || !b) return;
+    var r = ta.getBoundingClientRect();
+    var sz = Math.max(20, Math.min(34, Math.round(phbPx(ta) * 1.75)));
+    if (r.width < sz * 3 || r.height < sz * 1.6) { b.style.display = 'none'; return; }
+    b.style.display = '';
+    b.style.width = sz + 'px';
+    b.style.height = sz + 'px';
+    b.style.left = Math.round(r.right - sz - 6) + 'px';
+    b.style.top = Math.round(r.top + 6) + 'px';
+  }
+
+  function phbHide() {
+    if (PHB.pop) return;
+    if (PHB.btn) PHB.btn.style.display = 'none';
+    PHB.ta = null;
+    PHB.over = false;
+    PHB.overBtn = false;
+    if (PHB.raf) { cancelAnimationFrame(PHB.raf); PHB.raf = 0; }
+  }
+
+  function phbTick() {
+    PHB.raf = 0;
+    var ta = PHB.ta;
+    if (!ta || !ta.isConnected || !phOn() || LUPA.el) { if (PHB.pop) phbClose(); phbHide(); return; }
+    var now = Date.now();
+    if (PHB.over || PHB.overBtn || PHB.pop || document.activeElement === ta) PHB.seen = now;
+    /* a moment's grace, so the pointer can go from the box onto the button */
+    if (now - PHB.seen > 300) { phbHide(); return; }
+    phbPlace();
+    PHB.raf = requestAnimationFrame(phbTick);
+  }
+
+  function phbShow(ta) {
+    if (!phOn() || LUPA.el) return;
+    if (PHB.pop && PHB.ta !== ta) return;
+    if (!PHB.btn) {
+      var b = owns(document.createElement('button'));
+      b.type = 'button';
+      b.className = 'shb-phb';
+      b.title = 'The prompts you ran (\u2191 in an empty box)';
+      b.innerHTML = ico('history', 16);
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); e.stopPropagation(); });
+      b.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (PHB.pop) phbClose(); else phbOpen(); });
+      b.addEventListener('pointerenter', function () { PHB.overBtn = true; });
+      b.addEventListener('pointerleave', function () { PHB.overBtn = false; });
+      document.body.appendChild(b);
+      PHB.btn = b;
+    }
+    PHB.ta = ta;
+    PHB.seen = Date.now();
+    phbPlace();
+    if (!PHB.raf) PHB.raf = requestAnimationFrame(phbTick);
+  }
+
+  function phbClose() {
+    var pop = PHB.pop;
+    PHB.pop = null;
+    if (PHB.btn) PHB.btn.classList.remove('shb-on');
+    try { if (pop) pop.remove(); } catch (e) {}
+    document.removeEventListener('pointerdown', phbOutside, true);
+    document.removeEventListener('keydown', phbEsc, true);
+  }
+
+  function phbOutside(e) {
+    var t = e.target;
+    if (PHB.pop && (PHB.pop.contains(t) || (PHB.btn && PHB.btn.contains(t)))) return;
+    phbClose();
+  }
+
+  function phbEsc(e) {
+    if (e.key !== 'Escape' || !PHB.pop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var ta = PHB.ta;
+    phbClose();
+    try { if (ta) ta.focus(); } catch (err) {}
+  }
+
+  function phbOpen() {
+    var ta = PHB.ta;
+    if (!ta || !PHB.btn) return;
+    phbClose();
+    var w = phBoxWalker(ta);
+    var pop = owns(document.createElement('div'));
+    pop.className = 'shb-phb-pop';
+    var panel = phPanel(w, ta, {
+      pop: true,
+      px: Math.max(12, Math.min(20, Math.round(phbPx(ta)))),
+      close: function () { phbClose(); try { ta.focus(); } catch (e) {} },
+      picked: function () { phbClose(); }
+    });
+    pop.appendChild(panel.el);
+    document.body.appendChild(pop);
+    PHB.pop = pop;
+    PHB.btn.classList.add('shb-on');
+    panel.draw();
+    var W = window.innerWidth || 1600, H = window.innerHeight || 900;
+    var br = PHB.btn.getBoundingClientRect(), tr = ta.getBoundingClientRect(), m = pop.getBoundingClientRect();
+    var x = Math.min(tr.right, W - 8) - m.width;
+    var y = br.bottom + 6;
+    if (y + m.height > H - 8 && br.top - 6 - m.height > 8) y = br.top - 6 - m.height;
+    pop.style.left = Math.round(Math.max(8, x)) + 'px';
+    pop.style.top = Math.round(Math.max(8, Math.min(y, H - 8 - m.height))) + 'px';
+    document.addEventListener('pointerdown', phbOutside, true);
+    document.addEventListener('keydown', phbEsc, true);
+    var q = pop.querySelector('.shb-ph-q');
+    try { if (q) q.focus(); } catch (e) {}
+    try {
+      pop.animate([{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }], { duration: 110, easing: 'ease-out' });
+    } catch (e) {}
+  }
+
+  var PH_BOX_ON = false;
+  function phHookBoxes() {
+    if (PH_BOX_ON) return;
+    PH_BOX_ON = true;
+    document.addEventListener('keydown', phBoxKey, true);
+    document.addEventListener('pointerover', function (e) {
+      var ta = phBoxOf(e.target);
+      if (ta) { PHB.over = true; phbShow(ta); }
+    }, true);
+    document.addEventListener('pointerout', function (e) {
+      if (PHB.ta && e.target === PHB.ta) PHB.over = false;
+    }, true);
+    document.addEventListener('focusin', function (e) {
+      var ta = phBoxOf(e.target);
+      if (ta) phbShow(ta);
+    }, true);
+  }
+
+  function phPanelPx() { return Math.max(12, Math.round(lupaPx() * 0.62)); }
+
+  /* The history as a list: the prompts you ran with a field to find one by any word in it, the one in the box lit;
+     a click puts that prompt in, and the arrows go on from it. Beside the Magnifier's text it sits on the right,
+     folded into a narrow strip with one click (kept for the next time); `opts.pop` makes it the box under a node's
+     history button instead (`close`, `picked`, `px` its font size) */
+  function phPanel(walker, ta, opts) {
+    opts = opts || {};
+    var side = document.createElement('div');
+    side.className = 'shb-ph' + (opts.pop ? ' shb-ph-pop' : (S.lupaHist ? '' : ' shb-ph-shut'));
+    side.style.fontSize = (opts.px || phPanelPx()) + 'px';
+    side.innerHTML =
+      (opts.pop ? '' : '<button type="button" class="shb-ph-rail" title="The prompts you ran">' + ico('history', 16) + '<span class="shb-ph-n"></span></button>') +
+      '<div class="shb-ph-in">' +
+        '<div class="shb-ph-hd">' + ico('history', 16) + '<span>History</span><span class="shb-ph-n"></span>' +
+          (opts.pop ? '<button type="button" class="shb-ph-x" title="Close (Esc)">\u00d7</button>'
+            : '<button type="button" class="shb-ph-x" title="Fold the history away">' + ico('chevRight', 16) + '</button>') + '</div>' +
+        '<input class="shb-ph-q" type="text" spellcheck="false" autocomplete="off" placeholder="Find a prompt">' +
+        '<div class="shb-ph-list"></div>' +
+      '</div>';
+    var q = side.querySelector('.shb-ph-q'), listEl = side.querySelector('.shb-ph-list'), shown = [];
+    function mark() {
+      var cur = ta.value;
+      Array.prototype.forEach.call(listEl.querySelectorAll('[data-ph]'), function (r) {
+        var e = shown[+r.getAttribute('data-ph')];
+        r.classList.toggle('shb-ph-on', !!e && e.t === cur);
+      });
+    }
+    function draw() {
+      var all = phList(), ql = q.value.trim().toLowerCase();
+      shown = ql ? all.filter(function (e) { return e.t.toLowerCase().indexOf(ql) >= 0; }) : all;
+      Array.prototype.forEach.call(side.querySelectorAll('.shb-ph-n'), function (n) { n.textContent = all.length ? String(all.length) : ''; });
+      listEl.innerHTML = shown.length ? shown.map(function (e, i) {
+        return '<button type="button" class="shb-ph-row" data-ph="' + i + '" title="' + esc(e.t.length > 900 ? e.t.slice(0, 900) + '\u2026' : e.t) + '">' +
+          '<span class="shb-ph-t">' + esc(e.t.slice(0, 400)) + '</span><span class="shb-ph-a">' + esc(phAgo(e.at)) + '</span></button>';
+      }).join('') : '<div class="shb-ph-none">' + (ql ? 'No prompt has \u201c' + esc(q.value.trim()) + '\u201d'
+        : 'No prompts yet. Each run keeps the prompts it sends, newest first.') + '</div>';
+      mark();
+    }
+    function pick(t) {
+      walker.pick(t);
+      if (opts.picked) opts.picked();
+    }
+    function setOpen(on) {
+      side.classList.toggle('shb-ph-shut', !on);
+      S.lupaHist = !!on;
+      save();
+      try { ta.focus(); } catch (e) {}
+    }
+    /* its buttons and rows leave the cursor where it is */
+    side.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('button')) e.preventDefault(); });
+    var rail = side.querySelector('.shb-ph-rail');
+    if (rail) rail.onclick = function () { setOpen(true); };
+    side.querySelector('.shb-ph-x').onclick = function () { if (opts.pop) { if (opts.close) opts.close(); } else setOpen(false); };
+    listEl.addEventListener('click', function (e) {
+      var r = e.target.closest && e.target.closest('[data-ph]');
+      var en = r && shown[+r.getAttribute('data-ph')];
+      if (en) pick(en.t);
+    });
+    q.addEventListener('input', draw);
+    q.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (q.value) { q.value = ''; draw(); } else if (opts.pop) { if (opts.close) opts.close(); } else { try { ta.focus(); } catch (err) {} }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (shown[0]) pick(shown[0].t);
+      }
+    });
+    var raf = 0;
+    ta.addEventListener('input', function () {
+      if (raf) return;
+      raf = requestAnimationFrame(function () { raf = 0; mark(); });
+    });
+    return {
+      el: side,
+      draw: draw,
+      mark: mark,
+      size: function () { side.style.fontSize = (opts.px || phPanelPx()) + 'px'; }
     };
   }
 
@@ -7011,7 +7284,7 @@
   function lupaClose() {
     var el = LUPA.el, src = LUPA.src, ta = LUPA.ta;
     var at = ta ? [ta.selectionStart, ta.selectionEnd] : null;
-    LUPA.el = null; LUPA.ta = null; LUPA.src = null; LUPA.w = null; LUPA.node = null; LUPA.drag = null; LUPA.ph = null;
+    LUPA.el = null; LUPA.ta = null; LUPA.src = null; LUPA.w = null; LUPA.node = null; LUPA.drag = null; LUPA.ph = null; LUPA.phPanel = null;
     try { if (el) el.remove(); } catch (e) {}
     if (src) {
       try {
@@ -7040,8 +7313,7 @@
     head.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #333333;background:var(--shb-bg,#222222);font:500 12px/1.3 Inter,system-ui,sans-serif;color:var(--shb-fg-muted,#9a9a9a)';
     var cap = document.createElement('span');
     cap.style.cssText = 'flex:1;display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--shb-fg,#e2e2e2)';
-    cap.innerHTML = ico('lupa') + '<span>Magnifier' + (who ? ' · ' + esc(who) : '') + ' <span data-lupa-hint style="color:#777">'
-      + (phOn() ? '(Alt+Z or Esc \u00b7 \u2191 history)' : '(Alt+Z or Esc)') + '</span></span>';
+    cap.innerHTML = ico('lupa') + '<span>Magnifier' + (who ? ' · ' + esc(who) : '') + ' <span data-lupa-hint style="color:#777">(Alt+Z or Esc)</span></span>';
 
     var boxes = document.createElement('span');
     boxes.style.cssText = 'display:flex;align-items:center;gap:4px';
@@ -7104,6 +7376,7 @@
         ev.stopPropagation();
         S.lupaSize = i; save();
         ta.style.fontSize = px + 'px'; paintSizes();
+        if (LUPA.phPanel) LUPA.phPanel.size();
         finder.refresh();
         if (!finder.isOn()) { try { ta.focus(); } catch (e) {} }
       };
@@ -7127,7 +7400,12 @@
     head.appendChild(done);
     box.appendChild(head);
     box.appendChild(finder.bar);
-    box.appendChild(area);
+    /* the text, and the history on its right */
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;display:flex';
+    area.style.minWidth = '0';
+    body.appendChild(area);
+    box.appendChild(body);
 
     var grip = document.createElement('div');
     grip.title = 'Drag to resize window';
@@ -7158,10 +7436,23 @@
     wrap.appendChild(box);
     document.body.appendChild(wrap);
     LUPA.el = wrap; LUPA.ta = ta; LUPA.src = src; LUPA.w = t.w || null; LUPA.node = t.node || null;
-    LUPA.ph = (phOn() && !(src && src.readOnly)) ? phWalker(ta, cap.querySelector('[data-lupa-hint]')) : null;
+    var hintEl = cap.querySelector('[data-lupa-hint]');
+    function lupaHint(s) {
+      if (hintEl) hintEl.textContent = s || ((LUPA.ph && !ta.value.trim()) ? '(Alt+Z or Esc \u00b7 \u2191 your last prompt)' : '(Alt+Z or Esc)');
+    }
+    LUPA.ph = (phOn() && !(src && src.readOnly))
+      ? phWalker(ta, lupaHint, function () { if (LUPA.phPanel) LUPA.phPanel.mark(); }) : null;
+    if (LUPA.ph) {
+      LUPA.phPanel = phPanel(LUPA.ph, ta);
+      body.appendChild(LUPA.phPanel.el);
+      LUPA.phPanel.draw();
+      ta.addEventListener('input', function () { if (!LUPA.ph || !LUPA.ph.walking()) lupaHint(''); });
+    }
+    lupaHint('');
 
     ta.oninput = function () { lupaWrite(ta.value); finder.textChanged(); };
     ta.onkeydown = function (e) {
+      if (LUPA.ph && LUPA.ph.key(e)) { e.stopPropagation(); return; }
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); lupaClose(); return; }
       var mod = e.ctrlKey || e.metaKey;
       if (mod && !e.altKey && !e.shiftKey && (e.code === 'KeyF' || e.code === 'KeyH')) {
@@ -7170,7 +7461,6 @@
         return;
       }
       if (e.key === 'F3') { e.preventDefault(); e.stopPropagation(); finder.go(e.shiftKey ? -1 : 1); return; }
-      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !mod && !e.altKey && !e.shiftKey && LUPA.ph && LUPA.ph.arrow(e)) return;
       e.stopPropagation();
     };
     wrap.addEventListener('mousedown', function (e) {
@@ -17979,8 +18269,8 @@
   var POWER_TOOLS = [
     { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
-    { uid: 'tool:phist', icon: 'history', name: 'Prompt History', keys: 'Alt+Z · ↑', desc: 'The prompts you ran, back with ↑ in the Magnifier',
-      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json. In the Magnifier (Alt+Z), ↑ on the first line brings back the prompt before, and ↓ on the last line the one after and then what you were writing; Ctrl+Z takes it back. Its button, on a prompt node, lists them with a field to find one, and a click puts it in.' },
+    { uid: 'tool:phist', icon: 'history', name: 'Prompt History', keys: '↑ in an empty box', desc: 'The prompts you ran, back with ↑, as in Claude',
+      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; the tool\'s button, on a bar, lists them too.' },
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
     { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
@@ -19397,6 +19687,7 @@
     probe();
     cfgBoot();
     phHookRuns();
+    phHookBoxes();
   }
 
   if (document.readyState === 'loading') {
