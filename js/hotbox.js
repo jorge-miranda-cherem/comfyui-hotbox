@@ -52,6 +52,7 @@
     useMagic: true,         /* [X] Save as Button: a copy of the selection becomes a button */
     useCopyWf: true,        /* Copy Workflow: the whole workflow to the clipboard */
     useReplicate: true,     /* Replicate: copies of the selection, each with its own letter */
+    useGetWf: true,         /* Get Workflow: the workflow that made a picture, a clip or EXR frames */
     lupaSize: 1,
     lupaBox: 1,
     lupaWH: '',
@@ -191,7 +192,20 @@
         if (at >= 0) l.splice(at + 1, 0, 'tool:maskprev');
       });
     }
-    S.cfgRev = 8;
+    /* Get Workflow joins a saved bottom bar once, beside Load in Canvas, unless it is on a bar already; like every
+       tool there it shows only on the nodes it works on */
+    if (rev < 9 && Array.isArray(S.customBotBar)) {
+      var wfOn = S.customBotBar.indexOf('tool:wf') >= 0;
+      Object.keys(S.customToolsBar && typeof S.customToolsBar === 'object' ? S.customToolsBar : {}).forEach(function (k) {
+        if (Array.isArray(S.customToolsBar[k]) && S.customToolsBar[k].indexOf('tool:wf') >= 0) wfOn = true;
+      });
+      if (!wfOn) {
+        var lcAt = S.customBotBar.indexOf('tool:loadcanvas');
+        if (lcAt >= 0) S.customBotBar.splice(lcAt + 1, 0, 'tool:wf');
+        else S.customBotBar.push('tool:wf');
+      }
+    }
+    S.cfgRev = 9;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (!S.customIcons || typeof S.customIcons !== 'object' || Array.isArray(S.customIcons)) S.customIcons = {};
     /* your own power tools (Settings → Power Tools → New power tool): what does not read as one is dropped */
@@ -566,7 +580,7 @@
   }
 
   /* The bottom bar's own buttons, in their order */
-  var BOT_DEFAULTS = ['tool:loadcanvas', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
+  var BOT_DEFAULTS = ['tool:loadcanvas', 'tool:wf', 'tool:prev', 'tool:seedtoggle', 'tool:bypass', 'tool:zoom', 'tool:apibypass',
     'tool:swappair', 'tool:magic', 'tool:render'];
   /* set when an emptied bottom bar was mended: the shared library's buttons go back once the libraries load */
   var HB_LIB_FIX = false;
@@ -5224,24 +5238,305 @@
     });
   }
 
-  function actImageWorkflow(node) {
-    readPngChunks(node).then(function (meta) {
-      if (!meta.workflow) {
-        setStatus('error', 'No embedded ComfyUI workflow found in this PNG');
-        return;
+  /* ---- Get Workflow: the workflow that made a picture, a clip or EXR frames. A PNG keeps it in its text, a clip
+     in its metadata, and EXR frames rendered from ComfyUI have it in a _ui.json beside their first frame. Read,
+     it opens in a canvas of its own, or its nodes are inserted into this workflow */
+  var WF_CLIP = /\.(mp4|mov|m4v)$/i;
+  var WF_PATHS = /\.(png|exr|dpx|tif|tiff|jpg|jpeg|mp4|mov|m4v|mkv|webm|avi|mxf)$/i;
+
+  /* where a node's file is written (OCIO Read's source, a Load EXR's path, a video loader's file) */
+  function wfPathWidget(node) {
+    var ws = (node && node.widgets) || [];
+    for (var i = 0; i < ws.length; i++) {
+      var w = ws[i], nm = String((w && w.name) || '').toLowerCase();
+      if (!w || typeof w.value !== 'string' || !w.value.trim()) continue;
+      if (/^(source|filepath|file_path|path|file|video)$/.test(nm)) return w;
+    }
+    return null;
+  }
+
+  function wfFrame(node) {
+    var ws = (node && node.widgets) || [];
+    for (var i = 0; i < ws.length; i++) {
+      var nm = String((ws[i] && ws[i].name) || '').toLowerCase();
+      if (/^(start_frame|first_frame|frame_start|start_number)$/.test(nm) && +ws[i].value > 0) return Math.round(+ws[i].value);
+    }
+    return null;
+  }
+
+  /* Where the workflow of what this node shows can be read: { name, url, clip } for a file ComfyUI serves (a
+     PNG, a clip), { name, path, frame } for one read by its path; null where there is none to read */
+  function wfSourceOf(node) {
+    if (!node) return null;
+    var ims = producedImages(node);
+    for (var i = 0; i < ims.length; i++) {
+      var f = String(ims[i].filename || '');
+      if (/\.png$/i.test(f) || WF_CLIP.test(f)) return { name: f.split('/').pop(), url: viewURL(ims[i]), clip: WF_CLIP.test(f) };
+    }
+    if (outKind(node) === 'save') return null;
+    var w = wfPathWidget(node);
+    var p = w ? String(w.value).trim().replace(/\\/g, '/') : '';
+    if (!p) return null;
+    var name = p.replace(/\/+$/, '').split('/').pop();
+    var abs = /^(\/|[A-Za-z]:\/)/.test(p);
+    if (!abs && (/\.png$/i.test(p) || WF_CLIP.test(p))) {
+      return { name: name, clip: WF_CLIP.test(p), url: viewURL({ filename: name, subfolder: p.replace(/\/?[^\/]*$/, ''), type: 'input' }) };
+    }
+    /* an OCIO Read takes a still, a frame, a sequence, a folder of frames or a clip */
+    if (abs || /ocio/i.test(String(node.type || ''))) {
+      if (WF_PATHS.test(p) || /%0?\d*d|#|\$F/.test(p) || /ocio/i.test(String(node.type || ''))) return { name: name, path: p, frame: wfFrame(node) };
+    }
+    return null;
+  }
+
+  /* a PNG's text: tEXt and uncompressed iTXt */
+  function wfPngMeta(buf) {
+    var b = new Uint8Array(buf), out = { workflow: null, prompt: null };
+    var sig = [137, 80, 78, 71, 13, 10, 26, 10];
+    for (var i = 0; i < 8; i++) if (b[i] !== sig[i]) return null;
+    var dv = new DataView(buf), dec = new TextDecoder('utf-8'), p = 8;
+    while (p + 8 <= b.length) {
+      var len = dv.getUint32(p);
+      var type = String.fromCharCode(b[p + 4], b[p + 5], b[p + 6], b[p + 7]);
+      var st = p + 8;
+      if (st + len > b.length) break;
+      if (type === 'tEXt' || type === 'iTXt') {
+        var z = st;
+        while (z < st + len && b[z] !== 0) z++;
+        var key = dec.decode(b.subarray(st, z)), v = z + 1, ok = true;
+        if (type === 'iTXt') {
+          ok = b[v] === 0;
+          var nul = 0;
+          v += 2;
+          while (v < st + len && nul < 2) { if (b[v] === 0) nul++; v++; }
+        }
+        if (ok && (key === 'workflow' || key === 'prompt')) {
+          try { out[key] = JSON.parse(dec.decode(b.subarray(v, st + len))); } catch (e) {}
+        }
       }
-      var app = getApp();
-      if (app && typeof app.loadGraphData === 'function') {
-        var blob = new Blob([JSON.stringify(meta.workflow, null, 2)], { type: 'application/json' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'extracted_workflow_' + Date.now() + '.json';
-        a.click();
-        setStatus('ok', '⌗ Workflow JSON downloaded from PNG metadata');
+      if (type === 'IEND') break;
+      p = st + len + 4;
+    }
+    return out;
+  }
+
+  /* a clip's metadata (MP4 / MOV): the keys / ilst items under moov, and a comment holding both */
+  function wfIsoMeta(buf) {
+    var b = new Uint8Array(buf), dv = new DataView(buf), dec = new TextDecoder('utf-8'), recs = [];
+    function typ(p) { return String.fromCharCode(b[p], b[p + 1], b[p + 2], b[p + 3]); }
+    function boxes(s, e, fn) {
+      var p = s;
+      while (p + 8 <= e) {
+        var size = dv.getUint32(p), h = 8;
+        if (size === 1) {
+          if (p + 16 > e) return;
+          size = dv.getUint32(p + 8) * 4294967296 + dv.getUint32(p + 12);
+          h = 16;
+        } else if (size === 0) size = e - p;
+        if (size < h || p + size > e) return;
+        fn(typ(p + 4), p + h, p + size, p);
+        p += size;
       }
-    }).catch(function (err) {
-      setStatus('error', msgOf(err));
+    }
+    function meta(s, e) {
+      var st = (s + 12 <= e && typ(s + 4) !== 'hdlr') ? s + 4 : s, keys = [];
+      boxes(st, e, function (t, cs, ce) {
+        if (t === 'keys' && cs + 8 <= ce) {
+          var n = dv.getUint32(cs + 4), p = cs + 8;
+          for (var i = 0; i < n && p + 8 <= ce; i++) {
+            var ks = dv.getUint32(p);
+            if (ks < 8 || p + ks > ce) break;
+            keys.push(dec.decode(b.subarray(p + 8, p + ks)));
+            p += ks;
+          }
+        } else if (t === 'ilst') {
+          boxes(cs, ce, function (it, ics, ice, ip) {
+            var idx = dv.getUint32(ip + 4);
+            boxes(ics, ice, function (dt, dcs, dce) {
+              if (dt === 'data' && dce >= dcs + 8) {
+                recs.push({ key: (idx >= 1 && idx <= keys.length) ? keys[idx - 1] : it, val: dec.decode(b.subarray(dcs + 8, dce)) });
+              }
+            });
+          });
+        }
+      });
+    }
+    boxes(0, b.length, function (t, cs, ce) {
+      if (t !== 'moov') return;
+      boxes(cs, ce, function (t2, cs2, ce2) {
+        if (t2 === 'meta') meta(cs2, ce2);
+        else if (t2 === 'udta') boxes(cs2, ce2, function (t3, cs3, ce3) { if (t3 === 'meta') meta(cs3, ce3); });
+      });
     });
+    var out = { workflow: null, prompt: null };
+    function take(k, v) {
+      if (out[k] || !v) return;
+      try { out[k] = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) {}
+    }
+    recs.forEach(function (r) {
+      var k = String(r.key || '').toLowerCase();
+      if (k === 'workflow' || k === 'prompt') take(k, r.val);
+      else if (k === 'comment' || k === '\u00a9cmt') {
+        try {
+          var j = JSON.parse(r.val);
+          if (j && typeof j === 'object') { take('workflow', j.workflow); take('prompt', j.prompt); }
+        } catch (e) {}
+      }
+    });
+    return out;
+  }
+
+  function wfRead(src) {
+    if (src.path) {
+      return apiFetch('/hotbox/workflow?path=' + encodeURIComponent(src.path) + (src.frame ? '&frame=' + src.frame : ''), { cache: 'no-store' })
+        .then(function (r) {
+          if (r.status === 404) throw new Error(src.name + ' is read by its path, which needs Hotbox\'s Python side: this ComfyUI did not load it');
+          return r.json().catch(function () { return null; }).then(function (j) {
+            if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+            return { name: j.name || src.name, workflow: j.workflow || null, prompt: j.prompt || null };
+          });
+        });
+    }
+    return fetch(src.url, { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('ComfyUI has no ' + src.name + ' (HTTP ' + r.status + ')');
+        return r.arrayBuffer();
+      })
+      .then(function (buf) {
+        var m = src.clip ? wfIsoMeta(buf) : wfPngMeta(buf);
+        if (!m && !src.clip) throw new Error(src.name + ' is not a PNG after all');
+        if (!m || (!m.workflow && !m.prompt)) {
+          throw new Error(src.name + ' carries no workflow: ' + (src.clip ? 'ComfyUI did not render this clip'
+            : 'it was not written by a ComfyUI save, or the metadata was stripped'));
+        }
+        m.name = src.name;
+        return m;
+      });
+  }
+
+  function wfStem(name) {
+    return String(name || 'workflow').replace(/\.[^.\/]+$/, '').replace(/_ui$/i, '') || 'workflow';
+  }
+
+  /* in a canvas of its own: ComfyUI opens a new tab when a load is given a name, and the open one stays as it is.
+     A file that carries only the API prompt opens as one too, in a new empty tab */
+  function wfOpenTab(m) {
+    var app = getApp(), stem = wfStem(m.name);
+    var tab = stem.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'workflow';
+    if (!app || typeof app.loadGraphData !== 'function') throw new Error('this ComfyUI does not open a workflow from a script');
+    var go;
+    if (m.workflow) {
+      go = Promise.resolve(app.loadGraphData(JSON.parse(JSON.stringify(m.workflow)), true, true, tab));
+    } else if (m.prompt && typeof app.loadApiJson === 'function') {
+      var blank = { last_node_id: 0, last_link_id: 0, nodes: [], links: [], groups: [], config: {}, extra: {}, version: 0.4 };
+      go = Promise.resolve(app.loadGraphData(blank, true, true, tab)).then(function () {
+        return app.loadApiJson(JSON.parse(JSON.stringify(m.prompt)), tab);
+      });
+    } else {
+      throw new Error(stem + ' carries only the API prompt, and this ComfyUI cannot open one from a script');
+    }
+    return go.then(function () {
+      var n = m.workflow ? (m.workflow.nodes || []).length : Object.keys(m.prompt || {}).length;
+      setStatus('ok', '\u2317 ' + stem + ' opened in a new canvas \u00b7 ' + n + (n === 1 ? ' node' : ' nodes')
+        + (m.workflow ? '' : ' \u00b7 from the API prompt, without its layout'));
+    });
+  }
+
+  /* into this workflow: its nodes, wires, groups and subgraphs beside the node, at the first free place, selected */
+  function wfInsert(m, node) {
+    var stem = wfStem(m.name);
+    if (!m.workflow) {
+      setStatus('error', stem + ' carries only the API prompt, not the canvas graph: nothing to insert \u00b7 Open in a new canvas instead');
+      return;
+    }
+    var c = getCanvas(), g = getGraph(), LG = litegraph();
+    var wf = JSON.parse(JSON.stringify(m.workflow));
+    if (!c || !g || !wf.nodes || !wf.nodes.length) {
+      setStatus('error', stem + ' has no nodes to insert');
+      return;
+    }
+    var defs = (wf.definitions && wf.definitions.subgraphs) || [];
+    var reg = (LG && LG.registered_node_types) || {}, sub = {}, missing = {};
+    defs.forEach(function (d) { if (d && d.id) sub[d.id] = 1; });
+    if (Object.keys(reg).length) {
+      wf.nodes.forEach(function (n) { var t = n && n.type; if (t && !reg[t] && !sub[t]) missing[t] = 1; });
+    }
+    var links = (wf.links || []).map(function (l) {
+      return Array.isArray(l) ? { id: l[0], origin_id: l[1], origin_slot: l[2], target_id: l[3], target_slot: l[4], type: l[5] } : l;
+    }).filter(function (l) { return l && typeof l === 'object'; });
+    var data = { nodes: wf.nodes, links: links, groups: wf.groups || [], reroutes: [], subgraphs: defs };
+    /* the paste puts the block's corner (node positions and group corners) on the position given; the box adds
+       the titles and the sizes */
+    var TH = (LG && LG.NODE_TITLE_HEIGHT) || 30;
+    var cx = 1e9, cy = 1e9, bx = 1e9, by = 1e9, br = -1e9, bb = -1e9;
+    wf.nodes.forEach(function (n) {
+      if (!n || !n.pos) return;
+      var x = +n.pos[0] || 0, y = +n.pos[1] || 0, col = !!(n.flags && n.flags.collapsed);
+      var w = col ? 190 : ((n.size && +n.size[0]) || 240), h = col ? 0 : ((n.size && +n.size[1]) || 120);
+      cx = Math.min(cx, x); cy = Math.min(cy, y);
+      bx = Math.min(bx, x); by = Math.min(by, y - TH); br = Math.max(br, x + w); bb = Math.max(bb, y + h);
+    });
+    (wf.groups || []).forEach(function (gr) {
+      var q = gr && gr.bounding;
+      if (!q || q.length < 4) return;
+      cx = Math.min(cx, +q[0]); cy = Math.min(cy, +q[1]);
+      bx = Math.min(bx, +q[0]); by = Math.min(by, +q[1]); br = Math.max(br, +q[0] + +q[2]); bb = Math.max(bb, +q[1] + +q[3]);
+    });
+    if (cx === 1e9) { cx = cy = bx = by = 0; br = 240; bb = 120; }
+    var vb = node ? visBox(node) : null;
+    var at = vb ? [vb.x + vb.w + 80, vb.y - TH] : pasteAnchor(c);
+    var mv = hbFreeMove(g, { x: at[0], y: at[1], w: br - bx, h: bb - by }, []);
+    var pos = [at[0] + mv.dx + (cx - bx), at[1] + mv.dy + (cy - by)];
+    var made = [];
+    try { made = mgPaste(data, pos); } catch (e) {
+      setStatus('error', 'Could not insert ' + stem + ': ' + msgOf(e));
+      return;
+    }
+    try {
+      if (typeof c.deselectAll === 'function') c.deselectAll();
+      if (made.length && c.selectNodes) c.selectNodes(made);
+    } catch (e) {}
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    var gone = Object.keys(missing);
+    setStatus(gone.length ? 'error' : 'ok', '\u2317 ' + stem + ' \u00b7 ' + made.length + (made.length === 1 ? ' node' : ' nodes')
+      + ' inserted, selected' + (gone.length ? ' \u00b7 this ComfyUI has no ' + gone.join(', ') : ''));
+    hbAdded(made, 'tool:wf');
+  }
+
+  function wfGet(node, src, how) {
+    setStatus('ok', '\u2026 Reading the workflow of ' + src.name);
+    return wfRead(src).then(function (m) {
+      return how === 'here' ? wfInsert(m, node) : wfOpenTab(m);
+    }).catch(function (err) {
+      setStatus('error', 'Get Workflow: ' + msgOf(err));
+    });
+  }
+
+  /* The button opens its two choices under itself; from a key, or anywhere without the hotbox, it opens the
+     workflow in a new canvas */
+  function actGetWorkflow(node) {
+    var src = wfSourceOf(node);
+    if (!src) {
+      setStatus('error', 'Get Workflow: this node shows no PNG or clip, and reads no EXR frames');
+      return;
+    }
+    var anchor = (HB.el && HB.runEl && HB.el.contains(HB.runEl)) ? HB.runEl
+      : (HB.el && HB.el.querySelector('[data-hb-run="tool:wf"]'));
+    HB.runEl = null;
+    if (!anchor) {
+      if (HB.el) hbClose();
+      wfGet(node, src, 'tab');
+      return;
+    }
+    var it = { type: 'menu', search: false, items: [
+      { label: 'Open in a new canvas', icon: 'expand', hint: 'a tab of its own',
+        title: 'The workflow that made ' + src.name + ', in a tab of its own; this one is not touched', run: function () { wfGet(node, src, 'tab'); } },
+      { label: 'Insert into this workflow', icon: 'plus', hint: 'beside the node',
+        title: 'The nodes of the workflow that made ' + src.name + ', beside this node, at a free place, selected; nothing already here changes',
+        run: function () { wfGet(node, src, 'here'); } }
+    ] };
+    hbMenuClose();
+    hbMenuOpen(HB.wItems.push(it) - 1, anchor);
   }
 
   /* ---------------------------------------------------------------------
@@ -7224,7 +7519,7 @@
       batch:      { id: 'batch',      icon: 'video',      label: 'Framehold',      kbd: '',  fn: function () { addFromBatch(node); } },
       mkvid:      { id: 'mkvid',      icon: 'video',      label: 'Create Video',   kbd: '',  fn: function () { addCreateVideo(node); } },
       savevid:    { id: 'savevid',    icon: 'save',       label: 'Save Video',     kbd: '',  fn: function () { addSaveVideo(node); } },
-      wf:         { id: 'wf',         icon: 'subgraph',   label: 'PNG Workflow',   kbd: '',  fn: function () { actImageWorkflow(node); } },
+      wf:         { id: 'wf',         icon: 'subgraph',   label: 'Get Workflow',   kbd: '',  stayOpen: true, fn: function () { actGetWorkflow(node); } },
       seed:       { id: 'seed',       icon: 'seed',       label: 'Copy Seed',      kbd: '',  fn: function () { actExtractSeed(node); } },
       cropedit:   { id: 'cropedit',   icon: 'lupa',       label: 'Visual Crop',    kbd: 'Z', fn: function () { cropEditOpen(node); } },
       paintedit:  { id: 'paintedit',  icon: 'paint',      label: 'Paint Studio',   kbd: 'Z', fn: function () { paintEditOpen(node); } },
@@ -7452,7 +7747,8 @@
     swappair: 'useSwap',
     magic: 'useMagic',
     copywf: 'useCopyWf',
-    replicate: 'useReplicate'
+    replicate: 'useReplicate',
+    wf: 'useGetWf'
   };
 
   function hbToolOn(tid) {
@@ -7564,6 +7860,7 @@
     }
     if (node && tid === 'prev' && imageOutSlot(node) < 0 && !isPreviewNode(node)) return 'works on nodes with an image output';
     if (tid === 'maskprev' && !hasMaskToShow(node)) return 'works on an alpha (OCIO Read), the Painter, or a node that makes a mask';
+    if (tid === 'wf' && !wfSourceOf(node)) return 'works on a node showing a PNG or a clip, or reading EXR frames (OCIO Read)';
     if (node && tid === 'seedtoggle' && !seedControls(node).length) return 'works on nodes with a seed';
     if (tid === 'loadcanvas' && !(hbHasImage(node) || isPreviewNode(node) || outKind(node) === 'save')) {
       return 'works on Preview, Save Image and Save Video nodes, or a node showing an image';
@@ -12028,6 +12325,7 @@
           return;
         }
         if (item && item.run) {
+          HB.runEl = runBtn;
           if (!item.stayOpen) hbClose();
           item.run();
         }
@@ -17404,6 +17702,8 @@
       tip: 'Smoothly frames the selected node(s). Press . again to return to exactly where you were.' },
     { uid: 'tool:arrange', icon: 'arrange', name: 'Arrange Nodes', keys: 'L', desc: 'Line up the selection along its wires, as in Nuke',
       tip: 'With the hotbox closed, select nodes and press L. Wired nodes go into columns that follow the wires, each wire as straight as it can be; nodes with no wires between them line up in a row or a column. One node lines up with the node that feeds it. The selection keeps its corner, and Ctrl+Z puts it back.' },
+    { uid: 'tool:wf', icon: 'subgraph', name: 'Get Workflow', keys: 'click', desc: 'The workflow that made a picture or a clip: a new canvas, or into this one',
+      tip: 'On a node showing a picture or a clip (Load Image, Preview / Save Image, Load Video, Save Video), or an OCIO Read: reads the workflow that made it, from the PNG ComfyUI wrote, the clip\'s own metadata or the _ui.json saved next to EXR frames. Open in a new canvas puts it in a tab of its own and leaves yours as it is; Insert into this workflow adds its nodes beside the node, selected, and nothing already here changes. A file read by its path (an OCIO Read, EXR frames) needs Hotbox\'s Python side, on the computer running ComfyUI.' },
     { uid: 'tool:copywf', icon: 'copy', name: 'Copy Workflow', keys: 'click', desc: 'The whole workflow to the clipboard',
       tip: 'Copies the whole workflow, exactly as Export saves it, to the clipboard: paste it into a chat or a .json file, or press Ctrl+V on any ComfyUI canvas to open it there. Works from any node or from the bare canvas.' },
     { uid: 'tool:replicate', icon: 'copy', name: 'Replicate', keys: 'A → B, C…', desc: 'Copies of the selection, each with its own letter',
