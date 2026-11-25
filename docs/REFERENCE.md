@@ -87,7 +87,9 @@ The animation follows your style: **Fluid** pulls the nodes together into one ca
 **Buttons are modules.** With one node selected, a saved button whose block starts with an open input (say `Crop → Preview`, or `Nano Banana 2 → Save`) lands right after that node and plugs the node's output into that input, so small saved blocks chain into a whole pipeline one click at a time. A block that starts with its own loader is just added. Wires into the image slots of the newer API nodes, which a plain paste can drop, come back too.
 
 ### Image & Video Kit (`N`)
-Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `ImageScaleBy`, `ImageScale`), Flip, Paint Mask/Plate, Compare A/B, Preview / Save Image, Framehold, Video → Frames, Create Video, Save Video, Set / Get nodes, Reroutes and labels — each spawned and wired to the current selection in one click.
+Crop (+ preview), Super Stitch, Resize (`ImageResizeKJv2`, `ImageResize+`, `ImageScaleBy`, `ImageScale`), Flip, Paint Mask/Plate, Mask, Compare A/B, Preview / Save Image, Framehold, Video → Frames, Create Video, Save Video, Set / Get nodes, Reroutes and labels — each spawned and wired to the current selection in one click.
+
+**Paint** adds a Painter with a Preview of what it paints and one of its mask (Convert Mask to Image → Preview Image). The Painter paints over the picture its source shows, and some sources show none (an **OCIO Read** has its own viewer): there a **Preview Image goes in front of the Painter**, so after a run the Painter has the plate, at its size, and the Preview hands it on (ComfyUI 0.4x and later; on an older ComfyUI, whose Preview Image passes nothing on, the Painter is wired straight to the source). **Mask** shows a mask the same way: an OCIO Read's alpha, or the Painter's. An alpha goes on into an input of its own name (OCIO Write's `alpha`) and into a node that takes a mask (Convert Mask to Image, Grow Mask).
 
 ---
 

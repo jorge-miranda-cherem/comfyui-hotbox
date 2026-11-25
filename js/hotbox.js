@@ -180,7 +180,18 @@
     /* Icons Only is how the bars start now. A file saved before carries it off, chosen or not (it was new and
        off by default): it comes on once, and the switch in Settings → Power Tools turns it off for good */
     if (rev < 7) S.hbIconsOnly = true;
-    S.cfgRev = 7;
+    /* The Mask button (an alpha, the Painter's mask, as a picture) joins the context bars saved before it, once:
+       next to Paint, or after the Painter's Preview. It shows only where there is such a mask */
+    if (rev < 8 && S.customToolsBar && typeof S.customToolsBar === 'object') {
+      Object.keys(S.customToolsBar).forEach(function (k) {
+        var l = S.customToolsBar[k];
+        if (!Array.isArray(l) || l.indexOf('tool:maskprev') >= 0) return;
+        var at = l.indexOf('tool:paint');
+        if (at < 0 && l.indexOf('tool:paintedit') >= 0) at = Math.max(l.indexOf('tool:prev'), l.indexOf('tool:paintedit'));
+        if (at >= 0) l.splice(at + 1, 0, 'tool:maskprev');
+      });
+    }
+    S.cfgRev = 8;
     if (!S.customKeys || typeof S.customKeys !== 'object' || Array.isArray(S.customKeys)) S.customKeys = {};
     if (!S.customIcons || typeof S.customIcons !== 'object' || Array.isArray(S.customIcons)) S.customIcons = {};
     /* your own power tools (Settings → Power Tools → New power tool): what does not read as one is dropped */
@@ -705,6 +716,7 @@
     subgraph: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
     plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
     search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    mask: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
     arrange: '<rect x="2" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="15" width="7" height="5" rx="1.2"/><path d="M9 6.5h6"/><path d="M12 6.5v11h3"/>',
     zoom: '<circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
@@ -3636,10 +3648,13 @@
     });
     var skip = -1;
     if (outI >= 0 && outV >= 0 && free('IMAGE') && free('VIDEO')) skip = srcMediaKind(node) === 'video' ? outI : outV;
+    /* an alpha rides with the picture only into an input called alpha (OCIO Write); a node that takes no picture
+       (Convert Mask to Image, Grow Mask…) gets it as its mask */
+    var takesPicture = free('IMAGE') || free('VIDEO');
     return outs.map(function (o, k) {
       if (k === skip) return 'skip';
       var t = T(o);
-      if (picture && t === 'MASK' && /^alpha$/i.test(slotName(o))) return 'skip';
+      if (picture && t === 'MASK' && /^alpha$/i.test(slotName(o))) return takesPicture ? 'byName' : 'any';
       if (picture && WIRE_SIDE.test(t)) return 'byName';
       return 'any';
     });
@@ -4107,13 +4122,142 @@
     return addWiredWithPreview(node, t, 'ImageFlip');
   }
 
+  /* Does this node give the Painter a picture to paint on? The Painter shows, behind its canvas, the image of the
+     node right before it, and only a node that shows an image has one: a Load Image, a Preview or Save Image, a
+     node already showing a render. An OCIO Read (it has its own viewer), a VAE Decode or a resize show none, and
+     the Painter stays a blank 512 x 512 */
+  function paintSeesImage(n) {
+    if (!n) return false;
+    var t = String(n.type || n.comfyClass || '');
+    if (/^(LoadImage|LoadImageMask|LoadImageOutput|Painter|ImageCropV2)$/i.test(t)) return true;
+    if (isPreviewNode(n) || outKind(n) === 'save') return true;
+    return !!(n.imgs && n.imgs.length);
+  }
+
+  /* A node that passes an IMAGE on (a Preview Image does from ComfyUI 0.4x on: it shows the image and hands it on) */
+  function hbPassesImage(type) {
+    var outs = null;
+    try {
+      var def = SRV.types && SRV.types[type];
+      outs = def && def.output;
+      if (!outs) {
+        var reg = (litegraph() || {}).registered_node_types;
+        var nd = reg && reg[type] && reg[type].nodeData;
+        outs = nd && nd.output;
+      }
+    } catch (e) { outs = null; }
+    return Array.isArray(outs) && outs.some(function (o) { return String(o).toUpperCase() === 'IMAGE'; });
+  }
+
+  /* A mask as a picture: a MASK output through Convert Mask to Image into a Preview Image (which, on a recent
+     ComfyUI, also passes it on, to a Write for one). Returns the nodes made, the first at (x, y) */
+  function maskChain(src, slot, x, y) {
+    if (!src || slot < 0 || !hasType('MaskToImage')) return [];
+    var mti = createNodeOrSubgraph('MaskToImage', [x, y], true);
+    if (!mti) return [];
+    try { src.connect(slot, mti, 0); } catch (e) {}
+    var out = [mti];
+    if (canMake(PREVIEW_TYPE) || hasType(PREVIEW_TYPE)) {
+      var mb = visBox(mti);
+      var pv = createNodeOrSubgraph(PREVIEW_TYPE, [mb.x + mb.w + 50, y], true);
+      if (pv) {
+        try { mti.connect(0, pv, 0); } catch (e) {}
+        out.push(pv);
+      }
+    }
+    return out;
+  }
+
+  /* The paint button: [Preview Image] -> Painter -> Preview Image, and the Painter's mask -> Convert Mask to Image
+     -> Preview Image. The Preview in front goes in only when the source shows the Painter nothing (an OCIO Read)
+     and this ComfyUI's Preview Image passes the image on; after a run the Painter then paints over the plate, at
+     its size */
   function addPaint(node) {
     var t = paintType();
     if (!t) {
       setStatus('error', 'Painter node is not available on this ComfyUI');
       return null;
     }
-    return addWiredWithPreview(node, t, 'Painter');
+    var feed = ensureImageFeed(node);
+    if (!feed) {
+      setStatus('error', 'No IMAGE output on this node for Painter');
+      return null;
+    }
+    var g = getGraph(), made = [];
+    var vb = visBox(node);
+    var x = vb.x + vb.w + 60, y = vb.y;
+    var src = feed;
+    if (!paintSeesImage(feed.node) && hbPassesImage(PREVIEW_TYPE)) {
+      var front = createNodeOrSubgraph(PREVIEW_TYPE, [x, y], true);
+      if (front) {
+        try { feed.node.connect(feed.slot, front, 0); } catch (e) {}
+        var fo = imageOutSlot(front);
+        made.push(front);
+        if (fo >= 0) src = { node: front, slot: fo };
+        var fb = visBox(front);
+        x = fb.x + fb.w + 60;
+      }
+    }
+    var painter = createNodeOrSubgraph(t, [x, y], true);
+    if (!painter) {
+      setStatus('error', 'Node not available: ' + t);
+      return null;
+    }
+    made.push(painter);
+    var inSlot = findInSlot(painter, /^IMAGE$/i, true);
+    if (inSlot >= 0) {
+      try { src.node.connect(src.slot, painter, inSlot); } catch (e) {}
+    }
+    var pb = visBox(painter);
+    var x2 = pb.x + pb.w + 60;
+    var outSlot = imageOutSlot(painter);
+    if (outSlot >= 0 && (canMake(PREVIEW_TYPE) || hasType(PREVIEW_TYPE))) {
+      var pv = createNodeOrSubgraph(PREVIEW_TYPE, [x2, y], true);
+      if (pv) {
+        try { painter.connect(outSlot, pv, 0); } catch (e) {}
+        made.push(pv);
+      }
+    }
+    /* the mask under the painted picture's preview, far enough down for that preview to grow when it has an image */
+    made = made.concat(maskChain(painter, maskOutSlot(painter), x2, y + Math.max(380, Math.round(pb.h * 0.6))));
+    hbAvoidOverlap(g, made);
+    var c = getCanvas();
+    try { if (c && c.selectNodes) c.selectNodes([painter]); } catch (e) {}
+    try { if (g) g.setDirtyCanvas(true, true); } catch (e) {}
+    setStatus('ok', '⊕ Painter wired' + (made[0] !== painter ? ', a Preview in front so it shows the picture after a run' : '') + ', its mask previewed');
+    hbAdded(made, 'tool:paint');
+    return painter;
+  }
+
+  /* The Mask button: a node's mask (an OCIO Read's alpha, the Painter's mask) as a picture */
+  function addMaskPreview(node) {
+    var mo = maskOutSlot(node);
+    if (mo < 0) {
+      setStatus('error', 'This node has no MASK output');
+      return null;
+    }
+    if (!hasType('MaskToImage')) {
+      setStatus('error', 'Convert Mask to Image is not available on this ComfyUI');
+      return null;
+    }
+    var vb = visBox(node);
+    var made = maskChain(node, mo, vb.x + vb.w + 60, vb.y + Math.round(vb.h * 0.5));
+    if (!made.length) return null;
+    var g = getGraph(), c = getCanvas();
+    hbAvoidOverlap(g, made);
+    try { if (c && c.selectNodes) c.selectNodes([made[made.length - 1]]); } catch (e) {}
+    try { if (g) g.setDirtyCanvas(true, true); } catch (e) {}
+    setStatus('ok', '⊕ ' + (slotName(node.outputs[mo]) === 'alpha' ? 'Alpha' : 'Mask') + ' previewed');
+    hbAdded(made, 'tool:maskprev');
+    return made[0];
+  }
+
+  /* a node whose mask is worth a look: an alpha output (an OCIO Read), the Painter, or a node that makes only a
+     mask. A Load Image has a MASK too, but its picture is the point there: no Mask button on it */
+  function hasMaskToShow(node) {
+    if (!node || maskOutSlot(node) < 0) return false;
+    if (isPainterNode(node) || imageOutSlot(node) < 0) return true;
+    return (node.outputs || []).some(function (o) { return slotType(o) === 'MASK' && slotName(o) === 'alpha'; });
   }
 
   function addFromBatch(node) {
@@ -7071,6 +7215,7 @@
       rsz:        { id: 'rsz',        icon: 'resize',     label: 'Resize',         kbd: '',  fn: function () { addResize(node); } },
       flip:       { id: 'flip',       icon: 'flip',       label: 'Flip',           kbd: '',  fn: function () { addFlip(node); } },
       paint:      { id: 'paint',      icon: 'paint',      label: 'Paint',          kbd: '',  fn: function () { addPaint(node); } },
+      maskprev:   { id: 'maskprev',   icon: 'mask',       label: 'Mask',           kbd: '',  fn: function () { addMaskPreview(node); } },
       cmp:        { id: 'cmp',        icon: 'compare',    label: 'Compare',        kbd: '',  fn: function () { addCompare(node); } },
       saveimg:    { id: 'saveimg',    icon: 'save',       label: 'Save Image',     kbd: '',  fn: function () { addSaveImage(node); } },
       prev:       { id: 'prev',       icon: 'preview',    label: 'Preview',        kbd: 'T', fn: function () { addPreview(node); } },
@@ -7320,7 +7465,7 @@
   var TOOL_SPAWNS = {
     saveimg: ['SaveImage'], savevid: ['SaveVideo', 'VHS_VideoCombine'], prev: ['PreviewImage'],
     gvc: ['GetVideoComponents'], mkvid: ['CreateVideo'], batch: ['ImageFromBatch'],
-    flip: ['ImageFlip', 'ImageFlip+'], paint: ['Painter'], crop: ['ImageCropV2', 'ImageCrop', 'ImageCrop+'],
+    flip: ['ImageFlip', 'ImageFlip+'], paint: ['Painter'], crop: ['ImageCropV2', 'ImageCrop', 'ImageCrop+'], maskprev: ['MaskToImage'],
     cmp: ['ImageCompare', 'Image Comparer (rgthree)'],
     rsz: ['ImageResizeKJv2', 'ImageResize+', 'ImageScaleBy', 'ImageScale']
   };
@@ -7377,7 +7522,7 @@
       /* painting comes first, then the paint goes back where its crop was cut */
       ids.push('paintedit');
       if (stFirst) ids.push('stitch');
-      ids.push('prev', 'cmp', 'saveimg');
+      ids.push('prev', 'maskprev', 'cmp', 'saveimg');
     } else if (k === 'set') {
       ids.push('setinh', 'addget');
     } else if (k === 'get') {
@@ -7387,6 +7532,7 @@
       if (hasImg) {
         ids.push('crop', 'rsz', 'flip');
         if (paintType()) ids.push('paint');
+        if (hasMaskToShow(node)) ids.push('maskprev');
         ids.push('cmp', 'saveimg');
       }
       if (hasVid) {
@@ -7417,6 +7563,7 @@
       return 'works on a node: open the hotbox over one';
     }
     if (node && tid === 'prev' && imageOutSlot(node) < 0 && !isPreviewNode(node)) return 'works on nodes with an image output';
+    if (tid === 'maskprev' && !hasMaskToShow(node)) return 'works on an alpha (OCIO Read), the Painter, or a node that makes a mask';
     if (node && tid === 'seedtoggle' && !seedControls(node).length) return 'works on nodes with a seed';
     if (tid === 'loadcanvas' && !(hbHasImage(node) || isPreviewNode(node) || outKind(node) === 'save')) {
       return 'works on Preview, Save Image and Save Video nodes, or a node showing an image';
@@ -8505,7 +8652,7 @@
     if (d === 'tools') {
       var mt = getMasterTools(node);
       var allToolIds = [
-        'crop', 'stitch', 'stitchupd', 'rsz', 'flip', 'paint', 'cmp', 'saveimg', 'prev', 'loadcanvas',
+        'crop', 'stitch', 'stitchupd', 'rsz', 'flip', 'paint', 'maskprev', 'cmp', 'saveimg', 'prev', 'loadcanvas',
         'gvc', 'batch', 'mkvid', 'savevid', 'wf', 'seed', 'lupa', 'label',
         'rename', 'reroute', 'set', 'addget', 'bypass', 'mute', 'render', 'swappair', 'magic', 'apibypass', 'zoom', 'arrange', 'seedtoggle'
       ];
