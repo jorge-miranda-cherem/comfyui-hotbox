@@ -43,7 +43,7 @@ The stitch keeps following its crop: move or resize the crop box and the paste p
 
 ![Paint Studio, then Nano Banana 2 from the models drawer, prompt in the Magnifier](docs/tutorial/04-paint-studio-and-model.gif)
 
-1. On a **Load Image**, press **Paint** in the Context bar: a Painter node and its preview are added.
+1. On a **Load Image**, press **Paint** in the Context bar: a Painter node, its preview and a preview of its mask are added.
 2. With the Painter selected, <kbd>Alt</kbd>+<kbd>Z</kbd> opens **Paint Studio**: brush, eraser, size, color, undo.
    <kbd>Enter</kbd> saves the paint into the node.
 3. Open the hotbox on the Painter and press <kbd>A</kbd> (**Models & APIs**), type a name (`nano banana 2`) and click
