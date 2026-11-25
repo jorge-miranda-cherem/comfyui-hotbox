@@ -58,6 +58,7 @@
     lupaBox: 1,
     lupaWH: '',
     lupaHist: false,        /* the Magnifier's history panel is open (false, the start: folded into a strip) */
+    phScope: 'all',         /* the history shows 'all' the prompts, or 'wf': only those run from the workflow open now */
     favImage: [],
     favVideo: [],
     favBtn: ['crop', 'rsz', 'cmp', 'prev'],
@@ -1923,6 +1924,12 @@
       '.shb-ph-q{margin:0 .8em .6em;height:2.4em;box-sizing:border-box;padding:0 .7em;border:1px solid #3c3c3c;border-radius:5px;background:#181818;color:#e2e2e2;font:inherit;outline:none}',
       '.shb-ph-q:focus{border-color:#5c94f0}',
       '.shb-ph-q::placeholder{color:#6a6a6a}',
+      '.shb-ph-sc{display:flex;gap:2px;margin:0 .8em .6em;padding:2px;border:1px solid #333333;border-radius:6px;background:#181818}',
+      '.shb-ph-sc button{flex:1 1 0;min-width:0;height:2em;padding:0 .7em;border:0;border-radius:4px;background:transparent;color:#9a9a9a;font:inherit;font-size:.9em;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-ph-sc button[data-sc="all"]{flex:0 0 auto}',
+      '.shb-ph-sc button:hover{color:#e2e2e2}',
+      '.shb-ph-sc button.shb-on{background:#2e2e2e;color:#ffffff}',
+      '.shb-ph-sc button:disabled{opacity:.4;cursor:default}',
       '.shb-ph-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 .45em .6em}',
       '.shb-ph-row{display:flex;flex-direction:column;align-items:stretch;gap:.25em;width:100%;box-sizing:border-box;margin:0 0 2px;padding:.55em .65em;border:1px solid transparent;border-radius:6px;background:transparent;color:#c8c8c8;text-align:left;cursor:pointer;font:inherit}',
       '.shb-ph-row:hover{background:#262626;color:#e2e2e2}',
@@ -6764,23 +6771,55 @@
      prompt before and Down on the last line the one after, then what you were writing. One list for every prompt
      node, kept in prompt_history.json beside hotbox.json (this browser keeps a copy, so it works without the file) */
   var PH = { list: null, synced: false, timer: 0 };
-  var PH_FILE = 'prompt_history.json', PH_KEY = 'hotbox_prompt_history', PH_MAX = 200, PH_LONG = 20000;
+  var PH_FILE = 'prompt_history.json', PH_KEY = 'hotbox_prompt_history', PH_MAX = 1000, PH_LONG = 20000;
 
   function phOn() { return S.usePromptHistory !== false; }
 
-  /* newest first, each text once, the longest ones left out */
+  /* newest first, each text once for each workflow it ran from (`wf`, its file), the longest ones left out */
   function phClean(arr) {
     var seen = {}, out = [];
     (Array.isArray(arr) ? arr : []).forEach(function (e) {
       var t = (e && typeof e.t === 'string') ? e.t : '';
-      if (t.trim() && t.length <= PH_LONG) out.push({ t: t, at: +e.at || 0 });
+      if (!t.trim() || t.length > PH_LONG) return;
+      var o = { t: t, at: +e.at || 0 };
+      if (e.wf) o.wf = String(e.wf);
+      out.push(o);
     });
     out.sort(function (a, b) { return b.at - a.at; });
     return out.filter(function (e) {
+      var k = '$' + (e.wf || '') + '\u0001' + e.t;
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    }).slice(0, PH_MAX);
+  }
+
+  /* the workflow open now, by its file: its path under workflows/, as its tab names it. One not saved yet and
+     opened again is named "shot (2)": it is the same one, so the number goes */
+  function phWfKey() {
+    try {
+      var app = getApp(), ws = app && app.extensionManager && app.extensionManager.workflow;
+      var wf = ws && ws.activeWorkflow;
+      var k = String((wf && (wf.key || wf.path)) || '');
+      if (k && wf.isTemporary) k = k.replace(/ \(\d+\)(\.json)?$/i, '$1');
+      return k;
+    } catch (e) { return ''; }
+  }
+
+  function phWfLabel(k) { return String(k || '').split('/').pop().replace(/\.json$/i, ''); }
+
+  /* What the list and the arrows go through: every prompt (each text once, newest first), or, with the history
+     set to This workflow, only the prompts run from the workflow open now */
+  function phScopeKey() { return S.phScope === 'wf' ? phWfKey() : ''; }
+
+  function phView() {
+    var k = phScopeKey(), seen = {};
+    return phList().filter(function (e) {
+      if (k && e.wf !== k) return false;
       if (seen['$' + e.t]) return false;
       seen['$' + e.t] = 1;
       return true;
-    }).slice(0, PH_MAX);
+    });
   }
 
   function phKeepLocal() {
@@ -6823,11 +6862,11 @@
 
   function phAdd(texts) {
     if (!phOn()) return;
-    var now = Date.now(), list = phList().slice(), n = 0;
+    var now = Date.now(), list = phList().slice(), n = 0, wf = phWfKey();
     (texts || []).forEach(function (t) {
       t = String(t || '');
       if (!t.trim() || t.length > PH_LONG) return;
-      list.unshift({ t: t, at: now });
+      list.unshift(wf ? { t: t, at: now, wf: wf } : { t: t, at: now });
       n++;
     });
     if (!n) return;
@@ -6931,7 +6970,7 @@
     }
     function begin() {
       if (st.i >= 0) return;
-      st.list = phList().slice();
+      st.list = phView();
       st.draft = ta.value;
     }
     function step(d) {
@@ -7154,11 +7193,13 @@
           (opts.pop ? '<button type="button" class="shb-ph-x" title="Close (Esc)">\u00d7</button>'
             : '<button type="button" class="shb-ph-x" title="Fold the history away">' + ico('chevRight', 16) + '</button>') + '</div>' +
         '<input class="shb-ph-q" type="text" spellcheck="false" autocomplete="off" placeholder="Find a prompt">' +
+        '<div class="shb-ph-sc"><button type="button" data-sc="all" title="Every prompt you ran">All</button>' +
+          '<button type="button" data-sc="wf"></button></div>' +
         '<div class="shb-ph-list"></div>' +
       '</div>';
     var q = side.querySelector('.shb-ph-q'), listEl = side.querySelector('.shb-ph-list'), shown = [];
     function mark() {
-      var cur = ta.value, top = phList()[0];
+      var cur = ta.value, top = phView()[0];
       Array.prototype.forEach.call(listEl.querySelectorAll('[data-ph]'), function (r) {
         var e = shown[+r.getAttribute('data-ph')];
         r.classList.toggle('shb-ph-on', !!e && e.t === cur);
@@ -7171,7 +7212,7 @@
       try { if (opts.note) opts.note(t); else setStatus('ok', t); } catch (e) {}
     }
     function keep(btn) {
-      var t = ta.value, top = phList()[0];
+      var t = ta.value, top = phView()[0];
       if (!phOn()) return;
       if (!t.trim()) { say('The box is empty: nothing to keep'); return; }
       if (top && top.t === t) { say('This prompt is the newest in the history already'); return; }
@@ -7180,15 +7221,27 @@
       say('Kept in the history, without a run');
       try { btn.animate([{ transform: 'scale(1.3)', color: '#9cc0ff' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' }); } catch (e) {}
     }
+    function drawScope() {
+      var key = phWfKey(), scope = phScopeKey(), wb = side.querySelector('[data-sc="wf"]');
+      wb.textContent = key ? phWfLabel(key) : 'This workflow';
+      wb.title = key ? 'Only the prompts run from ' + key : 'This workflow has no file name yet';
+      wb.disabled = !key;
+      side.querySelector('[data-sc="all"]').classList.toggle('shb-on', !scope);
+      wb.classList.toggle('shb-on', !!scope);
+    }
     function draw() {
-      var all = phList(), ql = q.value.trim().toLowerCase();
+      var all = phView(), scope = phScopeKey(), ql = q.value.trim().toLowerCase();
       shown = ql ? all.filter(function (e) { return e.t.toLowerCase().indexOf(ql) >= 0; }) : all;
+      drawScope();
       Array.prototype.forEach.call(side.querySelectorAll('.shb-ph-n'), function (n) { n.textContent = all.length ? String(all.length) : ''; });
       listEl.innerHTML = shown.length ? shown.map(function (e, i) {
+        /* in All, each prompt says which workflow it ran from */
+        var from = (!scope && e.wf) ? ' \u00b7 ' + phWfLabel(e.wf) : '';
         return '<button type="button" class="shb-ph-row" data-ph="' + i + '" title="' + esc(e.t.length > 900 ? e.t.slice(0, 900) + '\u2026' : e.t) + '">' +
-          '<span class="shb-ph-t">' + esc(e.t.slice(0, 400)) + '</span><span class="shb-ph-a">' + esc(phAgo(e.at)) + '</span></button>';
+          '<span class="shb-ph-t">' + esc(e.t.slice(0, 400)) + '</span><span class="shb-ph-a">' + esc(phAgo(e.at) + from) + '</span></button>';
       }).join('') : '<div class="shb-ph-none">' + (ql ? 'No prompt has \u201c' + esc(q.value.trim()) + '\u201d'
-        : 'No prompts yet. Each run keeps the prompts it sends, newest first.') + '</div>';
+        : (scope ? 'No prompts from ' + esc(phWfLabel(scope)) + ' yet. Each run keeps the prompts it sends; All has the others.'
+          : 'No prompts yet. Each run keeps the prompts it sends, newest first.')) + '</div>';
       mark();
     }
     function pick(t) {
@@ -7207,6 +7260,15 @@
     if (rail) rail.onclick = function (e) { if (!(e.target.closest && e.target.closest('.shb-ph-keep'))) setOpen(true); };
     Array.prototype.forEach.call(side.querySelectorAll('.shb-ph-keep'), function (b) {
       b.addEventListener('click', function () { keep(b); });
+    });
+    /* All or This workflow, kept for the next time */
+    side.querySelector('.shb-ph-sc').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-sc]');
+      if (!b || b.disabled) return;
+      var sc = b.getAttribute('data-sc') === 'wf' ? 'wf' : 'all';
+      if (S.phScope !== sc) { S.phScope = sc; save(); }
+      draw();
+      try { ta.focus(); } catch (err) {}
     });
     side.querySelector('.shb-ph-x').onclick = function () { if (opts.pop) { if (opts.close) opts.close(); } else setOpen(false); };
     listEl.addEventListener('click', function (e) {
@@ -7290,10 +7352,11 @@
       if (LUPA.ph) LUPA.ph.step(1);
       return;
     }
-    var list = phList();
+    var list = phView();
     if (!list.length) {
       hbClose();
-      setStatus('ok', 'No prompts yet: each run keeps the prompts it sends, newest first');
+      setStatus('ok', phScopeKey() ? 'No prompts from ' + phWfLabel(phScopeKey()) + ' yet: each run keeps the prompts it sends'
+        : 'No prompts yet: each run keeps the prompts it sends, newest first');
       return;
     }
     var cur = String(w.value || '');
@@ -18353,7 +18416,7 @@
     { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
     { uid: 'tool:phist', icon: 'history', name: 'Prompt History', keys: '↑ in an empty box', desc: 'The prompts you ran, back with ↑, as in Claude',
-      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; its + keeps the prompt in the box without a run; the tool\'s button, on a bar, lists them too.' },
+      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json, each with the workflow it ran from. The panel shows All of them (the start) or only This workflow\'s, and \u2191 follows it. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; its + keeps the prompt in the box without a run; the tool\'s button, on a bar, lists them too.' },
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
     { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
