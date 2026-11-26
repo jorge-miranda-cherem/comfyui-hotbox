@@ -21,6 +21,10 @@ the list of shared libraries (POST /hotbox/libraries) answer only requests from 
 address, or the address ComfyUI itself answers on). From any other computer, or through a proxy, they
 answer 403, so a ComfyUI started with --listen never lets someone else point Hotbox at a folder. Everything
 else keeps working from anywhere, inside the folders already set.
+
+Get Workflow (GET /hotbox/workflow) reads the workflow that made a file given by its path: the _ui.json saved
+beside EXR frames, the text of a PNG, the metadata of an MP4 / MOV. It only reads, only those, and only the
+workflow in them, and like Set Project it answers only the computer running ComfyUI.
 """
 import ipaddress
 import json
@@ -28,7 +32,9 @@ import logging
 import os
 import re
 import shutil
+import struct
 import sys
+import zlib
 
 from aiohttp import web
 
@@ -345,7 +351,271 @@ def _library_info(l, buttons):
     return info
 
 
+# ---- Get Workflow: the workflow that made a file, read by its path
+WF_VIDEO = (".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".mxf")
+WF_ISO = (".mp4", ".mov", ".m4v")
+WF_MAX = 64 * 1024 * 1024
+FRAME_RE = re.compile(r"%0?(\d*)d|#+|\$F(\d*)")
+
+
+def _wf_json(path):
+    """A _ui.json: the workflow (and prompt) ComfyUI saved beside the frames"""
+    name = os.path.basename(path)
+    if os.path.getsize(path) > WF_MAX:
+        raise ValueError(name + " is too big to be a workflow")
+    with open(path, encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except ValueError:
+            raise ValueError(name + " is not readable JSON")
+    if isinstance(data, dict) and (data.get("workflow") or data.get("prompt")):
+        return name, data.get("workflow"), data.get("prompt")
+    if isinstance(data, dict) and data.get("nodes"):
+        return name, data, None
+    raise ValueError(name + " carries no nodes: it is not a workflow")
+
+
+def _wf_png(path):
+    """A PNG's text chunks (tEXt, iTXt): ComfyUI's save keeps workflow and prompt there. None without them"""
+    found = {}
+    with open(path, "rb") as f:
+        if f.read(8) != b"\x89PNG\r\n\x1a\n":
+            raise ValueError(os.path.basename(path) + " is not a PNG")
+        while True:
+            head = f.read(8)
+            if len(head) < 8:
+                break
+            size, kind = struct.unpack(">I", head[:4])[0], head[4:8]
+            if kind in (b"tEXt", b"iTXt") and size <= WF_MAX:
+                body = f.read(size)
+                f.seek(4, 1)
+                cut = body.find(b"\x00")
+                key, text = body[:cut].decode("latin-1"), body[cut + 1:]
+                if kind == b"iTXt":
+                    packed = text[:1] == b"\x01"
+                    text = text[2:]
+                    text = text[text.find(b"\x00") + 1:]
+                    text = text[text.find(b"\x00") + 1:]
+                    if packed:
+                        text = zlib.decompress(text)
+                if key in ("workflow", "prompt"):
+                    found[key] = text.decode("utf-8", "replace")
+            elif kind == b"IEND":
+                break
+            else:
+                f.seek(size + 4, 1)
+    out = {}
+    for k, v in found.items():
+        try:
+            out[k] = json.loads(v)
+        except ValueError:
+            pass
+    return (out.get("workflow"), out.get("prompt")) if out else None
+
+
+def _iso_boxes(b, s, e):
+    p = s
+    while p + 8 <= e:
+        size, head = struct.unpack(">I", b[p:p + 4])[0], 8
+        if size == 1:
+            if p + 16 > e:
+                return
+            size, head = struct.unpack(">Q", b[p + 8:p + 16])[0], 16
+        elif size == 0:
+            size = e - p
+        if size < head or p + size > e:
+            return
+        yield b[p + 4:p + 8], p + head, p + size, p
+        p += size
+
+
+def _wf_iso(path):
+    """An MP4 / MOV's metadata: the keys and ilst items under moov (a comment may hold both). None without them"""
+    moov = None
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        end, p = f.tell(), 0
+        while p + 8 <= end:
+            f.seek(p)
+            head = f.read(16)
+            if len(head) < 8:
+                break
+            size, kind, hs = struct.unpack(">I", head[:4])[0], head[4:8], 8
+            if size == 1 and len(head) >= 16:
+                size, hs = struct.unpack(">Q", head[8:16])[0], 16
+            elif size == 0:
+                size = end - p
+            if size < hs:
+                break
+            if kind == b"moov":
+                if size > WF_MAX:
+                    raise ValueError(os.path.basename(path) + ": its metadata is too big to read")
+                f.seek(p)
+                moov = f.read(size)
+                break
+            p += size
+    if not moov:
+        return None
+    recs = []
+
+    def meta(s, e):
+        st = s + 4 if (s + 12 <= e and moov[s + 4:s + 8] != b"hdlr") else s
+        keys = []
+        for kind, cs, ce, _ in _iso_boxes(moov, st, e):
+            if kind == b"keys" and cs + 8 <= ce:
+                n, q = struct.unpack(">I", moov[cs + 4:cs + 8])[0], cs + 8
+                for _i in range(n):
+                    if q + 8 > ce:
+                        break
+                    ks = struct.unpack(">I", moov[q:q + 4])[0]
+                    if ks < 8 or q + ks > ce:
+                        break
+                    keys.append(moov[q + 8:q + ks].decode("utf-8", "replace"))
+                    q += ks
+            elif kind == b"ilst":
+                for item, ics, ice, ip in _iso_boxes(moov, cs, ce):
+                    idx = struct.unpack(">I", moov[ip + 4:ip + 8])[0]
+                    for dk, dcs, dce, _ in _iso_boxes(moov, ics, ice):
+                        if dk == b"data" and dce >= dcs + 8:
+                            key = keys[idx - 1] if 1 <= idx <= len(keys) else item.decode("latin-1")
+                            recs.append((key, moov[dcs + 8:dce].decode("utf-8", "replace")))
+
+    hs = 16 if struct.unpack(">I", moov[:4])[0] == 1 else 8
+    for kind, cs, ce, _ in _iso_boxes(moov, hs, len(moov)):
+        if kind == b"meta":
+            meta(cs, ce)
+        elif kind == b"udta":
+            for k3, cs3, ce3, _ in _iso_boxes(moov, cs, ce):
+                if k3 == b"meta":
+                    meta(cs3, ce3)
+    out = {}
+
+    def take(k, v):
+        if out.get(k) or not v:
+            return
+        try:
+            out[k] = json.loads(v) if isinstance(v, str) else v
+        except ValueError:
+            pass
+
+    for key, val in recs:
+        k = key.lower()
+        if k in ("workflow", "prompt"):
+            take(k, val)
+        elif k in ("comment", "\u00a9cmt"):
+            try:
+                j = json.loads(val)
+            except ValueError:
+                continue
+            if isinstance(j, dict):
+                take("workflow", j.get("workflow"))
+                take("prompt", j.get("prompt"))
+    return (out.get("workflow"), out.get("prompt")) if out else None
+
+
+def _newest(folder, rx):
+    """The newest file in folder whose name matches rx"""
+    try:
+        names = [n for n in os.listdir(folder) if rx.match(n)]
+    except OSError:
+        return ""
+    paths = [os.path.join(folder, n) for n in names]
+    paths = [p for p in paths if os.path.isfile(p)]
+    return max(paths, key=os.path.getmtime) if paths else ""
+
+
+def _ui_json_near(path):
+    """A _ui.json of the same frames, whichever frame it sits beside: shot.%04d.exr, shot.####.exr, shot.1001.exr"""
+    folder, base = os.path.split(path)
+    m = re.match(r"^(.*?)(%0?\d*d|#+|\$F\d*)(.*?)\.[^.]+$", base)
+    if m:
+        rx = re.compile("^" + re.escape(m.group(1)) + r"\d+" + re.escape(m.group(3)) + r"_ui\.json$", re.I)
+    else:
+        f = re.match(r"^(.*?[._])\d+$", os.path.splitext(base)[0])
+        if not f:
+            return ""
+        rx = re.compile("^" + re.escape(f.group(1)) + r"\d+_ui\.json$", re.I)
+    return _newest(folder, rx)
+
+
+def _at_frame(path, frame):
+    def num(m):
+        tok = m.group(0)
+        if tok.startswith("#"):
+            width = len(tok)
+        else:
+            pad = m.group(1) if tok.startswith("%") else m.group(2)
+            width = int(pad) if pad and pad.isdigit() else 1
+        return str(frame).zfill(width)
+    return FRAME_RE.sub(num, path, count=1)
+
+
+def workflow_of(raw, frame=None):
+    """(file name, workflow, prompt) of what made the file at raw (a path, or one relative to ComfyUI's input
+    folder: a still, a numbered frame, a sequence pattern, a folder of frames, a clip); ValueError says why not"""
+    p = str(raw or "").strip()
+    if not p:
+        raise ValueError("No path given")
+    if not os.path.isabs(p):
+        import folder_paths
+        p = os.path.join(folder_paths.get_input_directory(), p)
+    p = os.path.normpath(p)
+    if os.path.isdir(p):
+        side = _newest(p, re.compile(r"^.+_ui\.json$", re.I))
+        if side:
+            return _wf_json(side)
+        raise ValueError("No workflow: there is no _ui.json in " + os.path.basename(p) + ", so ComfyUI did not render these frames")
+    base = os.path.basename(p)
+    ext = os.path.splitext(base)[1].lower()
+    if ext in WF_VIDEO:
+        side = os.path.splitext(p)[0] + "_ui.json"
+        if os.path.isfile(side):
+            return _wf_json(side)
+        if not os.path.isfile(p):
+            raise ValueError("There is no " + base)
+        got = _wf_iso(p) if ext in WF_ISO else None
+        if got:
+            return (base,) + got
+        raise ValueError("No workflow: ComfyUI did not render this clip (no " + os.path.basename(side) + ", nothing in its metadata)")
+    solid = p
+    if FRAME_RE.search(base):
+        solid = _at_frame(p, frame) if frame is not None else ""
+    if solid and os.path.isfile(solid):
+        if ext == ".png":
+            got = _wf_png(solid)
+            if got:
+                return (os.path.basename(solid),) + got
+        side = os.path.splitext(solid)[0] + "_ui.json"
+        if os.path.isfile(side):
+            return _wf_json(side)
+    side = _ui_json_near(p)
+    if side:
+        return _wf_json(side)
+    if ext == ".png" and solid and os.path.isfile(solid):
+        raise ValueError(os.path.basename(solid) + " carries no workflow: it was not written by a ComfyUI save, or the metadata was stripped")
+    if not os.path.isdir(os.path.dirname(p)):
+        raise ValueError("There is no folder " + os.path.dirname(p))
+    raise ValueError("No workflow: ComfyUI did not render " + base + " (no _ui.json of it in that folder)")
+
+
 def setup(routes):
+    @routes.get("/hotbox/workflow")
+    async def get_workflow(request):
+        """Get Workflow, for a file given by its path: what made it. Only on the computer running ComfyUI"""
+        if not is_same_machine(request):
+            msg = "A workflow is read by its path only on the computer running ComfyUI"
+            return web.json_response({"ok": False, "error": msg}, status=403)
+        frame = request.query.get("frame")
+        try:
+            frame = int(frame) if frame not in (None, "") else None
+        except ValueError:
+            frame = None
+        try:
+            name, wf, prompt = workflow_of(request.query.get("path"), frame)
+        except (OSError, ValueError, zlib.error, struct.error) as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        return web.json_response({"ok": True, "name": name, "workflow": wf, "prompt": prompt})
+
     @routes.get("/hotbox/folder")
     async def get_folder(request):
         return _folder_info(request)

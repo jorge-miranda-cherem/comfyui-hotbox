@@ -3,8 +3,9 @@ Hotbox for ComfyUI
 Open-source, context-aware hotbox with smart node auto-wiring, model swapping,
 drag-to-pin bars, pro sliders, visual crop/paint editors (Alt+Z), label studio
 (Alt+N), load-in-canvas (Alt+R) and a camera zoom toggle (.).
-The extension lives in ./js and adds no Python nodes; hotbox_files.py only serves
-its preferences folder (the default one, or one picked in Settings).
+The extension lives in ./js and adds no Python nodes; hotbox_files.py serves its
+preferences folder (the default one, or one picked in Settings) and, for Get Workflow,
+reads the workflow that made a file given by its path.
 """
 
 NODE_CLASS_MAPPINGS = {}
