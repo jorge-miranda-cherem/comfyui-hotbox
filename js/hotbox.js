@@ -7726,6 +7726,24 @@
     tool: 'brush', size: 24, color: '#ffffff', opacity: 1
   };
 
+  /* The strokes a Painter already has: its own canvas (Nodes 2.0), which holds them even before a run uploads
+     them, or else the picture its mask widget names ("sub/painter-12.png [input]") */
+  function painterCanvasOf(node) {
+    try {
+      var nc = document.querySelector('[data-node-id="' + node.id + '"] canvas[data-testid="painter-canvas"]');
+      return (nc && nc.width > 0 && nc.height > 0) ? nc : null;
+    } catch (e) { return null; }
+  }
+
+  function painterMaskInfo(node) {
+    var w = widgetNamed(node, 'mask');
+    var v = (w && typeof w.value === 'string') ? w.value.trim() : '';
+    if (!v) return null;
+    var m = v.match(/^(.+?) \[([^\]]+)\]$/);
+    var p = m ? m[1] : v, i = p.lastIndexOf('/');
+    return { filename: i >= 0 ? p.slice(i + 1) : p, subfolder: i >= 0 ? p.slice(0, i) : '', type: m ? m[2] : 'input' };
+  }
+
   function paintEditClose(keep) {
     if (!PE.el) return;
     var el = PE.el, node = PE.node, layer = PE.layer, changed = PE.changed;
@@ -7745,8 +7763,8 @@
           var v = (j.subfolder ? j.subfolder + '/' : '') + j.name + ' [input]';
           setWidgetVal(node, 'mask', v);
           try {
-            var nc = document.querySelector('[data-node-id="' + node.id + '"] canvas[data-testid="painter-canvas"]');
-            if (nc && nc.width > 0) {
+            var nc = painterCanvasOf(node);
+            if (nc) {
               var ctx = nc.getContext('2d');
               ctx.clearRect(0, 0, nc.width, nc.height);
               ctx.drawImage(layer, 0, 0, nc.width, nc.height);
@@ -7799,6 +7817,28 @@
       var ims = producedImages(orig.node);
       if (ims.length) src = viewURL(ims[0]);
     }
+    /* what the Painter already has goes on the layer first, so Done keeps it and paints on top of it; Undo and
+       Clear work as before. A picture that comes late goes under any stroke made meanwhile */
+    function putStrokes(from) {
+      if (PE.layer !== layer) return;
+      try {
+        var c = layer.getContext('2d');
+        c.save();
+        c.globalCompositeOperation = 'destination-over';
+        c.drawImage(from, 0, 0, layer.width, layer.height);
+        c.restore();
+      } catch (e) {}
+    }
+    function loadStrokes() {
+      var nc = painterCanvasOf(node);
+      if (nc) { putStrokes(nc); return; }
+      var mi = painterMaskInfo(node);
+      if (!mi) return;
+      var mim = new Image();
+      mim.crossOrigin = 'anonymous';
+      mim.onload = function () { putStrokes(mim); };
+      mim.src = viewURL(mi);
+    }
     function initCanvas(w, h) {
       PE.W = w; PE.H = h;
       layer.width = w; layer.height = h;
@@ -7808,12 +7848,16 @@
         layer.style.height = Math.min(h, 600) + 'px';
         img.style.display = 'none';
       }
+      loadStrokes();
     }
     if (src) {
       img.onload = function () { initCanvas(img.naturalWidth || 1024, img.naturalHeight || 1024); };
       img.src = src;
     } else {
-      initCanvas(1024, 1024);
+      /* no picture: the Painter's own size (its canvas, or its width and height), so Done does not resize it */
+      var nc0 = painterCanvasOf(node);
+      var ww = widgetNamed(node, 'width'), wh = widgetNamed(node, 'height');
+      initCanvas(nc0 ? nc0.width : ((ww && +ww.value) || 1024), nc0 ? nc0.height : ((wh && +wh.value) || 1024));
     }
 
     function toPt(ev) {
