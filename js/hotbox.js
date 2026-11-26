@@ -71,7 +71,7 @@
     customColors: {},       /* user colors of bar buttons by uid: a swatch name (Red, Amber…) */
     customFill: {},         /* bar buttons painted whole by their color (uid: true); the others color only their mark */
     customKeys: {},         /* a key of its own for a bar button (uid: 'q'), set in its Edit Button box; it works while the button shows */
-    customIcons: {},        /* the sign picked for a saved button in the button editor (uid: '◆'), where its sparkles were */
+    customIcons: {},        /* the icon picked for a saved button or a group (uid: 'i:gStack'); an older pick is a sign ('◆') */
     hbShare: true,          /* Copy to share / Paste: a saved button or a group travels as text, through any chat (false: not shown) */
     hbKeep: {},             /* power tools the user placed on a bar ('bot:tool:zoom'): shown there, dimmed where they do not apply */
     userTools: [],          /* power tools of your own, written in Settings ({ id, name, icon, when, code }): see YOUR OWN POWER TOOLS */
@@ -763,6 +763,20 @@
     paste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11v6"/><path d="m9 14 3 3 3-3"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    gStack: '<path d="M4 10a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/><path d="M10 16a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/><rect x="14" y="14" width="8" height="8" rx="2"/>',
+    gLayers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+    gPackage: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.7 4.73a2 2 0 0 0 2 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/>',
+    gNodes: '<rect x="3" y="3" width="8" height="8" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
+    gGrid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+    gBoxes: '<rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><rect x="8" y="3" width="8" height="8" rx="1.5"/>',
+    gPuzzle: '<path d="M4 8h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H4z"/>',
+    gChain: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    gImage: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+    gPerson: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    gText: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+    gBulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    gCamera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>',
+    gBolt: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
     expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
     wand: '<path d="M21.6 3.6 20.4 2.4a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.3 1.3a1.2 1.2 0 0 0 1.7 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/>'
   };
@@ -1211,6 +1225,14 @@
       '.shb-tpl-del.shb-armed{opacity:1;background:rgba(232,115,95,.32);color:#ffb3a6}',
       '.shb-btn.shb-armed{background:rgba(232,115,95,.28);border-color:#e0705f;color:#ffd0c8}',
       '.shb-ebtn-row{flex-wrap:wrap}',
+      '.shb-ebtn-gi{align-items:flex-start;flex-wrap:nowrap}',
+      '.shb-ebtn-gi > span{padding-top:15px}',
+      '.shb-gicons{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}',
+      '.shb-gicons small{display:block;margin:0 0 4px;font:500 11px/1.2 Inter,system-ui,sans-serif;color:#7a7a7a}',
+      '.shb-gicons-r{display:flex;flex-wrap:wrap;gap:4px}',
+      '.shb-gicon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;box-sizing:border-box;border:1px solid #333333;border-radius:6px;background:transparent;color:#b5b5b5;cursor:pointer}',
+      '.shb-gicon:hover{background:#2a2a2a;color:#e6e6e6}',
+      '.shb-gicon.shb-on{background:#343434;border-color:#5a5a5a;color:var(--shb-tint,#ffffff)}',
       '.shb-ebtn-key{min-width:96px;justify-content:center;font-weight:600}',
       '.shb-ebtn-row .shb-btn.shb-na{opacity:.45}',
       /* The nodes of a saved button (and what it shares with the header of the button editor) */
@@ -5607,11 +5629,17 @@
   var HB_SWATCHES = [
     { name: 'Default', color: '',        bgcolor: '',        dot: '#9a9a9a' },
     { name: 'Red',     color: '#3d2523', bgcolor: '#4d302d', dot: '#d26b5f' },
+    { name: 'Orange',  color: '#3d2c21', bgcolor: '#4d392b', dot: '#d9844a' },
     { name: 'Amber',   color: '#3b3121', bgcolor: '#4b3f2a', dot: '#d6a74c' },
+    { name: 'Olive',   color: '#3b3d21', bgcolor: '#4a4d2b', dot: '#a9b04f' },
     { name: 'Green',   color: '#213a2b', bgcolor: '#2a4a37', dot: '#5db07d' },
+    { name: 'Teal',    color: '#213d3a', bgcolor: '#2b4d48', dot: '#4fb3a5' },
+    { name: 'Sky',     color: '#21353d', bgcolor: '#2b434d', dot: '#56aed0' },
     { name: 'Blue',    color: '#20324a', bgcolor: '#29405e', dot: '#5f97d6' },
+    { name: 'Indigo',  color: '#21253d', bgcolor: '#2b304d', dot: '#7381d9' },
     { name: 'Purple',  color: '#2f2645', bgcolor: '#3c3158', dot: '#9378d6' },
-    { name: 'Pink',    color: '#3d2335', bgcolor: '#4d2d44', dot: '#cc6ea9' }
+    { name: 'Pink',    color: '#3d2335', bgcolor: '#4d2d44', dot: '#cc6ea9' },
+    { name: 'Slate',   color: '#292e36', bgcolor: '#353a43', dot: '#8d9bb0' }
   ];
 
   function barTint(uid) {
@@ -9068,13 +9096,14 @@
       var src = btnEl && btnEl.querySelector(':scope > .shb-num, :scope > .shb-pin-dot, :scope > .shb-tpl-ico, :scope > .shb-ico');
       lead = src ? src.outerHTML : '';
     } catch (e) {}
-    if (!lead) lead = /^grp:/.test(uid) ? ico('folder', 15) : (/^tpl:/.test(uid) ? tplIcoHTML(uid, 15) : '<i class="shb-pin-dot"></i>');
+    if (!lead) lead = /^grp:/.test(uid) ? ico(hbIconOf(uid) || 'folder', 15) : (/^tpl:/.test(uid) ? tplIcoHTML(uid, 15) : '<i class="shb-pin-dot"></i>');
+    var giOk = /^(tpl|grp):/.test(uid), gi = giOk ? hbGiconOn(uid) : '', giSet = false;
     var cur = (S.customColors && S.customColors[uid]) || '';
     var fill = !!(S.customFill && S.customFill[uid]);
     var bg = owns(document.createElement('div'));
     bg.className = 'shb-modal-bg';
     bg.innerHTML =
-      '<div class="shb-modal" style="width:min(430px,92vw)">' +
+      '<div class="shb-modal" style="width:min(' + (giOk ? 500 : 430) + 'px,92vw)">' +
         '<div class="shb-modal-t"><span>Edit Button</span></div>' +
         '<div class="shb-ebtn-prev"><span class="shb-btn" data-rbi-prev>' + lead + '<span class="shb-lbl" data-rbi-plbl>' + esc(item.label) + '</span></span></div>' +
         '<div class="shb-ebtn-row"><span>Name</span><input class="shb-input" style="flex:1" data-rbi-in value="' + esc(item.label) + '" placeholder="Custom button name…"></div>' +
@@ -9084,6 +9113,7 @@
             return '<i class="shb-swatch' + (on ? ' shb-on' : '') + '" data-rbi-col="' + (i ? esc(sw.name) : '') + '" style="background:' + sw.dot + '" title="' + esc(i ? sw.name : 'Default color') + '"></i>';
           }).join('') +
         '</div></div>' +
+        (giOk ? '<div class="shb-ebtn-row shb-ebtn-gi"><span>Icon</span>' + hbGiconsHTML(gi, 'data-rbi-icon') + '</div>' : '') +
         '<div class="shb-ebtn-row"><span>Paint</span><span class="shb-seg shb-ebtn-seg" data-rbi-seg>' +
           '<button type="button" data-rbi-fill="0" title="Only its dot, icon or number">Mark</button>' +
           '<button type="button" data-rbi-fill="1" title="The whole button, in a soft shade of the color">Whole button</button>' +
@@ -9177,6 +9207,11 @@
       else delete S.customColors[uid];
       if (col && whole) S.customFill[uid] = true;
       else delete S.customFill[uid];
+      if (giSet) {
+        if (!S.customIcons || typeof S.customIcons !== 'object') S.customIcons = {};
+        if (!gi || gi === hbIconDef(uid)) delete S.customIcons[uid];
+        else S.customIcons[uid] = 'i:' + gi;
+      }
       if (k) {
         Object.keys(S.customKeys).forEach(function (u) { if (S.customKeys[u] === k) delete S.customKeys[u]; });
         S.customKeys[uid] = k;
@@ -9190,6 +9225,22 @@
       var t = ev.target && ev.target.closest ? ev.target : null;
       var sw = t && t.closest('[data-rbi-col]');
       var fb = t && t.closest('[data-rbi-fill]');
+      var gb = t && t.closest('[data-rbi-icon]');
+      if (gb) {
+        gi = gb.getAttribute('data-rbi-icon');
+        giSet = true;
+        Array.prototype.forEach.call(bg.querySelectorAll('[data-rbi-icon]'), function (el) {
+          el.classList.toggle('shb-on', el.getAttribute('data-rbi-icon') === gi);
+        });
+        /* the preview wears it too, unless a key of its own leads the button there */
+        var pl = prev.firstElementChild;
+        if (pl && !pl.classList.contains('shb-num')) {
+          var tmp = document.createElement('span');
+          tmp.innerHTML = /^grp:/.test(uid) ? ico(gi, 15) : '<span class="shb-tpl-ico">' + ico(gi, 15) + '</span>';
+          prev.replaceChild(tmp.firstChild, pl);
+        }
+        return;
+      }
       if (sw) cur = sw.getAttribute('data-rbi-col');
       else if (fb) fill = fb.getAttribute('data-rbi-fill') === '1';
       else return;
@@ -9241,7 +9292,7 @@
       }, function (err) { setStatus('error', 'Could not copy: ' + msgOf(err)); });
     };
     bg.querySelector('[data-rbi-cancel]').onclick = close;
-    bg.querySelector('[data-rbi-reset]').onclick = function () { saveBtn('', '', false, ''); };
+    bg.querySelector('[data-rbi-reset]').onclick = function () { gi = ''; giSet = giOk; saveBtn('', '', false, ''); };
     bg.querySelector('[data-rbi-ok]').onclick = function () { saveBtn(String(inp.value || '').trim(), cur, fill, key); };
     inp.onkeydown = function (ev) {
       ev.stopPropagation();
@@ -9373,7 +9424,7 @@
     var cls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (barName === 'bot' ? 'shb-act' : 'shb-tool')) + ' shb-grp-btn' + (keyed ? '' : ' shb-lead') + tint.cls;
     return '<span class="shb-item-wrap shb-grp' + (pin ? ' shb-grp-show shb-grp-pin' : '') + '" data-hb-uid="' + esc(item.uid) + '" data-hb-bar="' + esc(barName) + '" data-hb-gkey="' + esc(item.id) + '">' +
       '<button type="button" class="' + cls + '"' + tint.style + ' data-hb-run="' + esc(item.uid) + '" title="' + esc(item.title) + '">' +
-        (keyed ? '<span class="shb-num">' + esc(hbKeyName(hbKeyFor(item.uid)) || numKey) + '</span>' : ico('folder', hbLeadSz())) +
+        (keyed ? '<span class="shb-num">' + esc(hbKeyName(hbKeyFor(item.uid)) || numKey) + '</span>' : ico(hbIconOf(item.uid) || 'folder', hbLeadSz())) +
         '<span class="shb-lbl">' + esc(item.label) + '</span>' +
         '<span class="shb-w-badge">' + esc(item.count) + '</span>' +
         '<span class="shb-grp-chev" data-hb-grpchev title="Keep it open · click again to close it">' + ico('chevDown', 12) + '</span>' +
@@ -14898,9 +14949,44 @@
     return (g && BRW_GLYPHS.indexOf(g) > 0) ? g : '';
   }
 
+  /* The icons a saved button or a group can wear instead of its sparkles or its folder: first shapes that say
+     "a group", then what the group is for. customIcons keeps 'i:<name>'; a sign picked before ('◆') still shows */
+  var HB_GICONS = [
+    { cap: 'Says group', list: [['sparkles', 'Sparkles'], ['folder', 'Folder'], ['gStack', 'Stack'], ['gLayers', 'Layers'], ['gPackage', 'Package'],
+      ['gNodes', 'Nodes'], ['gGrid', 'Grid'], ['gBoxes', 'Boxes'], ['gPuzzle', 'Puzzle'], ['gChain', 'Chain']] },
+    { cap: 'Says what it does', list: [['gImage', 'Image'], ['video', 'Video'], ['mask', 'Mask'], ['paint', 'Paint'], ['expand', 'Upscale'],
+      ['gPerson', 'Person'], ['gText', 'Text'], ['gBulb', 'Light'], ['gCamera', 'Camera'], ['gBolt', 'Fast'], ['wand', 'Fix'], ['star', 'Favorite']] }
+  ];
+
+  function hbGiconOk(n) {
+    return HB_GICONS.some(function (set) { return set.list.some(function (x) { return x[0] === n; }); });
+  }
+
+  /* the icon picked for a saved button or a group, or '' while it keeps its own */
+  function hbIconOf(uid) {
+    var v = (S.customIcons && typeof S.customIcons === 'object') ? S.customIcons[uid] : '';
+    var n = (typeof v === 'string' && v.indexOf('i:') === 0) ? v.slice(2) : '';
+    return (n && hbGiconOk(n)) ? n : '';
+  }
+
+  /* what it wears when nothing was picked: a group its folder, a saved button its sparkles */
+  function hbIconDef(uid) { return /^grp:/.test(uid) ? 'folder' : 'sparkles'; }
+
+  /* the icon lit in a picker: the one picked, else its own (none while an older sign is on) */
+  function hbGiconOn(uid) { return hbIconOf(uid) || (hbGlyphOf(uid) ? '' : hbIconDef(uid)); }
+
+  /* the picker, in two rows; attr names the attribute its buttons answer to */
+  function hbGiconsHTML(on, attr) {
+    return '<div class="shb-gicons">' + HB_GICONS.map(function (set) {
+      return '<div><small>' + esc(set.cap) + '</small><div class="shb-gicons-r">' + set.list.map(function (x) {
+        return '<button type="button" class="shb-gicon' + (x[0] === on ? ' shb-on' : '') + '" ' + attr + '="' + x[0] + '" title="' + esc(x[1]) + '" aria-label="' + esc(x[1]) + '">' + ico(x[0], 16) + '</button>';
+      }).join('') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
   function tplIcoHTML(uid, size) {
-    var g = hbGlyphOf(uid);
-    return '<span class="shb-tpl-ico">' + (g ? '<b class="shb-glyph" style="font-size:' + (size || 14) + 'px">' + g + '</b>' : ico('sparkles', size)) + '</span>';
+    var n = hbIconOf(uid), g = n ? '' : hbGlyphOf(uid);
+    return '<span class="shb-tpl-ico">' + (n ? ico(n, size) : g ? '<b class="shb-glyph" style="font-size:' + (size || 14) + 'px">' + g + '</b>' : ico('sparkles', size)) + '</span>';
   }
 
   /* the bottom bar's list, as it is (a bar that was never customized makes its own) */
@@ -15687,7 +15773,7 @@
     var tp = /^tpl:/.test(uid) ? tplById(uid.slice(4)) : null;
     var sub = tp ? brwNodeNames(tp).slice(0, 3).join(' · ')
       : (/^tool:/.test(uid) ? 'Hotbox tool' : (/^model:/.test(uid) ? 'Model' : 'Node'));
-    var icon = tp ? (hbGlyphOf(uid) || '✦') : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 13);
+    var icon = tp ? (hbIconOf(uid) ? ico(hbIconOf(uid), 13) : (hbGlyphOf(uid) || '✦')) : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 13);
     var key = hbKeyName(hbKeyFor(uid));
     var on = BRW.sel && BRW.sel.id === uid;
     return '<div class="shb-bed-card' + (on ? ' shb-on' : '') + (brwMatch(uid, q) ? '' : ' shb-dim') + '" data-bed-card="' + esc(uid) + '" data-bed-lane="' + esc(lane) + '" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
@@ -15895,6 +15981,7 @@
         '<div class="shb-bed-f"><div class="shb-bed-cap">Group</div>' +
           '<div class="shb-bed-name" style="--shb-tint:' + esc(brwTint(uid)) + '"><i class="shb-bed-sq"></i><input type="text" data-bed-name spellcheck="false" value="' + esc(hbBtnName(uid, g.name)) + '"></div></div>' +
         '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Color</span></div>' + brwSwatchesHTML(uid) + '</div>' +
+        '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Icon</span></div>' + hbGiconsHTML(hbGiconOn(uid), 'data-bed-icon') + '</div>' +
         '<div class="shb-bed-note">' + n + (n === 1 ? ' button' : ' buttons') + '. ' +
           (place === 'hidden' ? 'It is on no bar: drag it by its name, in its column, up onto the bar.' : 'Drag its button off a bar (or press its ×) to take it off that bar; it keeps its buttons.') +
           ' Deleting the group keeps its buttons too: they go back to the bar, and show under <b>Not in a group</b>.</div>' +
@@ -15912,13 +15999,10 @@
       var where = brwWhere(uid), curCtx = brwCtx();
       return '<div class="shb-bed-ibody" style="--shb-tint:' + esc(brwTint(uid)) + '">' +
         '<div class="shb-bed-f"><div class="shb-bed-cap">Button' + (tp && tp.lib ? ' <small>from ' + esc(tp.libLabel || 'a shared library') + (tp.canDelete ? '' : ' · read-only') + '</small>' : '') + '</div>' +
-          '<div class="shb-bed-name"><span class="shb-bed-ico">' + (tp ? glyph : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 14)) + '</span>' +
+          '<div class="shb-bed-name"><span class="shb-bed-ico">' + (tp ? (hbIconOf(uid) ? ico(hbIconOf(uid), 14) : glyph) : ico(/^tool:/.test(uid) ? 'tools' : 'plus', 14)) + '</span>' +
             '<input type="text" data-bed-name spellcheck="false" value="' + esc(hbUidLabel(uid)) + '"></div></div>' +
         '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Color</span></div>' + brwSwatchesHTML(uid) + '</div>' +
-        (tp ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Icon</span></div><div class="shb-bed-gl">' +
-          BRW_GLYPHS.map(function (gl) {
-            return '<button type="button" class="' + (gl === glyph ? 'shb-on' : '') + '" data-bed-glyph="' + gl + '">' + gl + '</button>';
-          }).join('') + '</div></div>' : '') +
+        (tp ? '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Icon</span></div>' + hbGiconsHTML(hbGiconOn(uid), 'data-bed-icon') + '</div>' : '') +
         '<div class="shb-bed-f"><div class="shb-bed-lab"><span>Hotkey</span></div>' +
           '<button type="button" class="shb-bed-keyb' + (grabbing ? ' shb-on' : '') + '" data-bed-act="key"><kbd>' + (grabbing ? '…' : esc(hbKeyName(key) || '—')) + '</kbd>' +
             '<span>' + (grabbing ? 'Press a key · Esc cancels · ⌫ clears' : (key ? 'Click to change' : 'Click, then press a key')) + '</span></button>' +
@@ -16456,6 +16540,17 @@
           if (!S.customColors || typeof S.customColors !== 'object') S.customColors = {};
           if (col) S.customColors[uid] = col;
           else { delete S.customColors[uid]; if (S.customFill) delete S.customFill[uid]; }
+        });
+        return;
+      }
+      var gic = t.closest('[data-bed-icon]');
+      if (gic) {
+        var nm = gic.getAttribute('data-bed-icon');
+        if (nm === hbGiconOn(uid)) return;
+        brwCommit('icon', 'the icon of "' + hbUidLabel(uid) + '"', function () {
+          if (!S.customIcons || typeof S.customIcons !== 'object') S.customIcons = {};
+          if (nm === hbIconDef(uid)) delete S.customIcons[uid];
+          else S.customIcons[uid] = 'i:' + nm;
         });
         return;
       }
