@@ -162,6 +162,64 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 4. Or give the button a canvas of its own: **Edit on a clean canvas** in the button editor opens a new tab with only its nodes, and a small bar stays there. Change them with ComfyUI itself, then **Save button**: the same button keeps them, the tab closes and you are back where you were.
 5. What the button held before is kept behind it (the last five): **Versions…** in that editor brings one back.
 
+## 14. Delete a saved button for good
+
+![Desert sunrise dragged past Remove to Delete for good at the end of the strip: gone from the bar, and Undo, lit for 10 seconds, brings it back; deleted again, then Done](docs/tutorial/14-delete-for-good.gif)
+
+1. Hold one of **your saved buttons** for edit mode and drag it: the red **Remove** strip under the bottom bar has a small, darker **Delete for good** at its right end.
+2. Let go there: the saved button itself is deleted, from every bar and every group it was in, with no trip to Settings.
+3. The edit bar says which one went, and its **Undo** stays lit for about 10 seconds, a line in it running out. **Undo** (or <kbd>Ctrl</kbd>+<kbd>Z</kbd>) brings it back with its place, its group, its name, its color and its key.
+4. Only your own saved buttons get that section: a power tool, a node or a group is only taken off the bar.
+
+## 15. Prompt History: the prompts you ran
+
+![Up in an empty prompt box brings back the prompts you ran; one changed and run is first now; the history button in the box's corner finds one by a word; in the Magnifier the history is on the right, all of it or only this workflow's](docs/tutorial/15-prompt-history.gif)
+
+1. Every run keeps the text of each prompt box it sends, newest first, in one list for all your prompt nodes.
+2. In an **empty** prompt box, <kbd>↑</kbd> brings back the last prompt; <kbd>↑</kbd> and <kbd>↓</kbd> go on to older and newer ones. Type, click or press any other key and it stays there to edit.
+3. The **history button** in the box's top-right corner lists them, with a field to find one by any word in it; a click puts it in.
+4. In the **Magnifier** (<kbd>Alt</kbd>+<kbd>Z</kbd>) the history is on the right: **All**, or only the prompts run from this workflow (the button with its name).
+
+## 16. Get the workflow back from an image
+
+![Get Workflow on a Load Image that shows a PNG ComfyUI wrote: Open in a new canvas puts its workflow in a tab of its own; back in the first tab, Insert into this workflow adds its nodes beside the node](docs/tutorial/16-get-workflow.gif)
+
+1. On a node that shows a picture or a clip ComfyUI made (Load Image, Preview / Save Image, Load Video, Save Video), open the hotbox and press **Get Workflow** in the bottom bar.
+2. **Open in a new canvas** puts the workflow that made it in a tab of its own; yours stays as it is.
+3. **Insert into this workflow** adds its nodes beside the node, at a free place, selected.
+
+## 17. Find and replace in the Magnifier
+
+![The Magnifier's search button: dusk found four times, Enter steps through them; Ctrl+H, first light, Replace, then All](docs/tutorial/17-find-and-replace.gif)
+
+1. In the **Magnifier**, the search button in its head (or <kbd>Ctrl</kbd>+<kbd>F</kbd>) opens a row under it: type, and every match is lit. <kbd>Enter</kbd> and <kbd>Shift</kbd>+<kbd>Enter</kbd> step through them; **Aa** matches case and <u>ab</u> whole words.
+2. <kbd>Ctrl</kbd>+<kbd>H</kbd> adds **Replace with**: **Replace** changes the lit one, **All** every one.
+3. <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes a replace back; <kbd>Esc</kbd> closes the row.
+
+## 18. Paint Studio keeps the Painter's strokes
+
+![A ring drawn in the Painter node; Alt+Z opens Paint Studio with it; a line added there, Enter, and the node has both](docs/tutorial/18-paint-keeps-strokes.gif)
+
+1. Paint right in the **Painter** node, then <kbd>Alt</kbd>+<kbd>Z</kbd>: **Paint Studio** opens with those strokes.
+2. Paint on top of them, and **Done** (<kbd>Enter</kbd>) keeps both in the node.
+
+## 19. A power tool of your own
+
+![Settings, Power Tools, New power tool: an icon, a name, Runs After a button adds nodes, its code pasted in, Test, Save; then Nano Banana 2 from the models drawer, and the tool puts a Save Image after it by itself](docs/tutorial/19-your-own-power-tool.gif)
+
+1. **Settings → Power Tools → New power tool** (the first row of the list): an icon, a name, a key, when it runs, and a box to **paste code** into.
+2. **Runs → When pressed** runs it from its button. **After a button adds nodes** also runs it by itself each time the hotbox adds nodes, with those nodes in `added`.
+3. **Test** runs it as it stands; **Save** keeps it in your preferences. From then on it is a power tool like the others: drag its row onto any bar.
+4. The one in the recording puts a **Save Image** after every API node a button brings in:
+
+   ```js
+   for (const n of added)
+     if (hotbox.isApiNode(n))
+       hotbox.addNode('SaveImage', { after: n });
+   ```
+
+   The code runs in your ComfyUI: paste only code you trust. More in [Your own power tools](docs/REFERENCE.md#your-own-power-tools).
+
 ---
 
 ## Keys at a glance
@@ -181,6 +239,8 @@ Saved buttons live in your preferences file (`hotbox.json`), so they survive res
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Render only the selected outputs (works with the hotbox closed) |
 | <kbd>L</kbd> (hotbox closed) | Arrange the selection along its wires, as Nuke's <kbd>L</kbd> does; on one node, line it up with what feeds it |
 | <kbd>Alt</kbd>+<kbd>R</kbd> · <kbd>Alt</kbd>+<kbd>N</kbd> | Load in Canvas · Label Studio |
+| <kbd>↑</kbd> · <kbd>↓</kbd> (in an empty prompt box) | The prompts you ran (Prompt History) |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> · <kbd>Ctrl</kbd>+<kbd>H</kbd> (in the Magnifier) | Find · find and replace |
 
 ---
 
