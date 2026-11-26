@@ -38,7 +38,7 @@ import zlib
 
 from aiohttp import web
 
-NAME_RE = re.compile(r"^(?:hotbox(?:_v\d+)?|active)\.json$")
+NAME_RE = re.compile(r"^(?:hotbox(?:_v\d+)?|active|prompt_history)\.json$")
 POINTER = "folder.json"
 LIBS = "libraries.json"
 BUTTON_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
