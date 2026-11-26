@@ -58,6 +58,8 @@
     lupaBox: 1,
     lupaWH: '',
     lupaHist: false,        /* the Magnifier's history panel is open (false, the start: folded into a strip) */
+    bxDim: 0.4,             /* Box Studio: how dark the picture is under the boxes (ComfyUI's editor uses 0.75) */
+    bxAll: 1,               /* Box Studio: the opacity of every box, on top of each box's own */
     phScope: 'all',         /* the history shows 'all' the prompts, or 'wf': only those run from the workflow open now */
     favImage: [],
     favVideo: [],
@@ -763,6 +765,10 @@
     paste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11v6"/><path d="m9 14 3 3 3-3"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    boxes: '<rect x="2.5" y="3" width="12" height="10" rx="1.5"/><rect x="9.5" y="11" width="12" height="10" rx="1.5"/><path d="M5 6h3"/>',
+    gridDots: '<g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.3"/><circle cx="12" cy="5" r="1.3"/><circle cx="19" cy="5" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/><circle cx="5" cy="19" r="1.3"/><circle cx="12" cy="19" r="1.3"/><circle cx="19" cy="19" r="1.3"/></g>',
+    undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
     gStack: '<path d="M4 10a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/><path d="M10 16a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/><rect x="14" y="14" width="8" height="8" rx="2"/>',
     gLayers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
     gPackage: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.7 4.73a2 2 0 0 0 2 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/>',
@@ -1940,6 +1946,70 @@
       '.shb-ph-rail .shb-ph-keep{margin:.35em 0 0;flex:0 0 auto}',
       /* the count holds its line, so the + under it stays put when the first prompt is kept */
       '.shb-ph-rail .shb-ph-n{min-height:1.3em}',
+      /* Box Studio (Alt+Z on Create Bounding Boxes) */
+      '.shb-bx{width:95vw;height:91vh;display:flex;flex-direction:column;background:var(--shb-bg,#222222);border:1px solid var(--shb-border,#3c3c3c);border-radius:8px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.6)}',
+      '.shb-bx-hd{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #333333;background:var(--shb-bg,#222222)}',
+      '.shb-bx-t{font-weight:600;color:var(--shb-fg,#e2e2e2);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}',
+      '.shb-bx-read{flex:1;min-width:0;margin-left:10px;font:12px/1.2 var(--shb-mono,ui-monospace,monospace);color:#8a8a8a;white-space:pre;overflow:hidden;text-overflow:ellipsis}',
+      '.shb-bx-ib{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 auto;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:#9a9a9a;cursor:pointer}',
+      '.shb-bx-ib:hover{background:#333333;color:#e2e2e2}',
+      '.shb-bx-ib.shb-bx-pr{background:#2e2e2e;border-color:#474747;color:#e2e2e2}',
+      '.shb-bx-ib:disabled,.shb-bx .shb-btn:disabled{opacity:.35;cursor:default;background:transparent;color:#9a9a9a}',
+      '.shb-bx-body{flex:1;min-height:0;display:flex}',
+      '.shb-bx-stage{flex:1;min-width:0;position:relative;overflow:hidden;background:#141414;user-select:none;touch-action:none}',
+      '.shb-bx-pic{position:absolute;background:#262626;cursor:crosshair}',
+      '.shb-bx-pic img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;-webkit-user-drag:none}',
+      '.shb-bx-dim{position:absolute;inset:0;background:#000000;pointer-events:none}',
+      '.shb-bx-grid{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,rgba(255,255,255,.22) 1px,transparent 1.5px)}',
+      '.shb-bx-b{position:absolute;box-sizing:border-box;border:1px solid;background:var(--f);pointer-events:none}',
+      '.shb-bx-b.shb-bx-hv{background:var(--fh)}',
+      '.shb-bx-b.shb-bx-on{border-width:2px;outline:1px dashed rgba(255,255,255,.45);outline-offset:3px;z-index:2}',
+      '.shb-bx-tag{position:absolute;left:0;top:0;padding:calc(1px * var(--bxz,1)) calc(5px * var(--bxz,1));border-radius:0 0 3px 0;font:600 calc(11px * var(--bxz,1))/1.35 var(--shb-mono,ui-monospace,monospace)}',
+      '.shb-bx-txt{position:absolute;left:calc(5px * var(--bxz,1));right:calc(5px * var(--bxz,1));top:calc(20px * var(--bxz,1));bottom:calc(7px * var(--bxz,1));overflow:hidden;font:calc(12px * var(--bxz,1))/1.35 Inter,system-ui,sans-serif;color:#f2f2f2;text-shadow:0 1px 2px rgba(0,0,0,.75);white-space:pre-wrap;word-break:break-word}',
+      '.shb-bx-pal{position:absolute;left:0;right:0;bottom:0;height:calc(4px * var(--bxz,1));display:flex}',
+      '.shb-bx-pal i{flex:1}',
+      '.shb-bx-h{position:absolute;box-sizing:border-box;background:#e2e2e2;border:1.5px solid #222222;border-radius:2px;pointer-events:auto}',
+      '.shb-bx-side{width:324px;flex:0 0 auto;display:flex;flex-direction:column;min-height:0;border-left:1px solid #333333;background:var(--shb-bg,#222222);color:#cfcfcf}',
+      '.shb-bx-sec{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid #333333}',
+      '.shb-bx-sl{display:grid;grid-template-columns:72px minmax(0,1fr) 40px;align-items:center;gap:8px;color:#9a9a9a}',
+      '.shb-bx-sl input[type=range]{width:100%;margin:0;accent-color:#9aa9c4;cursor:pointer}',
+      '.shb-bx-sl b{font:500 11.5px/1 var(--shb-mono,ui-monospace,monospace);color:#cfcfcf;text-align:right}',
+      '.shb-bx-na{opacity:.45}',
+      '.shb-bx-list{flex:1 1 auto;min-height:64px;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px}',
+      '.shb-bx-row{display:flex;align-items:center;gap:6px;padding:3px 4px 3px 6px;border:1px solid transparent;border-radius:5px;cursor:pointer}',
+      '.shb-bx-row:hover{background:#2a2a2a}',
+      '.shb-bx-row.shb-bx-on{background:#2c2c2c;border-color:#454545}',
+      '.shb-bx-row .shb-bx-ib{width:24px;height:24px;opacity:0}',
+      '.shb-bx-row:hover .shb-bx-ib,.shb-bx-row.shb-bx-on .shb-bx-ib{opacity:1}',
+      '.shb-bx-chip{flex:0 0 auto;min-width:22px;padding:1px 4px;border-radius:3px;box-sizing:border-box;text-align:center;font:600 11px/1.35 var(--shb-mono,ui-monospace,monospace)}',
+      '.shb-bx-lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cfcfcf}',
+      '.shb-bx-lbl.shb-bx-dimt{color:#6e6e6e}',
+      '.shb-bx-empty{padding:8px 6px;color:#7a7a7a}',
+      '.shb-bx-ed{display:flex;flex-direction:column;gap:9px;padding:10px 12px;border-top:1px solid #333333}',
+      '.shb-bx-edh{display:flex;align-items:center;gap:8px;font-weight:600;color:#e2e2e2}',
+      '.shb-bx-f{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px;color:#9a9a9a}',
+      '.shb-bx-ft{align-items:start}',
+      '.shb-bx-ft > span{padding-top:5px}',
+      '.shb-bx-dots{display:flex;flex-wrap:wrap;align-items:center;gap:5px}',
+      '.shb-bx-dot{position:relative;display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;padding:0;box-sizing:border-box;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:transparent;color:#9a9a9a;font:500 12px/1 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.shb-bx-dot.shb-bx-on{box-shadow:0 0 0 2px #222222,0 0 0 3.5px #e2e2e2}',
+      '.shb-bx-dot input{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;opacity:0;cursor:pointer}',
+      '.shb-bx-seg{display:inline-flex;justify-self:start;border:1px solid #3c3c3c;border-radius:6px;overflow:hidden}',
+      '.shb-bx-seg button{padding:4px 12px;border:0;background:transparent;color:#9a9a9a;font:inherit;cursor:pointer}',
+      '.shb-bx-seg button.shb-bx-on{background:#343434;color:#e2e2e2}',
+      '.shb-bx-in{box-sizing:border-box;width:100%;margin:0;padding:5px 8px;border-radius:5px;border:1px solid #3c3c3c;background:#181818;color:#e2e2e2;font:400 12.5px/1.4 Inter,system-ui,sans-serif;outline:none;resize:vertical}',
+      '.shb-bx-in:focus{border-color:#5c94f0}',
+      '.shb-bx-in::placeholder{color:#666666}',
+      '.shb-bx-pals{display:flex;flex-wrap:wrap;align-items:center;gap:7px}',
+      '.shb-bx-pc{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;box-sizing:border-box;border-radius:4px;border:1px solid rgba(255,255,255,.16);background:transparent;color:#9a9a9a;font:500 14px/1 Inter,system-ui,sans-serif}',
+      '.shb-bx-pc input{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;opacity:0;cursor:pointer}',
+      '.shb-bx-pc button{position:absolute;top:-6px;right:-6px;display:none;width:14px;height:14px;padding:0;border:0;border-radius:50%;background:#4a4a4a;color:#e2e2e2;font:600 10px/14px Inter,system-ui,sans-serif;cursor:pointer}',
+      '.shb-bx-pc:hover button{display:block}',
+      '.shb-bx-padd{border-style:dashed;cursor:pointer}',
+      '.shb-bx-padd:hover{color:#e2e2e2;border-color:#6a6a6a}',
+      '.shb-bx-note{color:#6e6e6e;font-size:11.5px}',
+      '.shb-bx-hint{padding:7px 12px;border-top:1px solid #333333;color:#7a7a7a;font-size:11.5px}',
+      '.shb-bx-sink{position:fixed;left:-40px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;outline:none;caret-color:transparent}',
       '.shb-ph-keep + .shb-ph-x{margin-left:0}',
       '.shb-ph-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;padding:0;border:0;border-radius:5px;background:transparent;color:#9a9a9a;cursor:pointer}',
       '.shb-ph-x:hover{background:#2e2e2e;color:#e2e2e2}',
@@ -3035,6 +3105,7 @@
     if (isCropNode(node)) return 'crop';
     if (isStitchNode(node)) return 'stitch';
     if (isPainterNode(node)) return 'paint';
+    if (isBoxNode(node)) return 'bbox';
     if (isSetNode(node)) return 'set';
     if (isGetNode(node)) return 'get';
     if (isPreviewNode(node)) return 'view';
@@ -7594,8 +7665,53 @@
     try { ta.focus(); } catch (e) {}
   }
 
+  /* The keys of a full-screen editor (Visual Crop, Paint Studio) go to a small editable spot that takes no text.
+     ComfyUI's history listens to the window first and takes Ctrl+Z / Ctrl+Y as an undo of the whole graph (a
+     reload, so the node the editor works on would be another object by Done) unless the focus is in a field;
+     Hotbox's own keys step aside there too, Alt+Z still closes. A press on the picture or a click on a button
+     gives the keys back to it, a field that has them keeps them. Returns what puts the keys there */
+  function edKeySink(wrap, host) {
+    var sink = document.createElement('div');
+    sink.setAttribute('data-edsink', '');
+    sink.setAttribute('contenteditable', 'true');
+    sink.setAttribute('aria-hidden', 'true');
+    sink.tabIndex = -1;
+    sink.style.cssText = 'position:fixed;left:-40px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;outline:none;caret-color:transparent';
+    ['beforeinput', 'paste', 'drop'].forEach(function (k) { sink.addEventListener(k, function (e) { e.preventDefault(); }); });
+    sink.addEventListener('input', function () { sink.textContent = ''; });
+    (host || wrap).appendChild(sink);
+    function focus() { try { sink.focus({ preventScroll: true }); } catch (e) {} }
+    /* a press on what takes no focus (the picture, the bars) puts it on the window itself */
+    wrap.addEventListener('focusin', function (ev) { if (ev.target === wrap) focus(); });
+    wrap.addEventListener('click', function (ev) {
+      if (!wrap.isConnected || (ev.target.closest && ev.target.closest('input,textarea,select,label'))) return;
+      var ae = document.activeElement;
+      if (ae && wrap.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+      focus();
+    });
+    return focus;
+  }
+
+  /* an Undo or Redo button with nothing to take back looks off */
+  function edHist(btn, n) {
+    if (!btn) return;
+    btn.disabled = !n;
+    btn.style.opacity = n ? '' : '.4';
+  }
+
+  /* the node as the graph has it now: ComfyUI's undo reloads the graph, which makes new node objects, and an
+     editor that kept the old one would write to nothing */
+  function liveNode(node, test) {
+    if (!node) return node;
+    try {
+      var g = getGraph(), live = (g && g.getNodeById) ? g.getNodeById(node.id) : null;
+      if (live && live !== node && (!test || test(live))) return live;
+    } catch (e) {}
+    return node;
+  }
+
   /* Visual Crop Editor (Alt+Z on Crop Node) */
-  var CE = { el: null, node: null, orig: null, box: null, W: 0, H: 0, lock: null, drag: null, fit: null };
+  var CE = { el: null, node: null, orig: null, box: null, W: 0, H: 0, lock: null, drag: null, fit: null, undo: [], redo: [], gest: '' };
   var CE_MIN = 16;
 
   function cropImgSrc(crop) {
@@ -7672,11 +7788,14 @@
   }
 
   function cropEditClose(keep) {
-    var el = CE.el, node = CE.node, b = CE.box, o = CE.orig;
-    CE.el = null; CE.drag = null;
+    var el = CE.el, node = liveNode(CE.node, isCropNode), b = CE.box, o = CE.orig;
+    CE.el = null; CE.drag = null; CE.undo = []; CE.redo = [];
     try { if (el) el.remove(); } catch (e) {}
     if (!node) return;
     if (!keep && o) cropRegionWrite(node, o);
+    /* the box is written as it moves; Done writes it again if the node does not hold it */
+    var nb = keep && b ? cropBox(node) : null;
+    if (nb && (nb.x !== b.x || nb.y !== b.y || nb.w !== b.w || nb.h !== b.h)) cropRegionWrite(node, b);
     var fin = keep ? b : o;
     if (fin) {
       setStatus('ok', (keep ? 'Crop applied: ' : 'Crop restored: ') + fin.x + ', ' + fin.y + ' · ' + fin.w + '×' + fin.h);
@@ -7699,7 +7818,7 @@
     CE.node = node;
     CE.orig = { x: b.x, y: b.y, w: b.w, h: b.h };
     CE.box = { x: b.x, y: b.y, w: b.w, h: b.h };
-    CE.lock = null; CE.W = 0; CE.H = 0; CE.fit = null;
+    CE.lock = null; CE.W = 0; CE.H = 0; CE.fit = null; CE.undo = []; CE.redo = []; CE.gest = '';
 
     var wrap = owns(document.createElement('div'));
     wrap.className = 'shb-modal-bg';
@@ -7716,6 +7835,8 @@
           '<select class="shb-select" data-cesize style="width:110px"><option value="">Size ▾</option>' +
             CROP_SIZES.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join('') +
           '</select>' +
+          '<button class="shb-btn" data-ceundo title="Undo (Ctrl+Z)">Undo</button>' +
+          '<button class="shb-btn" data-ceredo title="Redo (Ctrl+Shift+Z)">Redo</button>' +
           '<button class="shb-btn" data-cecancel>Cancel</button>' +
           '<button class="shb-btn shb-btn-pri" data-cedone>Done</button>' +
         '</div>' +
@@ -7731,7 +7852,7 @@
           '</div>' +
         '</div>' +
         '<div style="padding:7px 14px;border-top:1px solid #333333;color:#888888;font-size:11.5px">' +
-          'Drag inside box to move · Drag handles to resize · Arrow keys nudge 1px (Shift: 10px) · Enter/Done keeps changes · Any paired Stitch node updates automatically' +
+          'Drag inside box to move · Drag handles to resize · Arrow keys nudge 1px (Shift: 10px) · Ctrl+Z undoes, Ctrl+Shift+Z redoes · Enter/Done keeps changes · Any paired Stitch node updates automatically' +
         '</div>' +
       '</div>';
 
@@ -7739,6 +7860,7 @@
     CE.el = wrap;
     var im = wrap.querySelector('[data-ceimg]');
     var panel = wrap.querySelector('[data-cepanel]');
+    var sinkFocus = edKeySink(wrap, panel);
 
     function cePaint() {
       var bx = CE.box, f = CE.fit;
@@ -7748,6 +7870,8 @@
       var lk = wrap.querySelector('[data-celock]');
       lk.textContent = CE.lock ? '🔒 Ratio Locked' : '🔓 Free Ratio';
       lk.className = 'shb-btn' + (CE.lock ? ' shb-btn-pri' : '');
+      edHist(wrap.querySelector('[data-ceundo]'), CE.undo.length);
+      edHist(wrap.querySelector('[data-ceredo]'), CE.redo.length);
       var fr = wrap.querySelector('[data-cebox]');
       if (!fr || !f) return;
       fr.style.left = Math.round(f.ox + bx.x * f.s) + 'px';
@@ -7758,9 +7882,30 @@
 
     function ceSet(nb) {
       CE.box = nb;
+      CE.node = liveNode(CE.node, isCropNode);
       cropRegionWrite(CE.node, nb);
       cePaint();
     }
+
+    /* one undo step per gesture: a drag, a run of arrow nudges, a ratio or a size from the lists */
+    function ceMark(key) {
+      if (key && key === CE.gest) return;
+      CE.gest = key || '';
+      var b = CE.box;
+      CE.undo.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+      if (CE.undo.length > 80) CE.undo.shift();
+      CE.redo = [];
+    }
+    function ceStep(from, to) {
+      var s = from.pop();
+      if (!s) return;
+      var b = CE.box;
+      to.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+      CE.gest = '';
+      ceSet(s);
+    }
+    function ceUndo() { ceStep(CE.undo, CE.redo); }
+    function ceRedo() { ceStep(CE.redo, CE.undo); }
 
     im.onload = function () {
       CE.W = im.naturalWidth || 1024;
@@ -7787,10 +7932,12 @@
       var bx = ev.target.closest('[data-cebox]');
       if (!h && !bx) return;
       ev.preventDefault();
+      sinkFocus();
       CE.drag = {
         mode: h ? h.getAttribute('data-ceh') : 'move',
         at: stageOf(ev),
-        b0: { x: CE.box.x, y: CE.box.y, w: CE.box.w, h: CE.box.h }
+        b0: { x: CE.box.x, y: CE.box.y, w: CE.box.w, h: CE.box.h },
+        marked: false
       };
     });
     wrap.addEventListener('pointermove', function (ev) {
@@ -7798,56 +7945,73 @@
       if (!d || !f) return;
       var p = stageOf(ev);
       var dx = (p[0] - d.at[0]) / f.s, dy = (p[1] - d.at[1]) / f.s;
-      ceSet(d.mode === 'move'
+      var nb = d.mode === 'move'
         ? ceMove(d.b0, dx, dy, CE.W, CE.H)
-        : ceResize(d.b0, d.mode, dx, dy, CE.W, CE.H, CE.lock));
+        : ceResize(d.b0, d.mode, dx, dy, CE.W, CE.H, CE.lock);
+      var b = CE.box;
+      if (nb.x === b.x && nb.y === b.y && nb.w === b.w && nb.h === b.h) return;
+      if (!d.marked) { d.marked = true; ceMark(''); }
+      ceSet(nb);
     });
     wrap.addEventListener('pointerup', function () { CE.drag = null; });
     wrap.addEventListener('keydown', function (ev) {
+      var k = ev.key, mod = ev.ctrlKey || ev.metaKey;
       var step = ev.shiftKey ? 10 : 1;
-      var mv = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
-      if (ev.key === 'Escape') { ev.preventDefault(); cropEditClose(false); }
-      else if (ev.key === 'Enter') { ev.preventDefault(); cropEditClose(true); }
+      var mv = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[k];
+      ev.stopPropagation();
+      if (k === 'Escape') { ev.preventDefault(); cropEditClose(false); }
+      else if (k === 'Enter') { ev.preventDefault(); cropEditClose(true); }
+      else if (mod && (k === 'z' || k === 'Z')) { ev.preventDefault(); if (ev.shiftKey) ceRedo(); else ceUndo(); }
+      else if (mod && (k === 'y' || k === 'Y')) { ev.preventDefault(); ceRedo(); }
       else if (mv && CE.box) {
         ev.preventDefault();
-        ceSet(ceMove(CE.box, mv[0], mv[1], CE.W || 1e9, CE.H || 1e9));
-      }
-      if (ev.key !== 'z' && ev.key !== 'Z') ev.stopPropagation();
-    });
-
-    wrap.querySelector('[data-ceratio]').onchange = function () {
-      var a = this.value; this.value = '';
-      if (!a) return;
-      if (a === 'free') { CE.lock = null; cePaint(); return; }
-      cropSet(node, a, '');
-      var nb = cropBox(node);
-      if (nb) {
-        CE.lock = (CROP_R[a] || [1, 1])[0] / (CROP_R[a] || [1, 1])[1];
+        var nb = ceMove(CE.box, mv[0], mv[1], CE.W || 1e9, CE.H || 1e9);
+        if (nb.x === CE.box.x && nb.y === CE.box.y) return;
+        ceMark('nudge');
         ceSet(nb);
       }
+    });
+
+    /* a ratio or a size from the lists: one undo step, and the keys go back to the window */
+    function cePick(aspect, size) {
+      var n = CE.node = liveNode(CE.node, isCropNode);
+      cropSet(n, aspect, size);
+      var nb = cropBox(n), b = CE.box;
+      if (!nb) return;
+      if (nb.x !== b.x || nb.y !== b.y || nb.w !== b.w || nb.h !== b.h) ceMark('');
+      ceSet(nb);
+    }
+    wrap.querySelector('[data-ceratio]').onchange = function () {
+      var a = this.value; this.value = '';
+      sinkFocus();
+      if (!a) return;
+      if (a === 'free') { CE.lock = null; cePaint(); return; }
+      CE.lock = (CROP_R[a] || [1, 1])[0] / (CROP_R[a] || [1, 1])[1];
+      cePick(a, '');
     };
     wrap.querySelector('[data-cesize]').onchange = function () {
       var p = this.value; this.value = '';
+      sinkFocus();
       if (!p) return;
-      cropSet(node, '', p);
-      var nb = cropBox(node);
-      if (nb) ceSet(nb);
+      cePick('', p);
     };
     wrap.querySelector('[data-celock]').onclick = function () {
       CE.lock = CE.lock ? null : (CE.box.w / CE.box.h);
       cePaint();
     };
+    wrap.querySelector('[data-ceundo]').onclick = ceUndo;
+    wrap.querySelector('[data-ceredo]').onclick = ceRedo;
     wrap.querySelector('[data-cecancel]').onclick = function () { cropEditClose(false); };
     wrap.querySelector('[data-cedone]').onclick = function () { cropEditClose(true); };
     cePaint();
-    try { wrap.focus(); } catch (e) {}
+    sinkFocus();
     return true;
   }
 
   /* Fullscreen Paint Studio (Alt+Z on Painter Node) */
   var PE = {
     el: null, node: null, layer: null, W: 0, H: 0, view: null, fit: 1,
-    drawing: false, last: null, pan: null, space: false, undo: [], changed: 0,
+    drawing: false, last: null, pan: null, space: false, undo: [], redo: [], changed: 0,
     tool: 'brush', size: 24, color: '#ffffff', opacity: 1
   };
 
@@ -7871,8 +8035,8 @@
 
   function paintEditClose(keep) {
     if (!PE.el) return;
-    var el = PE.el, node = PE.node, layer = PE.layer, changed = PE.changed;
-    PE.el = null; PE.node = null; PE.layer = null; PE.undo = [];
+    var el = PE.el, node = liveNode(PE.node, isPainterNode), layer = PE.layer, changed = PE.changed;
+    PE.el = null; PE.node = null; PE.layer = null; PE.undo = []; PE.redo = [];
     try { if (el) el.remove(); } catch (e) {}
     if (!keep || !changed || !node || !layer) return;
     setStatus('busy', 'Uploading painted layer…');
@@ -7886,6 +8050,7 @@
         .then(function (j) {
           if (!j || !j.name) return;
           var v = (j.subfolder ? j.subfolder + '/' : '') + j.name + ' [input]';
+          node = liveNode(node, isPainterNode);
           setWidgetVal(node, 'mask', v);
           try {
             var nc = painterCanvasOf(node);
@@ -7905,7 +8070,7 @@
   function paintEditOpen(node) {
     if (!isPainterNode(node)) return false;
     if (PE.el) paintEditClose(true);
-    PE.node = node; PE.undo = []; PE.changed = 0;
+    PE.node = node; PE.undo = []; PE.redo = []; PE.changed = 0;
     var wrap = owns(document.createElement('div'));
     wrap.className = 'shb-modal-bg';
     wrap.tabIndex = -1;
@@ -7919,6 +8084,7 @@
           '<input type="range" min="1" max="300" value="' + PE.size + '" data-pesize style="width:110px;accent-color:#5c94f0">' +
           '<input type="color" value="' + PE.color + '" data-pecolor style="width:32px;height:26px;border:0;background:none;cursor:pointer">' +
           '<button class="shb-btn" data-peundo>Undo (Ctrl+Z)</button>' +
+          '<button class="shb-btn" data-peredo title="Ctrl+Y redoes too">Redo (Ctrl+Shift+Z)</button>' +
           '<button class="shb-btn" data-peclear>Clear</button>' +
           '<button class="shb-btn" data-pecancel>Cancel</button>' +
           '<button class="shb-btn shb-btn-pri" data-pedone>Done</button>' +
@@ -7935,6 +8101,7 @@
     var layer = wrap.querySelector('[data-pelayer]');
     var img = wrap.querySelector('[data-peimg]');
     PE.layer = layer;
+    var sinkFocus = edKeySink(wrap, wrap.querySelector('[data-pepanel]'));
 
     var orig = imageOrigin(getGraph(), node);
     var src = '';
@@ -7994,10 +8161,29 @@
     }
 
     var ctx = layer.getContext('2d');
+    /* undo keeps 15 steps (a stroke, a Clear); a new step ends what redo had */
+    function peSnap() { return ctx.getImageData(0, 0, layer.width, layer.height); }
+    function peHist() {
+      edHist(wrap.querySelector('[data-peundo]'), PE.undo.length);
+      edHist(wrap.querySelector('[data-peredo]'), PE.redo.length);
+    }
+    function peKeep() {
+      try { PE.undo.push(peSnap()); if (PE.undo.length > 15) PE.undo.shift(); } catch (e) {}
+      PE.redo = [];
+      peHist();
+    }
+    function peStep(from, to) {
+      var s = from.pop();
+      if (!s) return;
+      try { to.push(peSnap()); } catch (e) {}
+      ctx.putImageData(s, 0, 0);
+      peHist();
+    }
     layer.addEventListener('pointerdown', function (ev) {
       if (ev.button !== 0) return;
       ev.preventDefault();
-      try { PE.undo.push(ctx.getImageData(0, 0, layer.width, layer.height)); if (PE.undo.length > 15) PE.undo.shift(); } catch (e) {}
+      sinkFocus();
+      peKeep();
       PE.drawing = true;
       var p = toPt(ev);
       PE.last = p;
@@ -8031,28 +8217,820 @@
     wrap.querySelector('[data-petool="eraser"]').onclick = function () { PE.tool = 'eraser'; updateTools(); };
     wrap.querySelector('[data-pesize]').oninput = function () { PE.size = +this.value || 10; };
     wrap.querySelector('[data-pecolor]').oninput = function () { PE.color = this.value; PE.tool = 'brush'; updateTools(); };
-    wrap.querySelector('[data-peundo]').onclick = function () {
-      var u = PE.undo.pop();
-      if (u) ctx.putImageData(u, 0, 0);
-    };
+    wrap.querySelector('[data-peundo]').onclick = function () { peStep(PE.undo, PE.redo); };
+    wrap.querySelector('[data-peredo]').onclick = function () { peStep(PE.redo, PE.undo); };
     wrap.querySelector('[data-peclear]').onclick = function () {
+      peKeep();
       ctx.clearRect(0, 0, layer.width, layer.height);
       PE.changed++;
     };
     wrap.querySelector('[data-pecancel]').onclick = function () { paintEditClose(false); };
     wrap.querySelector('[data-pedone]').onclick = function () { paintEditClose(true); };
     wrap.addEventListener('keydown', function (ev) {
+      var mod = ev.ctrlKey || ev.metaKey;
       if (ev.key === 'Escape') { ev.preventDefault(); paintEditClose(false); }
       else if (ev.key === 'Enter') { ev.preventDefault(); paintEditClose(true); }
-      else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')) {
+      else if (mod && (ev.key === 'z' || ev.key === 'Z')) {
         ev.preventDefault();
-        var u = PE.undo.pop();
-        if (u) ctx.putImageData(u, 0, 0);
-      } else if (ev.key === 'b' || ev.key === 'B') { PE.tool = 'brush'; updateTools(); }
+        if (ev.shiftKey) peStep(PE.redo, PE.undo); else peStep(PE.undo, PE.redo);
+      } else if (mod && (ev.key === 'y' || ev.key === 'Y')) { ev.preventDefault(); peStep(PE.redo, PE.undo); }
+      else if (ev.key === 'b' || ev.key === 'B') { PE.tool = 'brush'; updateTools(); }
       else if (ev.key === 'e' || ev.key === 'E') { PE.tool = 'eraser'; updateTools(); }
       ev.stopPropagation();
     });
-    try { wrap.focus(); } catch (e) {}
+    peHist();
+    sinkFocus();
+    return true;
+  }
+
+  /* Fullscreen Box Studio (Alt+Z on Create Bounding Boxes). ComfyUI's own editor keeps the picture under 75% black
+     and every box at one fixed see-through fill. Here the darkening, all the boxes and each box have a slider, each
+     box can wear a color of its own, and a box can be duplicated or scaled from its center. Opacity and color are
+     only for the eye: they stay in the node's properties (hbBoxView) and the darkening in Hotbox's settings, never
+     in the boxes, whose palette goes to the model. The boxes (where, type, text, description, palette) go to the
+     node's editor_state on Done, in the form ComfyUI writes them. */
+  var BX = {
+    el: null, node: null, W: 1024, H: 1024, dims: null, boxes: [], orig: '', act: -1, hov: -1, fit: null, drag: null,
+    undo: [], redo: [], gest: '', sc: null, grid: true, grid0: true, onRs: null
+  };
+  var BX_SW = ['#e6e0d4', '#d9b382', '#d0876a', '#d98ca0', '#a99ad9', '#7fa3d6', '#6fc1b4', '#9dbb7e'];
+  var BX_SWN = ['Bone', 'Sand', 'Clay', 'Rose', 'Lilac', 'Slate', 'Sea', 'Sage'];
+  var BX_NONE = '#8c8c8c';
+
+  function isBoxNode(node) {
+    if (!node) return false;
+    var t = String(node.type || node.comfyClass || '');
+    if (t === 'CreateBoundingBoxes') return true;
+    var w = widgetNamed(node, 'editor_state');
+    return !!(w && Array.isArray(w.value) && widgetNamed(node, 'last_incoming'));
+  }
+
+  /* a color as ComfyUI keeps a palette entry (#rrggbb or #rrggbbaa, lower case), or '' */
+  function bxPalHex(c) {
+    var h = String(c == null ? '' : c).trim().toLowerCase();
+    var m = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/.exec(h);
+    if (m) return '#' + m[1] + m[1] + m[2] + m[2] + m[3] + m[3];
+    return /^#([0-9a-f]{6}|[0-9a-f]{8})$/.test(h) ? h : '';
+  }
+  function bxHex(c) { return bxPalHex(c).slice(0, 7); }
+  function bxRgba(c, a) {
+    var n = parseInt(c.slice(1, 7), 16);
+    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + (Math.round(Math.max(0, Math.min(1, a)) * 1000) / 1000) + ')';
+  }
+  function bxInk(c) {
+    var n = parseInt(c.slice(1, 7), 16);
+    return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.55 ? '#1a1a1a' : '#f2f2f2';
+  }
+  function bxAuto(b) {
+    var p = (b.meta && b.meta.palette) || [];
+    for (var i = 0; i < p.length; i++) { var h = bxHex(p[i]); if (h) return h; }
+    return BX_NONE;
+  }
+  function bxColor(b) { return b.c || bxAuto(b); }
+  function bxTag(i) { return (i < 9 ? '0' : '') + (i + 1); }
+  function bxAll() { var v = +S.bxAll; return isFinite(v) ? Math.max(0, Math.min(1, v)) : 1; }
+  function bxDimV() { var v = +S.bxDim; return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.4; }
+  function bxLabel(b) {
+    var m = b.meta, d = String(m.desc || '').replace(/\s+/g, ' ').trim();
+    if (m.type === 'text') {
+      var t = String(m.text || '').trim();
+      if (t) return { t: '"' + t + '"' + (d ? ' — ' + d : ''), dim: false };
+      return { t: d || 'Text', dim: !d };
+    }
+    return { t: d || 'Object', dim: !d };
+  }
+
+  function bxDims(node) {
+    var ww = widgetNamed(node, 'width'), wh = widgetNamed(node, 'height');
+    return { w: (ww && +ww.value > 0) ? +ww.value : 1024, h: (wh && +wh.value > 0) ? +wh.value : 1024 };
+  }
+
+  /* the boxes of the node, with the look Box Studio gave each one: first the stored look of a box with the same place
+     and size (ComfyUI's editor may have deleted or added some since), then the one at the same place in the list */
+  function bxRead(node) {
+    var w = widgetNamed(node, 'editor_state');
+    var v = (w && Array.isArray(w.value)) ? w.value : [];
+    var props = node.properties || {};
+    var view = Array.isArray(props.hbBoxView) ? props.hbBoxView : [];
+    var out = [];
+    v.forEach(function (b) {
+      if (!b || typeof b !== 'object' || typeof b.x !== 'number' || typeof b.y !== 'number' ||
+          typeof b.width !== 'number' || typeof b.height !== 'number') return;
+      var m = (b.metadata && typeof b.metadata === 'object') ? b.metadata : {};
+      out.push({
+        x: b.x, y: b.y, w: b.width, h: b.height,
+        meta: {
+          type: m.type === 'text' ? 'text' : 'obj',
+          text: typeof m.text === 'string' ? m.text : '',
+          desc: typeof m.desc === 'string' ? m.desc : '',
+          palette: Array.isArray(m.palette) ? m.palette.map(bxPalHex).filter(Boolean) : []
+        },
+        a: 1, c: ''
+      });
+    });
+    var used = {}, got = {};
+    function take(i, k) {
+      var s = view[k];
+      used[k] = 1; got[i] = 1;
+      if (typeof s.a === 'number' && isFinite(s.a)) out[i].a = Math.max(0, Math.min(1, s.a));
+      out[i].c = bxHex(s.c);
+    }
+    out.forEach(function (b, i) {
+      for (var k = 0; k < view.length; k++) {
+        var s = view[k];
+        if (!used[k] && s && s.x === b.x && s.y === b.y && s.w === b.w && s.h === b.h) { take(i, k); return; }
+      }
+    });
+    out.forEach(function (b, i) { if (!got[i] && view[i] && !used[i]) take(i, i); });
+    return out;
+  }
+
+  function bxWrite(node, boxes) {
+    var arr = boxes.map(function (b) {
+      return {
+        x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.w), height: Math.round(b.h),
+        metadata: { type: b.meta.type === 'text' ? 'text' : 'obj', text: b.meta.text || '', desc: b.meta.desc || '', palette: b.meta.palette.slice() }
+      };
+    });
+    if (!node.properties) node.properties = {};
+    node.properties.hbBoxView = boxes.map(function (b) {
+      return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h), a: Math.round(b.a * 100) / 100, c: b.c || '' };
+    });
+    setWidgetVal(node, 'editor_state', arr);
+  }
+
+  /* the picture under the boxes: what feeds the background input, or the one the node kept from its last run */
+  function bxPicture(node) {
+    var ins = node.inputs || [], slot = -1;
+    for (var i = 0; i < ins.length; i++) if (ins[i] && ins[i].name === 'background') slot = i;
+    if (slot < 0 || ins[slot].link == null) return '';
+    var g = getGraph(), l = linkById(g, ins[slot].link);
+    var up = (l && g && g.getNodeById) ? g.getNodeById(l.origin_id) : null;
+    if (up) {
+      var ims = producedImages(up);
+      if (ims.length) return viewURL(ims[0]);
+      if (up.imgs && up.imgs[0] && up.imgs[0].src) return up.imgs[0].src;
+    }
+    try {
+      var app = getApp(), no = app && app.nodeOutputs && app.nodeOutputs[node.id];
+      var bg = no && no.background_images;
+      if (Array.isArray(bg) && bg[0] && bg[0].filename) return viewURL(bg[0]);
+    } catch (e) {}
+    return '';
+  }
+
+  function boxEditClose(keep) {
+    if (!BX.el) return;
+    var el = BX.el, node = BX.node;
+    BX.el = null; BX.node = null; BX.drag = null; BX.sc = null;
+    try { if (BX.onRs) window.removeEventListener('resize', BX.onRs); } catch (e) {}
+    BX.onRs = null;
+    try { el.remove(); } catch (e) {}
+    if (!node) return;
+    try {
+      var g0 = getGraph(), live = (g0 && g0.getNodeById) ? g0.getNodeById(node.id) : null;
+      if (live && live !== node && isBoxNode(live)) node = live;
+    } catch (e) {}
+    var title = node.title || node.type;
+    var changed = JSON.stringify(BX.boxes) !== BX.orig;
+    var dims = BX.dims, gridCh = BX.grid !== BX.grid0;
+    if (!keep) {
+      setStatus('ok', 'Box Studio closed: ' + title + ' keeps its boxes as they were');
+      return;
+    }
+    if (!changed && !dims && !gridCh) return;
+    if (dims) {
+      var ww = widgetNamed(node, 'width'), wh = widgetNamed(node, 'height');
+      if (ww && +ww.value !== dims.w) setWidgetNum(node, 'width', dims.w);
+      if (wh && +wh.value !== dims.h) setWidgetNum(node, 'height', dims.h);
+    }
+    if (gridCh) {
+      if (!node.properties) node.properties = {};
+      node.properties.bboxGrid = BX.grid;
+    }
+    if (changed || dims) bxWrite(node, BX.boxes);
+    var g = getGraph();
+    if (g && g.setDirtyCanvas) g.setDirtyCanvas(true, true);
+    try {
+      var app = getApp(), wf = app && app.extensionManager && app.extensionManager.workflow;
+      cedCapture(wf && wf.activeWorkflow && wf.activeWorkflow.changeTracker);
+    } catch (e) {}
+    var n = BX.boxes.length;
+    setStatus('ok', 'Boxes saved to ' + title + ' · ' + n + (n === 1 ? ' box' : ' boxes'));
+  }
+
+  function boxEditOpen(node) {
+    if (!isBoxNode(node)) return false;
+    if (BX.el) boxEditClose(true);
+    var d = bxDims(node);
+    BX.node = node; BX.W = d.w; BX.H = d.h; BX.dims = null;
+    BX.boxes = bxRead(node);
+    BX.orig = JSON.stringify(BX.boxes);
+    BX.act = BX.boxes.length ? 0 : -1; BX.hov = -1;
+    BX.undo = []; BX.redo = []; BX.gest = ''; BX.sc = null; BX.drag = null; BX.fit = null;
+    BX.grid = BX.grid0 = !(node.properties && node.properties.bboxGrid === false);
+    /* a 4K screen gets larger controls: the bar and the side panel grow with the window, the picture fills the rest */
+    var z = Math.max(1, Math.min(2, (window.innerWidth || 1600) / 1700));
+    var src = bxPicture(node);
+
+    var wrap = owns(document.createElement('div'));
+    wrap.className = 'shb-modal-bg';
+    wrap.tabIndex = -1;
+    wrap.innerHTML =
+      '<div class="shb-bx" data-bxpanel>' +
+        '<div class="shb-bx-hd" data-bxhd>' +
+          '<span class="shb-bx-t">' + ico('boxes') + '<span>Box Studio · ' + esc(node.title || node.type) + '</span></span>' +
+          '<span class="shb-bx-read" data-bxread></span>' +
+          '<button type="button" class="shb-bx-ib" data-bxgrid title="Snap to the grid">' + ico('gridDots', 16) + '</button>' +
+          '<button type="button" class="shb-bx-ib" data-bxundo title="Undo (Ctrl+Z)">' + ico('undo', 16) + '</button>' +
+          '<button type="button" class="shb-bx-ib" data-bxredo title="Redo (Ctrl+Shift+Z)">' + ico('redo', 16) + '</button>' +
+          '<button type="button" class="shb-btn" data-bxclear title="Delete every box">Clear</button>' +
+          '<button type="button" class="shb-btn" data-bxcancel>Cancel</button>' +
+          '<button type="button" class="shb-btn shb-btn-pri" data-bxdone>Done</button>' +
+        '</div>' +
+        '<div class="shb-bx-body">' +
+          '<div class="shb-bx-stage" data-bxstage>' +
+            '<div class="shb-bx-pic" data-bxpic>' +
+              (src ? '<img data-bximg draggable="false" alt="">' : '') +
+              '<div class="shb-bx-dim" data-bxdim></div>' +
+              '<div class="shb-bx-grid" data-bxgl></div>' +
+              '<div data-bxlayer></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="shb-bx-side" data-bxside>' +
+            '<div class="shb-bx-sec">' +
+              '<label class="shb-bx-sl" title="How dark the picture is under the boxes"><span>Darken</span>' +
+                '<input type="range" min="0" max="100" step="1" data-bxdims><b data-bxdimv></b></label>' +
+              '<label class="shb-bx-sl" title="How see-through every box is"><span>All boxes</span>' +
+                '<input type="range" min="0" max="100" step="1" data-bxalls><b data-bxallv></b></label>' +
+            '</div>' +
+            '<div class="shb-bx-list" data-bxlist></div>' +
+            '<div class="shb-bx-ed" data-bxed></div>' +
+            '<div class="shb-bx-hint">Drag on the picture to draw a box · Ctrl+D duplicates · Del deletes · Enter keeps</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="shb-bx-sink" data-bxsink contenteditable="true" tabindex="-1" aria-hidden="true"></div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    BX.el = wrap;
+
+    var panel = wrap.querySelector('[data-bxpanel]');
+    var stage = wrap.querySelector('[data-bxstage]');
+    var pic = wrap.querySelector('[data-bxpic]');
+    var img = wrap.querySelector('[data-bximg]');
+    var dimEl = wrap.querySelector('[data-bxdim]');
+    var gl = wrap.querySelector('[data-bxgl]');
+    var layer = wrap.querySelector('[data-bxlayer]');
+    var side = wrap.querySelector('[data-bxside]');
+    var list = wrap.querySelector('[data-bxlist]');
+    var ed = wrap.querySelector('[data-bxed]');
+    /* The keys go to a small editable spot that takes no text. ComfyUI's history listens to the window first and
+       takes Ctrl+Z / Ctrl+Y as an undo of the whole graph (a reload, so the node this window edits would be
+       another object by Done) unless the focus is in a field; Hotbox's own keys step aside there too, Alt+Z
+       still closes */
+    var sink = wrap.querySelector('[data-bxsink]');
+    function sinkFocus() { try { sink.focus({ preventScroll: true }); } catch (e) {} }
+    ['beforeinput', 'paste', 'drop'].forEach(function (k) { sink.addEventListener(k, function (e) { e.preventDefault(); }); });
+    sink.addEventListener('input', function () { sink.textContent = ''; });
+    wrap.querySelector('[data-bxhd]').style.zoom = z;
+    side.style.zoom = z;
+    layer.style.setProperty('--bxz', z);
+
+    function px(v) { return Math.round(v * 100) / 100 + 'px'; }
+    function step() { return { x: Math.max(32, Math.ceil(BX.W / 64)), y: Math.max(32, Math.ceil(BX.H / 64)) }; }
+    function snapV(v, st, max) { return Math.max(0, Math.min(max, Math.round(v / st) * st)); }
+    function cur() { return BX.boxes[BX.act] || null; }
+    function snapOf() { return JSON.stringify({ b: BX.boxes, a: BX.act }); }
+    /* one undo step per gesture: a drag, one slider pull, typing in one field */
+    function mark(key) {
+      if (key && key === BX.gest) return;
+      BX.gest = key || '';
+      BX.undo.push(snapOf());
+      if (BX.undo.length > 80) BX.undo.shift();
+      BX.redo = [];
+      paintHead();
+    }
+    function load(s) {
+      if (!s) return;
+      var o = JSON.parse(s);
+      BX.boxes = o.b;
+      BX.act = Math.min(o.a, BX.boxes.length - 1);
+      BX.gest = ''; BX.sc = null; BX.hov = -1;
+      paintAll();
+    }
+    function undo() { var s = BX.undo.pop(); if (!s) return; BX.redo.push(snapOf()); load(s); }
+    function redo() { var s = BX.redo.pop(); if (!s) return; BX.undo.push(snapOf()); load(s); }
+
+    function fit() {
+      var sw = stage.clientWidth || 1200, sh = stage.clientHeight || 700, pad = Math.round(22 * z);
+      var s = Math.min((sw - pad * 2) / BX.W, (sh - pad * 2) / BX.H);
+      if (!(s > 0)) s = 1;
+      var w = Math.round(BX.W * s), h = Math.round(BX.H * s);
+      BX.fit = { s: s };
+      pic.style.left = Math.round((sw - w) / 2) + 'px';
+      pic.style.top = Math.round((sh - h) / 2) + 'px';
+      pic.style.width = w + 'px';
+      pic.style.height = h + 'px';
+      var st = step();
+      gl.style.backgroundSize = px(st.x * s) + ' ' + px(st.y * s);
+      gl.style.backgroundPosition = px(-st.x * s / 2) + ' ' + px(-st.y * s / 2);
+      paintBoxes();
+    }
+
+    function paintBoxes() {
+      if (!BX.fit) return;
+      var s = BX.fit.s, g = bxAll(), hs = Math.round(10 * z);
+      dimEl.style.opacity = src ? bxDimV() : 0;
+      gl.style.display = BX.grid ? '' : 'none';
+      /* the big ones under the small ones, as the pointer picks the smallest box under it */
+      var order = BX.boxes.map(function (b, i) { return i; }).sort(function (i, j) {
+        var a = BX.boxes[i], b = BX.boxes[j];
+        return (b.w * b.h - a.w * a.h) || (i - j);
+      });
+      layer.innerHTML = order.map(function (i) {
+        var b = BX.boxes[i], on = i === BX.act, o = b.a * g, c = bxColor(b);
+        if (!on && o < 0.02) return '';
+        var vis = on ? Math.max(o, 0.9) : o;
+        var m = b.meta, body = m.desc || '';
+        if (m.type === 'text' && m.text) body = '"' + m.text + '"' + (body ? ' — ' + body : '');
+        var pal = m.palette.map(bxHex).filter(Boolean);
+        return '<div class="shb-bx-b' + (on ? ' shb-bx-on' : '') + (i === BX.hov ? ' shb-bx-hv' : '') + '" data-bxi="' + i + '" style="' +
+            'left:' + px(b.x * s) + ';top:' + px(b.y * s) + ';width:' + px(b.w * s) + ';height:' + px(b.h * s) + ';' +
+            '--f:' + bxRgba(c, 0.24 * o) + ';--fh:' + bxRgba(c, Math.min(0.9, 0.24 * o + 0.14)) + ';border-color:' + bxRgba(c, vis) + '">' +
+          '<span class="shb-bx-tag" style="background:' + c + ';color:' + bxInk(c) + ';opacity:' + vis + '">' + bxTag(i) + '</span>' +
+          (body ? '<span class="shb-bx-txt" style="opacity:' + vis + '">' + esc(body) + '</span>' : '') +
+          (pal.length ? '<span class="shb-bx-pal" style="opacity:' + vis + '">' + pal.map(function (p) { return '<i style="background:' + p + '"></i>'; }).join('') + '</span>' : '') +
+          (on ? ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(function (dd) {
+            var l = dd.indexOf('w') >= 0 ? '0%' : dd.indexOf('e') >= 0 ? '100%' : '50%';
+            var t = dd.indexOf('n') >= 0 ? '0%' : dd.indexOf('s') >= 0 ? '100%' : '50%';
+            var cu = (dd === 'n' || dd === 's') ? 'ns' : (dd === 'e' || dd === 'w') ? 'ew' : (dd === 'nw' || dd === 'se') ? 'nwse' : 'nesw';
+            return '<i class="shb-bx-h" data-bxh="' + dd + '" style="left:' + l + ';top:' + t + ';width:' + hs + 'px;height:' + hs + 'px;margin:' + (-hs / 2) + 'px 0 0 ' + (-hs / 2) + 'px;cursor:' + cu + '-resize"></i>';
+          }).join('') : '') +
+        '</div>';
+      }).join('');
+    }
+
+    function paintHead() {
+      var b = cur();
+      wrap.querySelector('[data-bxread]').textContent = b
+        ? bxTag(BX.act) + ' · ' + Math.round(b.x) + ', ' + Math.round(b.y) + ' · ' + Math.round(b.w) + '×' + Math.round(b.h) + '  on ' + BX.W + '×' + BX.H
+        : BX.boxes.length + (BX.boxes.length === 1 ? ' box' : ' boxes') + ' on ' + BX.W + '×' + BX.H;
+      var gb = wrap.querySelector('[data-bxgrid]');
+      gb.classList.toggle('shb-bx-pr', BX.grid);
+      gb.setAttribute('aria-pressed', BX.grid ? 'true' : 'false');
+      wrap.querySelector('[data-bxundo]').disabled = !BX.undo.length;
+      wrap.querySelector('[data-bxredo]').disabled = !BX.redo.length;
+      wrap.querySelector('[data-bxclear]').disabled = !BX.boxes.length;
+    }
+
+    function paintList() {
+      list.innerHTML = BX.boxes.length ? BX.boxes.map(function (b, i) {
+        var c = bxColor(b), lb = bxLabel(b);
+        return '<div class="shb-bx-row' + (i === BX.act ? ' shb-bx-on' : '') + '" data-bxrow="' + i + '">' +
+          '<span class="shb-bx-chip" style="background:' + c + ';color:' + bxInk(c) + '">' + bxTag(i) + '</span>' +
+          '<span class="shb-bx-lbl' + (lb.dim ? ' shb-bx-dimt' : '') + '">' + esc(lb.t) + '</span>' +
+          '<button type="button" class="shb-bx-ib" data-bxdup="' + i + '" title="Duplicate (Ctrl+D)">' + ico('copy', 14) + '</button>' +
+          '<button type="button" class="shb-bx-ib" data-bxdel="' + i + '" title="Delete (Del)">' + ico('trash', 14) + '</button>' +
+        '</div>';
+      }).join('') : '<div class="shb-bx-empty">No boxes yet. Drag on the picture to draw one.</div>';
+      var on = list.querySelector('.shb-bx-on');
+      if (on && on.scrollIntoView) { try { on.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+    }
+
+    function paintEd() {
+      var b = cur();
+      if (!b) { ed.innerHTML = ''; ed.style.display = 'none'; return; }
+      ed.style.display = '';
+      var c = bxColor(b), m = b.meta;
+      ed.innerHTML =
+        '<div class="shb-bx-edh"><span class="shb-bx-chip" data-bxedchip style="background:' + c + ';color:' + bxInk(c) + '">' + bxTag(BX.act) + '</span><span>Box ' + bxTag(BX.act) + '</span></div>' +
+        '<label class="shb-bx-sl" title="How see-through this box is, here only"><span>Opacity</span>' +
+          '<input type="range" min="0" max="100" step="1" value="' + Math.round(b.a * 100) + '" data-bxop><b data-bxopv>' + Math.round(b.a * 100) + '%</b></label>' +
+        '<label class="shb-bx-sl" title="Grows or shrinks the box from its center"><span>Scale</span>' +
+          '<input type="range" min="10" max="300" step="1" value="100" data-bxsc><b data-bxscv>100%</b></label>' +
+        '<div class="shb-bx-f"><span>Color</span><div class="shb-bx-dots" data-bxdots>' +
+          '<button type="button" class="shb-bx-dot" data-bxc="" title="Auto: the first color of its palette" style="background:linear-gradient(135deg,' + bxAuto(b) + ' 50%,#2a2a2a 50%)"></button>' +
+          BX_SW.map(function (s, k) {
+            return '<button type="button" class="shb-bx-dot" data-bxc="' + s + '" title="' + BX_SWN[k] + '" style="background:' + s + '"></button>';
+          }).join('') +
+          '<label class="shb-bx-dot shb-bx-dotc" data-bxcl title="Any color"><span>+</span><input type="color" data-bxcc value="' + c + '"></label>' +
+        '</div></div>' +
+        '<div class="shb-bx-f"><span>Type</span><div class="shb-bx-seg">' +
+          '<button type="button" data-bxty="obj"' + (m.type !== 'text' ? ' class="shb-bx-on"' : '') + '>Object</button>' +
+          '<button type="button" data-bxty="text"' + (m.type === 'text' ? ' class="shb-bx-on"' : '') + '>Text</button>' +
+        '</div></div>' +
+        (m.type === 'text' ? '<div class="shb-bx-f"><span>Text</span><input type="text" class="shb-bx-in" data-bxtx value="' + esc(m.text) + '" placeholder="The words to write"></div>' : '') +
+        '<div class="shb-bx-f shb-bx-ft"><span>Description</span><textarea class="shb-bx-in" rows="3" data-bxds placeholder="What goes in this box">' + esc(m.desc) + '</textarea></div>' +
+        '<div class="shb-bx-f"><span>Palette</span><div class="shb-bx-pals">' +
+          m.palette.map(function (p, j) {
+            return '<span class="shb-bx-pc" style="background:' + bxHex(p) + '"><input type="color" data-bxpc="' + j + '" value="' + bxHex(p) + '" title="' + esc(p) + '">' +
+              '<button type="button" data-bxpdel="' + j + '" title="Remove this color">×</button></span>';
+          }).join('') +
+          (m.palette.length < 5 ? '<button type="button" class="shb-bx-pc shb-bx-padd" data-bxpadd title="Add a color">+</button>' : '') +
+        '</div></div>' +
+        '<div class="shb-bx-note">Opacity and color are for this view only. The palette goes to the model.</div>';
+      markDots();
+      BX.sc = null;
+    }
+
+    /* the color row and the chips follow the box's color without being rebuilt, so a picker stays open */
+    function markDots() {
+      var b = cur();
+      if (!b) return;
+      var own = b.c && BX_SW.indexOf(b.c) < 0, c = bxColor(b);
+      Array.prototype.forEach.call(ed.querySelectorAll('[data-bxc]'), function (el) {
+        el.classList.toggle('shb-bx-on', el.getAttribute('data-bxc') === (b.c || ''));
+      });
+      var cl = ed.querySelector('[data-bxcl]');
+      if (cl) {
+        cl.classList.toggle('shb-bx-on', !!own);
+        cl.style.background = own ? b.c : '';
+        cl.querySelector('span').style.visibility = own ? 'hidden' : '';
+      }
+      var ch = ed.querySelector('[data-bxedchip]');
+      if (ch) { ch.style.background = c; ch.style.color = bxInk(c); }
+      var auto = ed.querySelector('[data-bxc=""]');
+      if (auto) auto.style.background = 'linear-gradient(135deg,' + bxAuto(b) + ' 50%,#2a2a2a 50%)';
+      var row = list.querySelector('[data-bxrow="' + BX.act + '"] .shb-bx-chip');
+      if (row) { row.style.background = c; row.style.color = bxInk(c); }
+    }
+
+    function rowLabel() {
+      var b = cur(), el = b && list.querySelector('[data-bxrow="' + BX.act + '"] .shb-bx-lbl');
+      if (!el) return;
+      var lb = bxLabel(b);
+      el.textContent = lb.t;
+      el.classList.toggle('shb-bx-dimt', lb.dim);
+    }
+
+    /* a rebuilt list takes the focused button with it: the keys come back to the window */
+    function paintAll() {
+      paintBoxes(); paintHead(); paintList(); paintEd();
+      var ae = document.activeElement;
+      if (!ae || ae === document.body || ae === wrap || !wrap.contains(ae)) sinkFocus();
+    }
+
+    function select(i) {
+      if (i === BX.act) return;
+      BX.act = i; BX.gest = '';
+      paintAll();
+    }
+
+    /* a geometry change by any other way than the Scale slider: the slider starts again from this size */
+    function scReset() {
+      BX.sc = null;
+      var sl = ed.querySelector('[data-bxsc]');
+      if (sl) { sl.value = 100; ed.querySelector('[data-bxscv]').textContent = '100%'; }
+    }
+
+    function dup(i) {
+      var s = BX.boxes[i];
+      if (!s) return;
+      mark('');
+      var n = JSON.parse(JSON.stringify(s));
+      var st = BX.grid ? step() : { x: 24, y: 24 };
+      n.x = Math.min(BX.W - n.w, s.x + st.x);
+      n.y = Math.min(BX.H - n.h, s.y + st.y);
+      if (n.x <= s.x && n.y <= s.y) { n.x = Math.max(0, s.x - st.x); n.y = Math.max(0, s.y - st.y); }
+      BX.boxes.splice(i + 1, 0, n);
+      BX.act = i + 1;
+      paintAll();
+    }
+
+    function del(i) {
+      if (!BX.boxes[i]) return;
+      mark('');
+      BX.boxes.splice(i, 1);
+      BX.act = BX.boxes.length ? Math.min(i, BX.boxes.length - 1) : -1;
+      BX.hov = -1;
+      paintAll();
+    }
+
+    /* a new box wears the first of the eight colors no box wears yet */
+    function freshColor() {
+      for (var k = 0; k < BX_SW.length; k++) {
+        if (!BX.boxes.some(function (b) { return b.c === BX_SW[k]; })) return BX_SW[k];
+      }
+      return BX_SW[BX.boxes.length % BX_SW.length];
+    }
+
+    function toImg(ev) {
+      var r = pic.getBoundingClientRect(), s = BX.fit ? BX.fit.s : 1;
+      return { x: (ev.clientX - r.left) / s, y: (ev.clientY - r.top) / s };
+    }
+    function hit(p) {
+      var best = -1, ba = Infinity, g = bxAll();
+      BX.boxes.forEach(function (b, i) {
+        if (i !== BX.act && b.a * g < 0.02) return;
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+          var a = b.w * b.h;
+          if (a < ba) { ba = a; best = i; }
+        }
+      });
+      return best;
+    }
+
+    stage.addEventListener('pointerdown', function (ev) {
+      if (ev.button !== 0 || !BX.fit) return;
+      ev.preventDefault();
+      var ae = document.activeElement;
+      if (ae && ae !== sink && wrap.contains(ae)) { try { ae.blur(); } catch (e) {} }
+      sinkFocus();
+      BX.gest = '';
+      var p = toImg(ev), h = ev.target.closest('[data-bxh]');
+      var b0 = function (b) { return { x: b.x, y: b.y, w: b.w, h: b.h }; };
+      if (h && cur()) {
+        BX.drag = { mode: h.getAttribute('data-bxh'), at: p, b0: b0(cur()) };
+      } else {
+        var i = hit(p);
+        if (i >= 0) {
+          if (i !== BX.act) { BX.act = i; paintAll(); }
+          BX.drag = { mode: 'move', at: p, b0: b0(cur()) };
+        } else {
+          if (p.x < 0 || p.y < 0 || p.x > BX.W || p.y > BX.H) return;
+          var st = step(), q = { x: Math.max(0, Math.min(BX.W, p.x)), y: Math.max(0, Math.min(BX.H, p.y)) };
+          if (BX.grid) { q.x = snapV(q.x, st.x, BX.W); q.y = snapV(q.y, st.y, BX.H); }
+          mark('draw');
+          BX.boxes.push({ x: Math.round(q.x), y: Math.round(q.y), w: 0, h: 0, meta: { type: 'obj', text: '', desc: '', palette: [] }, a: 1, c: freshColor() });
+          BX.act = BX.boxes.length - 1;
+          BX.drag = { mode: 'draw', p0: q };
+          paintBoxes();
+        }
+      }
+      try { stage.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+
+    stage.addEventListener('pointermove', function (ev) {
+      if (!BX.fit) return;
+      var d = BX.drag, p = toImg(ev);
+      if (!d) {
+        var i = hit(p);
+        if (i !== BX.hov) {
+          BX.hov = i;
+          Array.prototype.forEach.call(layer.children, function (el) {
+            el.classList.toggle('shb-bx-hv', +el.getAttribute('data-bxi') === i);
+          });
+        }
+        pic.style.cursor = i >= 0 ? 'move' : 'crosshair';
+        return;
+      }
+      var b = cur();
+      if (!b) return;
+      var st = step(), nb;
+      if (d.mode === 'draw') {
+        var q = { x: Math.max(0, Math.min(BX.W, p.x)), y: Math.max(0, Math.min(BX.H, p.y)) };
+        if (BX.grid) { q.x = snapV(q.x, st.x, BX.W); q.y = snapV(q.y, st.y, BX.H); }
+        nb = { x: Math.min(d.p0.x, q.x), y: Math.min(d.p0.y, q.y), w: Math.abs(q.x - d.p0.x), h: Math.abs(q.y - d.p0.y) };
+      } else if (d.mode === 'move') {
+        nb = ceMove(d.b0, p.x - d.at.x, p.y - d.at.y, BX.W, BX.H);
+        if (BX.grid) {
+          nb.x = Math.min(snapV(nb.x, st.x, BX.W), BX.W - nb.w);
+          nb.y = Math.min(snapV(nb.y, st.y, BX.H), BX.H - nb.h);
+        }
+      } else {
+        nb = ceResize(d.b0, d.mode, p.x - d.at.x, p.y - d.at.y, BX.W, BX.H, null);
+        if (BX.grid) {
+          var x0 = nb.x, y0 = nb.y, x1 = nb.x + nb.w, y1 = nb.y + nb.h;
+          if (d.mode.indexOf('w') >= 0) x0 = snapV(x0, st.x, BX.W);
+          if (d.mode.indexOf('e') >= 0) x1 = snapV(x1, st.x, BX.W);
+          if (d.mode.indexOf('n') >= 0) y0 = snapV(y0, st.y, BX.H);
+          if (d.mode.indexOf('s') >= 0) y1 = snapV(y1, st.y, BX.H);
+          if (x1 - x0 >= 4) { nb.x = x0; nb.w = x1 - x0; }
+          if (y1 - y0 >= 4) { nb.y = y0; nb.h = y1 - y0; }
+        }
+      }
+      nb = { x: Math.round(nb.x), y: Math.round(nb.y), w: Math.round(nb.w), h: Math.round(nb.h) };
+      if (nb.x === b.x && nb.y === b.y && nb.w === b.w && nb.h === b.h) return;
+      if (d.mode !== 'draw') mark('drag');
+      b.x = nb.x; b.y = nb.y; b.w = nb.w; b.h = nb.h;
+      paintBoxes();
+      paintHead();
+    });
+
+    function dragEnd() {
+      var d = BX.drag;
+      if (!d) return;
+      BX.drag = null;
+      BX.gest = '';
+      var b = cur();
+      if (d.mode === 'draw' && (!b || b.w < 4 || b.h < 4)) {
+        BX.redo = [];
+        load(BX.undo.pop());
+        return;
+      }
+      paintAll();
+    }
+    stage.addEventListener('pointerup', dragEnd);
+    stage.addEventListener('pointercancel', dragEnd);
+    stage.addEventListener('lostpointercapture', dragEnd);
+    stage.addEventListener('pointerleave', function () {
+      if (BX.drag || BX.hov < 0) return;
+      BX.hov = -1;
+      Array.prototype.forEach.call(layer.children, function (el) { el.classList.remove('shb-bx-hv'); });
+    });
+
+    /* a click on the dark around the window keeps the boxes, as Visual Crop does */
+    wrap.addEventListener('pointerdown', function (ev) {
+      if (!panel.contains(ev.target)) boxEditClose(true);
+    });
+
+    side.addEventListener('click', function (ev) {
+      var t = ev.target, el;
+      if ((el = t.closest('[data-bxdup]'))) { dup(+el.getAttribute('data-bxdup')); return; }
+      if ((el = t.closest('[data-bxdel]'))) { del(+el.getAttribute('data-bxdel')); return; }
+      if ((el = t.closest('[data-bxrow]'))) { select(+el.getAttribute('data-bxrow')); return; }
+      var b = cur();
+      if (!b) return;
+      if ((el = t.closest('[data-bxc]'))) {
+        var c = el.getAttribute('data-bxc');
+        if ((b.c || '') === c) return;
+        mark('');
+        b.c = c;
+        paintBoxes(); markDots();
+        return;
+      }
+      if ((el = t.closest('[data-bxty]'))) {
+        var ty = el.getAttribute('data-bxty');
+        if (b.meta.type === ty) return;
+        mark('');
+        b.meta.type = ty;
+        paintBoxes(); paintEd(); rowLabel();
+        var tx = ed.querySelector('[data-bxtx]');
+        if (tx) { try { tx.focus(); } catch (e) {} }
+        return;
+      }
+      if ((el = t.closest('[data-bxpdel]'))) {
+        mark('');
+        b.meta.palette.splice(+el.getAttribute('data-bxpdel'), 1);
+        paintBoxes(); paintEd();
+        markDots();
+        return;
+      }
+      if (t.closest('[data-bxpadd]') && b.meta.palette.length < 5) {
+        mark('');
+        var pl = b.meta.palette;
+        pl.push(pl.length ? bxHex(pl[pl.length - 1]) : bxColor(b));
+        paintBoxes(); paintEd();
+        var ins = ed.querySelectorAll('[data-bxpc]');
+        if (ins.length) { try { ins[ins.length - 1].click(); } catch (e) {} }
+      }
+    });
+
+    side.addEventListener('input', function (ev) {
+      var t = ev.target, b = cur(), v;
+      if (t.hasAttribute('data-bxdims')) {
+        S.bxDim = (+t.value || 0) / 100;
+        wrap.querySelector('[data-bxdimv]').textContent = Math.round(S.bxDim * 100) + '%';
+        dimEl.style.opacity = src ? S.bxDim : 0;
+        return;
+      }
+      if (t.hasAttribute('data-bxalls')) {
+        S.bxAll = (+t.value || 0) / 100;
+        wrap.querySelector('[data-bxallv]').textContent = Math.round(S.bxAll * 100) + '%';
+        paintBoxes();
+        return;
+      }
+      if (!b) return;
+      if (t.hasAttribute('data-bxop')) {
+        mark('op' + BX.act);
+        b.a = (+t.value || 0) / 100;
+        ed.querySelector('[data-bxopv]').textContent = Math.round(b.a * 100) + '%';
+        paintBoxes();
+      } else if (t.hasAttribute('data-bxsc')) {
+        if (!BX.sc || BX.sc.i !== BX.act) BX.sc = { i: BX.act, b0: { x: b.x, y: b.y, w: b.w, h: b.h } };
+        mark('sc' + BX.act);
+        var k = (+t.value || 100) / 100, b0 = BX.sc.b0;
+        var cx = b0.x + b0.w / 2, cy = b0.y + b0.h / 2;
+        var w = Math.max(4, b0.w * k), h = Math.max(4, b0.h * k);
+        var f = Math.min(1, BX.W / w, BX.H / h);
+        b.w = Math.round(w * f); b.h = Math.round(h * f);
+        b.x = Math.round(Math.max(0, Math.min(BX.W - b.w, cx - b.w / 2)));
+        b.y = Math.round(Math.max(0, Math.min(BX.H - b.h, cy - b.h / 2)));
+        ed.querySelector('[data-bxscv]').textContent = Math.round(k * 100) + '%';
+        paintBoxes(); paintHead();
+      } else if (t.hasAttribute('data-bxcc')) {
+        v = bxHex(t.value);
+        if (!v) return;
+        mark('cc' + BX.act);
+        b.c = v;
+        paintBoxes(); markDots();
+      } else if (t.hasAttribute('data-bxpc')) {
+        v = bxHex(t.value);
+        var j = +t.getAttribute('data-bxpc');
+        if (!v) return;
+        mark('pc' + BX.act + '_' + j);
+        b.meta.palette[j] = v;
+        t.parentNode.style.background = v;
+        t.title = v;
+        paintBoxes(); markDots();
+      } else if (t.hasAttribute('data-bxtx')) {
+        mark('tx' + BX.act);
+        b.meta.text = t.value;
+        paintBoxes(); rowLabel();
+      } else if (t.hasAttribute('data-bxds')) {
+        mark('ds' + BX.act);
+        b.meta.desc = t.value;
+        paintBoxes(); rowLabel();
+      }
+    });
+    /* a slider let go, a color picked, a field left: the next change is its own undo step */
+    side.addEventListener('change', function (ev) {
+      var t = ev.target;
+      if (t.hasAttribute('data-bxdims') || t.hasAttribute('data-bxalls')) { save(); return; }
+      BX.gest = '';
+      paintHead();
+    });
+    side.addEventListener('focusout', function () { BX.gest = ''; paintHead(); });
+
+    wrap.querySelector('[data-bxgrid]').onclick = function () { BX.grid = !BX.grid; paintBoxes(); paintHead(); };
+    wrap.querySelector('[data-bxundo]').onclick = undo;
+    wrap.querySelector('[data-bxredo]').onclick = redo;
+    wrap.querySelector('[data-bxclear]').onclick = function () {
+      if (!BX.boxes.length) return;
+      mark('');
+      BX.boxes = []; BX.act = -1; BX.hov = -1;
+      paintAll();
+    };
+    wrap.querySelector('[data-bxcancel]').onclick = function () { boxEditClose(false); };
+    wrap.querySelector('[data-bxdone]').onclick = function () { boxEditClose(true); };
+
+    wrap.addEventListener('keydown', function (ev) {
+      var t = ev.target, k = ev.key;
+      var field = !!(t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+      var typing = field && t.type !== 'range' && t.type !== 'color';
+      if (ev.altKey && (k === 'z' || k === 'Z')) return;
+      ev.stopPropagation();
+      var mod = ev.ctrlKey || ev.metaKey;
+      if (k === 'Escape') {
+        ev.preventDefault();
+        if (typing) { try { t.blur(); } catch (e) {} sinkFocus(); return; }
+        boxEditClose(false);
+        return;
+      }
+      if (mod && k === 'Enter') { ev.preventDefault(); boxEditClose(true); return; }
+      if (typing) {
+        if (k === 'Enter' && t.tagName === 'INPUT') { ev.preventDefault(); try { t.blur(); } catch (e) {} sinkFocus(); }
+        return;
+      }
+      if (k === 'Enter') { ev.preventDefault(); boxEditClose(true); return; }
+      if (mod && (k === 'z' || k === 'Z')) { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); return; }
+      if (mod && (k === 'y' || k === 'Y')) { ev.preventDefault(); redo(); return; }
+      if (mod && (k === 'd' || k === 'D')) { ev.preventDefault(); if (cur()) dup(BX.act); return; }
+      if ((k === 'Delete' || k === 'Backspace') && cur()) { ev.preventDefault(); del(BX.act); return; }
+      if (field) return;
+      var n = ev.shiftKey ? 10 : 1;
+      var mv = { ArrowLeft: [-n, 0], ArrowRight: [n, 0], ArrowUp: [0, -n], ArrowDown: [0, n] }[k];
+      var b = cur();
+      if (mv && b) {
+        ev.preventDefault();
+        var nb = ceMove(b, mv[0], mv[1], BX.W, BX.H);
+        if (nb.x === b.x && nb.y === b.y) return;
+        mark('nudge' + BX.act);
+        b.x = nb.x; b.y = nb.y;
+        scReset();
+        paintBoxes(); paintHead();
+      }
+    });
+
+    var dimIn = wrap.querySelector('[data-bxdims]'), allIn = wrap.querySelector('[data-bxalls]');
+    dimIn.value = Math.round(bxDimV() * 100);
+    wrap.querySelector('[data-bxdimv]').textContent = Math.round(bxDimV() * 100) + '%';
+    allIn.value = Math.round(bxAll() * 100);
+    wrap.querySelector('[data-bxallv]').textContent = Math.round(bxAll() * 100) + '%';
+    if (!src) dimIn.closest('label').classList.add('shb-bx-na');
+
+    if (img) {
+      /* a picture fed in sets the node's size, as ComfyUI's editor does: rounded to 16, the boxes keep their place on it */
+      img.onload = function () {
+        if (BX.el !== wrap) return;
+        var nw = img.naturalWidth, nh = img.naturalHeight;
+        if (!(nw > 0 && nh > 0)) return;
+        var tw = Math.max(16, Math.round(nw / 16) * 16), th = Math.max(16, Math.round(nh / 16) * 16);
+        if (tw === BX.W && th === BX.H) return;
+        var fx = tw / BX.W, fy = th / BX.H;
+        var re = function (b) { b.x = Math.round(b.x * fx); b.y = Math.round(b.y * fy); b.w = Math.round(b.w * fx); b.h = Math.round(b.h * fy); };
+        BX.boxes.forEach(re);
+        var reSnap = function (s) { var o = JSON.parse(s); o.b.forEach(re); return JSON.stringify(o); };
+        BX.undo = BX.undo.map(reSnap); BX.redo = BX.redo.map(reSnap);
+        BX.W = tw; BX.H = th; BX.dims = { w: tw, h: th };
+        fit(); paintHead();
+      };
+      img.onerror = function () { img.style.display = 'none'; dimEl.style.opacity = 0; };
+      img.src = src;
+    }
+
+    BX.onRs = function () { if (BX.el === wrap) fit(); };
+    window.addEventListener('resize', BX.onRs);
+    /* a click on a button leaves the keys with the window, not on the button */
+    wrap.addEventListener('click', function (ev) {
+      if (BX.el !== wrap || ev.target.closest('input,textarea,select,label')) return;
+      var ae = document.activeElement;
+      if (ae && wrap.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+      sinkFocus();
+    });
+    fit();
+    paintAll();
+    sinkFocus();
     return true;
   }
 
@@ -8060,17 +9038,19 @@
     if (LUPA.el) { lupaClose(); return; }
     if (CE.el) { cropEditClose(true); return; }
     if (PE.el) { paintEditClose(true); return; }
+    if (BX.el) { boxEditClose(true); return; }
     var n = explicitNode || hbNode();
     var t = lupaTarget();
     var typing = !!(t && t.ta && t.ta === document.activeElement);
     if (n && isCropNode(n) && !typing) { cropEditOpen(n); return; }
     if (n && isPainterNode(n) && !typing) { paintEditOpen(n); return; }
+    if (n && isBoxNode(n) && !typing) { boxEditOpen(n); return; }
     if (t && (t.ta || t.w)) { lupaOpen(t); return; }
     if (n) {
       var w = lupaWidget(n);
       if (w) { lupaOpen({ w: w, node: n }); return; }
     }
-    setStatus('error', 'Alt+Z: Point at a Prompt node (Magnifier), a Crop node (Visual Crop), or a Painter node');
+    setStatus('error', 'Alt+Z: Point at a Prompt node (Magnifier), a Crop node (Visual Crop), a Painter node, or a Create Bounding Boxes node');
   }
 
   /* ---------------------------------------------------------------------
@@ -8274,6 +9254,7 @@
       seed:       { id: 'seed',       icon: 'seed',       label: 'Copy Seed',      kbd: '',  fn: function () { actExtractSeed(node); } },
       cropedit:   { id: 'cropedit',   icon: 'lupa',       label: 'Visual Crop',    kbd: 'Z', fn: function () { cropEditOpen(node); } },
       paintedit:  { id: 'paintedit',  icon: 'paint',      label: 'Paint Studio',   kbd: 'Z', fn: function () { paintEditOpen(node); } },
+      boxedit:    { id: 'boxedit',    icon: 'boxes',      label: 'Box Studio',     kbd: 'Z', fn: function () { boxEditOpen(node); } },
       lupa:       { id: 'lupa',       icon: 'lupa',       label: 'Magnifier',      kbd: 'Z', fn: function () { actAltZ(node); } },
       phist:      { id: 'phist',      icon: 'history',    label: 'Prompt History', kbd: '',  stayOpen: true, fn: function () { actPromptHistory(node); } },
       label:      { id: 'label',      icon: 'label',      label: 'Add Label',      kbd: 'L', fn: function () { labelOpen(node); } },
@@ -8488,7 +9469,7 @@
 
   /* Power tools are the user's own extras; each can be switched off in Settings, which hides its buttons too */
   var POWER_TOOL_OF = {
-    cropedit: 'useAltZ', paintedit: 'useAltZ', lupa: 'useAltZ',
+    cropedit: 'useAltZ', paintedit: 'useAltZ', boxedit: 'useAltZ', lupa: 'useAltZ',
     label: 'useAltN', note: 'useAltN',
     loadcanvas: 'useAltR',
     render: 'useShiftR',
@@ -8572,6 +9553,8 @@
       ids.push('paintedit');
       if (stFirst) ids.push('stitch');
       ids.push('prev', 'maskprev', 'cmp', 'saveimg');
+    } else if (k === 'bbox') {
+      ids.push('boxedit', 'prev', 'saveimg');
     } else if (k === 'set') {
       ids.push('setinh', 'addget');
     } else if (k === 'get') {
@@ -9670,7 +10653,7 @@
     var isTpl = item.kind === 'template';
     var isPin = (barName === 'bot' && item.kind !== 'tool') || isTpl;
     var btnCls = 'shb-btn ' + (barName === 'add' ? 'shb-fav' : (isPin ? 'shb-pin' : (barName === 'bot' ? 'shb-act' : 'shb-tool'))) + (isTpl ? ' shb-tpl' : '');
-    if (barName === 'tools' && /^(cropedit|paintedit|lupa)$/.test(item.id)) btnCls += ' shb-btn-primary';
+    if (barName === 'tools' && /^(cropedit|paintedit|boxedit|lupa)$/.test(item.id)) btnCls += ' shb-btn-primary';
     if (item.id === 'apibypass') btnCls += ' shb-danger';
     if (item.cls && item.cls !== 'shb-btn-pri') btnCls += ' ' + item.cls;
     if (item.off) btnCls += ' shb-na';
@@ -15000,7 +15983,7 @@
      kinds you already changed, the kinds of the nodes on the canvas right now (one of those nodes stands for
      its kind, to know what the bar holds before any change) and, for the dock, always the empty canvas and the
      two swap bars ---- */
-  var BRW_BUCKET_NAMES = { empty: 'Empty canvas', load: 'Loader node', crop: 'Crop node', stitch: 'Stitch node', paint: 'Painter node',
+  var BRW_BUCKET_NAMES = { empty: 'Empty canvas', load: 'Loader node', crop: 'Crop node', stitch: 'Stitch node', paint: 'Painter node', bbox: 'Bounding Boxes node',
     set: 'Set node', get: 'Get node', view: 'Preview node', out: 'Output node', api: 'Image API node', 'api-video': 'Video API node',
     gen: 'Image generator', 'gen-video': 'Video generator', other: 'Other nodes', 'other-video': 'Other video nodes' };
 
@@ -18508,8 +19491,8 @@
   /* The user's own power tools. Settings lists them as buttons to drag onto any hotbox bar; a placed one stays
      there, dimmed on the nodes it does not work on (hbKeep). */
   var POWER_TOOLS = [
-    { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
-      tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
+    { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio · Box Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
+      tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). On a Create Bounding Boxes node: Box Studio (draw, move and resize boxes; a slider for how dark the picture is, one for all the boxes and one for each box; a color of its own per box; duplicate; scale from the center; type, text, description and palette). Also the Z row of the hotbox.' },
     { uid: 'tool:phist', icon: 'history', name: 'Prompt History', keys: '↑ in an empty box', desc: 'The prompts you ran, back with ↑, as in Claude',
       tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json, each with the workflow it ran from. The panel shows All of them (the start) or only This workflow\'s, and \u2191 follows it. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; its + keeps the prompt in the box without a run; the tool\'s button, on a bar, lists them too.' },
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
@@ -19900,7 +20883,7 @@
   listen(document, 'keydown', function (e) {
     if (!S.dotZoom || HB.binding || hbTyping()) return;
     if (e.key !== '.' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    if (LUPA.el || CE.el || PE.el || LB.on) return;
+    if (LUPA.el || CE.el || PE.el || BX.el || LB.on) return;
     if (!selNodes().length && !NZ.prev) return;
     e.preventDefault(); e.stopPropagation();
     if (e.repeat) return;
@@ -19912,7 +20895,7 @@
     if (!S.useArrange || HB.binding || HB.el || hbTyping()) return;
     if (e.code !== 'KeyL' && String(e.key || '').toLowerCase() !== 'l') return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    if (LUPA.el || CE.el || PE.el || LB.on) return;
+    if (LUPA.el || CE.el || PE.el || BX.el || LB.on) return;
     if (!selNodes().length) return;
     e.preventDefault(); e.stopPropagation();
     if (e.repeat) return;
