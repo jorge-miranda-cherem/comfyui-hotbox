@@ -511,6 +511,8 @@
       return cfgRead(CFG.file);
     }).then(function (raw) {
       CFG.ready = true;
+      /* the prompt history comes in now, so the first Up in a new browser already has it */
+      phBootSync();
       /* Changed while the files could not be reached: this browser has the newest copy */
       if (CFG.pending) {
         CFG.pending = false;
@@ -6888,7 +6890,7 @@
      queues it) adds the text of each prompt it sends; in the Magnifier, Up on the first line brings back the
      prompt before and Down on the last line the one after, then what you were writing. One list for every prompt
      node, kept in prompt_history.json beside hotbox.json (this browser keeps a copy, so it works without the file) */
-  var PH = { list: null, synced: false, timer: 0 };
+  var PH = { list: null, synced: false, timer: 0, wait: null };
   var PH_FILE = 'prompt_history.json', PH_KEY = 'hotbox_prompt_history', PH_MAX = 1000, PH_LONG = 20000;
 
   function phOn() { return S.usePromptHistory !== false; }
@@ -6944,23 +6946,47 @@
     try { localStorage.setItem(PH_KEY, JSON.stringify(PH.list || [])); } catch (e) {}
   }
 
-  /* the file and this browser's copy, together (another tab, or another browser, may have added to the file) */
-  function phSync() {
-    PH.synced = true;
-    return cfgRead(PH_FILE).catch(function () { return null; }).then(function (j) {
-      var got = (j && Array.isArray(j.prompts)) ? j.prompts : [];
-      PH.list = phClean(got.concat(PH.list || []));
-      phKeepLocal();
-      return PH.list;
-    });
-  }
-
-  function phList() {
+  /* this browser's copy */
+  function phLocal() {
     if (!PH.list) {
       var loc = [];
       try { loc = JSON.parse(localStorage.getItem(PH_KEY) || '[]'); } catch (e) { loc = []; }
       PH.list = phClean(loc);
     }
+    return PH.list;
+  }
+
+  /* the file and this browser's copy, together (another tab, or another browser, may have added to the file).
+     While it is read, PH.wait is there for what cannot do without it (phLater) */
+  function phSync() {
+    PH.synced = true;
+    phLocal();
+    var p = cfgRead(PH_FILE).catch(function () { return null; }).then(function (j) {
+      var got = (j && Array.isArray(j.prompts)) ? j.prompts : [];
+      PH.list = phClean(got.concat(PH.list || []));
+      phKeepLocal();
+      return PH.list;
+    });
+    var w = PH.wait = p.then(function () {}, function () {}).then(function () { if (PH.wait === w) PH.wait = null; });
+    return p;
+  }
+
+  /* as soon as the preferences file is found: a browser with no copy of the history (a new one, another machine,
+     cleared storage) has it before the first Up */
+  function phBootSync() {
+    if (!PH.synced && phOn()) phSync();
+  }
+
+  /* While the file is being read: `fn` runs once it is in, and this says true (false when there is nothing to
+     wait for) */
+  function phLater(fn) {
+    if (!PH.wait) return false;
+    PH.wait.then(fn);
+    return true;
+  }
+
+  function phList() {
+    phLocal();
     if (!PH.synced && CFG.ready) phSync();
     return PH.list;
   }
@@ -7052,7 +7078,7 @@
      What it puts in goes through the box's own editing, so Ctrl+Z takes it back. `note(text)` says where the walk
      is ('' when it stops); `moved()` is told after each step */
   function phWalker(ta, note, moved) {
-    var st = { i: -1, list: [], draft: '', busy: false };
+    var st = { i: -1, list: [], draft: '', busy: false, wait: false };
     function tell(s) {
       try { if (note) note(s); } catch (e) {}
       try { if (moved) moved(); } catch (e) {}
@@ -7093,6 +7119,17 @@
     }
     function step(d) {
       begin();
+      /* the history file is still coming in: the step is taken once it is, unless something went in the box */
+      if (!st.list.length && PH.wait) {
+        if (!st.wait) {
+          st.wait = true;
+          phLater(function () {
+            st.wait = false;
+            if (ta.isConnected && st.i < 0 && ta.value === st.draft) step(d);
+          });
+        }
+        return;
+      }
       if (!st.list.length) { tell('No prompts yet: each run keeps the prompts it sends'); return; }
       var n = st.i + d;
       if (n >= st.list.length) { tell('Prompt ' + st.list.length + ' of ' + st.list.length + ' \u00b7 the oldest'); return; }
@@ -7243,6 +7280,8 @@
     var ta = PHB.ta;
     if (!ta || !PHB.btn) return;
     phbClose();
+    /* the history file is still coming in: the list opens once it is */
+    if (!phView().length && phLater(function () { if (PHB.ta === ta && !PHB.pop) phbOpen(); })) return;
     var w = phBoxWalker(ta);
     var pop = owns(document.createElement('div'));
     pop.className = 'shb-phb-pop';
@@ -7315,7 +7354,7 @@
           '<button type="button" data-sc="wf"></button></div>' +
         '<div class="shb-ph-list"></div>' +
       '</div>';
-    var q = side.querySelector('.shb-ph-q'), listEl = side.querySelector('.shb-ph-list'), shown = [];
+    var q = side.querySelector('.shb-ph-q'), listEl = side.querySelector('.shb-ph-list'), shown = [], later = false;
     function mark() {
       var cur = ta.value, top = phView()[0];
       Array.prototype.forEach.call(listEl.querySelectorAll('[data-ph]'), function (r) {
@@ -7361,6 +7400,8 @@
         : (scope ? 'No prompts from ' + esc(phWfLabel(scope)) + ' yet. Each run keeps the prompts it sends; All has the others.'
           : 'No prompts yet. Each run keeps the prompts it sends, newest first.')) + '</div>';
       mark();
+      /* the history file is still coming in: drawn again once it is */
+      if (!later) later = phLater(function () { later = false; if (side.isConnected) draw(); });
     }
     function pick(t) {
       walker.pick(t);
@@ -7471,6 +7512,12 @@
       return;
     }
     var list = phView();
+    /* the history file is still coming in: the list opens once it is, if the hotbox is still there */
+    if (!list.length && phLater(function () {
+      if (!HB.el || !HB.el.contains(anchor)) return;
+      HB.runEl = anchor;
+      actPromptHistory(node);
+    })) return;
     if (!list.length) {
       hbClose();
       setStatus('ok', phScopeKey() ? 'No prompts from ' + phWfLabel(phScopeKey()) + ' yet: each run keeps the prompts it sends'
