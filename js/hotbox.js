@@ -733,6 +733,7 @@
     plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
     search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
     mask: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
+    maskPreview: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="4.6"/><path d="M12 7.4a4.6 4.6 0 0 1 0 9.2z" fill="currentColor"/>',
     arrange: '<rect x="2" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="4" width="7" height="5" rx="1.2"/><rect x="15" y="15" width="7" height="5" rx="1.2"/><path d="M9 6.5h6"/><path d="M12 6.5v11h3"/>',
     zoom: '<circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
@@ -1904,12 +1905,19 @@
       '.shb-ph{flex:0 0 auto;display:flex;min-height:0;border-left:1px solid #333333;background:#1d1d1d;font-family:Inter,system-ui,sans-serif;line-height:1.3;color:#c8c8c8}',
       '.shb-ph svg{width:1.2em;height:1.2em;flex:0 0 auto}',
       '.shb-ph-in{width:20em;max-width:34vw;display:flex;flex-direction:column;min-height:0}',
-      '.shb-ph-rail{display:none;flex-direction:column;align-items:center;gap:.4em;width:2.6em;margin:0;padding:.9em 0;border:0;background:transparent;color:#9a9a9a;cursor:pointer;font:inherit}',
+      '.shb-ph-rail{display:none;flex-direction:column;align-items:center;gap:.4em;width:2.6em;box-sizing:border-box;margin:0;padding:.9em 0;border:0;background:transparent;color:#9a9a9a;cursor:pointer;font:inherit}',
       '.shb-ph-rail:hover{background:#262626;color:#e2e2e2}',
       '.shb-ph.shb-ph-shut .shb-ph-in{display:none}',
       '.shb-ph.shb-ph-shut .shb-ph-rail{display:flex}',
       '.shb-ph-hd{display:flex;align-items:center;gap:.5em;padding:.7em .5em .55em 1em;font-weight:600;color:#e2e2e2}',
       '.shb-ph-n{font-weight:500;font-size:.85em;color:#8a8a8a}',
+      '.shb-ph-keep{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;padding:0;border:0;border-radius:5px;background:transparent;color:#9a9a9a;cursor:pointer}',
+      '.shb-ph-keep:hover{background:#2e2e2e;color:#e2e2e2}',
+      '.shb-ph-keep.shb-ph-idle{opacity:.4}',
+      '.shb-ph-rail .shb-ph-keep{margin:.35em 0 0;flex:0 0 auto}',
+      /* the count holds its line, so the + under it stays put when the first prompt is kept */
+      '.shb-ph-rail .shb-ph-n{min-height:1.3em}',
+      '.shb-ph-keep + .shb-ph-x{margin-left:0}',
       '.shb-ph-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;padding:0;border:0;border-radius:5px;background:transparent;color:#9a9a9a;cursor:pointer}',
       '.shb-ph-x:hover{background:#2e2e2e;color:#e2e2e2}',
       '.shb-ph-q{margin:0 .8em .6em;height:2.4em;box-sizing:border-box;padding:0 .7em;border:1px solid #3c3c3c;border-radius:5px;background:#181818;color:#e2e2e2;font:inherit;outline:none}',
@@ -7131,16 +7139,18 @@
   /* The history as a list: the prompts you ran with a field to find one by any word in it, the one in the box lit;
      a click puts that prompt in, and the arrows go on from it. Beside the Magnifier's text it sits on the right,
      folded into a narrow strip with one click (kept for the next time); `opts.pop` makes it the box under a node's
-     history button instead (`close`, `picked`, `px` its font size) */
+     history button instead (`close`, `picked`, `px` its font size). Its + (on the strip too) keeps the prompt in the
+     box without a run; `opts.note(text)` says so (else the status line) */
   function phPanel(walker, ta, opts) {
     opts = opts || {};
     var side = document.createElement('div');
     side.className = 'shb-ph' + (opts.pop ? ' shb-ph-pop' : (S.lupaHist ? '' : ' shb-ph-shut'));
     side.style.fontSize = (opts.px || phPanelPx()) + 'px';
+    var keepBtn = '<button type="button" class="shb-ph-keep" title="Keep the prompt in the box in the history, without a run">' + ico('plus', 16) + '</button>';
     side.innerHTML =
-      (opts.pop ? '' : '<button type="button" class="shb-ph-rail" title="The prompts you ran">' + ico('history', 16) + '<span class="shb-ph-n"></span></button>') +
+      (opts.pop ? '' : '<div class="shb-ph-rail" title="The prompts you ran">' + ico('history', 16) + '<span class="shb-ph-n"></span>' + keepBtn + '</div>') +
       '<div class="shb-ph-in">' +
-        '<div class="shb-ph-hd">' + ico('history', 16) + '<span>History</span><span class="shb-ph-n"></span>' +
+        '<div class="shb-ph-hd">' + ico('history', 16) + '<span>History</span><span class="shb-ph-n"></span>' + keepBtn +
           (opts.pop ? '<button type="button" class="shb-ph-x" title="Close (Esc)">\u00d7</button>'
             : '<button type="button" class="shb-ph-x" title="Fold the history away">' + ico('chevRight', 16) + '</button>') + '</div>' +
         '<input class="shb-ph-q" type="text" spellcheck="false" autocomplete="off" placeholder="Find a prompt">' +
@@ -7148,11 +7158,27 @@
       '</div>';
     var q = side.querySelector('.shb-ph-q'), listEl = side.querySelector('.shb-ph-list'), shown = [];
     function mark() {
-      var cur = ta.value;
+      var cur = ta.value, top = phList()[0];
       Array.prototype.forEach.call(listEl.querySelectorAll('[data-ph]'), function (r) {
         var e = shown[+r.getAttribute('data-ph')];
         r.classList.toggle('shb-ph-on', !!e && e.t === cur);
       });
+      /* nothing to keep: an empty box, or the newest prompt already */
+      var idle = !cur.trim() || !!(top && top.t === cur);
+      Array.prototype.forEach.call(side.querySelectorAll('.shb-ph-keep'), function (b) { b.classList.toggle('shb-ph-idle', idle); });
+    }
+    function say(t) {
+      try { if (opts.note) opts.note(t); else setStatus('ok', t); } catch (e) {}
+    }
+    function keep(btn) {
+      var t = ta.value, top = phList()[0];
+      if (!phOn()) return;
+      if (!t.trim()) { say('The box is empty: nothing to keep'); return; }
+      if (top && top.t === t) { say('This prompt is the newest in the history already'); return; }
+      phAdd([t]);
+      draw();
+      say('Kept in the history, without a run');
+      try { btn.animate([{ transform: 'scale(1.3)', color: '#9cc0ff' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' }); } catch (e) {}
     }
     function draw() {
       var all = phList(), ql = q.value.trim().toLowerCase();
@@ -7175,10 +7201,13 @@
       save();
       try { ta.focus(); } catch (e) {}
     }
-    /* its buttons and rows leave the cursor where it is */
-    side.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('button')) e.preventDefault(); });
+    /* its buttons, strip and rows leave the cursor where it is */
+    side.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('button, .shb-ph-rail')) e.preventDefault(); });
     var rail = side.querySelector('.shb-ph-rail');
-    if (rail) rail.onclick = function () { setOpen(true); };
+    if (rail) rail.onclick = function (e) { if (!(e.target.closest && e.target.closest('.shb-ph-keep'))) setOpen(true); };
+    Array.prototype.forEach.call(side.querySelectorAll('.shb-ph-keep'), function (b) {
+      b.addEventListener('click', function () { keep(b); });
+    });
     side.querySelector('.shb-ph-x').onclick = function () { if (opts.pop) { if (opts.close) opts.close(); } else setOpen(false); };
     listEl.addEventListener('click', function (e) {
       var r = e.target.closest && e.target.closest('[data-ph]');
@@ -7443,7 +7472,12 @@
     LUPA.ph = (phOn() && !(src && src.readOnly))
       ? phWalker(ta, lupaHint, function () { if (LUPA.phPanel) LUPA.phPanel.mark(); }) : null;
     if (LUPA.ph) {
-      LUPA.phPanel = phPanel(LUPA.ph, ta);
+      LUPA.phPanel = phPanel(LUPA.ph, ta, {
+        note: function (s) {
+          lupaHint(s);
+          setTimeout(function () { if (hintEl && hintEl.textContent === s) lupaHint(''); }, 2600);
+        }
+      });
       body.appendChild(LUPA.phPanel.el);
       LUPA.phPanel.draw();
       ta.addEventListener('input', function () { if (!LUPA.ph || !LUPA.ph.walking()) lupaHint(''); });
@@ -8530,6 +8564,9 @@
     });
   }
 
+  /* A node button leads with a plus; these nodes have an icon of their own, so on a bar of icons they read as one */
+  var NODE_ICONS = { MaskPreview: 'maskPreview' };
+
   /* Resolve any bar item uid ('model:...', 'node:...', 'tool:...', 'tpl:...') into a unified renderable & executable
      item. `loose` (a power tool dragged in from Settings) skips the "only where it applies" filter. A tool the
      user placed on a bar themselves (hbKeep) is never hidden: where it does not apply it comes back with `off`,
@@ -8664,7 +8701,8 @@
         id: nType,
         label: shortDisp,
         title: 'Add & auto-connect ' + disp + (matchSlots ? ' [' + matchSlots + ']' : ''),
-        icon: subName ? 'subgraph' : 'plus',
+        icon: subName ? 'subgraph' : (NODE_ICONS[nType] || 'plus'),
+        ownIcon: !subName && !!NODE_ICONS[nType],
         kbd: '',
         cls: 'shb-btn-pri',
         run: function () {
@@ -9529,8 +9567,9 @@
     if (isLead) btnCls += ' shb-lead';
     /* Icons Only (Settings → Power Tools): a tool is its icon alone, and its name and key show under the pointer.
        Not in a group's list, which reads as a list, and not where the name says what a press will do (Seed: fixed,
-       a Get's bus, a crop ratio). Saved buttons, groups and nodes share one icon each, so they keep their name */
-    var iconOnly = !!S.hbIconsOnly && isLead && item.kind === 'tool' && !grpId && !/^(seedtoggle$|get_|ar_)/.test(item.id);
+       a Get's bus, a crop ratio). Saved buttons, groups and nodes share one icon each, so they keep their name;
+       a node with an icon of its own (Preview Mask) goes by its icon like a tool */
+    var iconOnly = !!S.hbIconsOnly && isLead && (item.kind === 'tool' || item.ownIcon) && !grpId && !/^(seedtoggle$|get_|ar_)/.test(item.id);
     if (iconOnly) btnCls += ' shb-ionly';
     var lead = numKey ? '<span class="shb-num">' + esc(kbdStr) + '</span>'
       : (isTpl ? tplIcoHTML(item.uid, hbLeadSz())
@@ -18314,7 +18353,7 @@
     { uid: 'tool:lupa', icon: 'lupa', name: 'Magnifier · Visual Crop · Paint Studio', keys: 'Alt+Z', desc: 'A big editor for the node under the cursor',
       tip: 'On a prompt / text node: Magnifier, a big live text editor (5 font sizes, box presets, corner resize, find and replace with Ctrl+F / Ctrl+H). On a crop node: the Visual Crop editor (8 handles, ratios, size presets, arrow-key nudging; its stitch stays in sync). On a paint or LoadImage node: the fullscreen Paint Studio (brush, eraser, undo, uploads straight to ComfyUI). Also the Z row of the hotbox.' },
     { uid: 'tool:phist', icon: 'history', name: 'Prompt History', keys: '↑ in an empty box', desc: 'The prompts you ran, back with ↑, as in Claude',
-      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; the tool\'s button, on a bar, lists them too.' },
+      tip: 'Every run keeps the prompts it sends, newest first: one list for all your prompt nodes, in prompt_history.json beside hotbox.json. ↑ in an empty prompt box (the node\'s own, or the Magnifier\'s) brings back the last one; while the box shows one, ↑ and ↓ go on to older and newer ones, and anything else leaves it there to edit. Ctrl+Z takes it back. A prompt box shows a history button in its top-right corner while the pointer is on it: a click lists them, with a field to find one. The Magnifier has them on its right, folded into a strip until you open it; its + keeps the prompt in the box without a run; the tool\'s button, on a bar, lists them too.' },
     { uid: 'tool:label', icon: 'label', name: 'Label Studio', keys: 'Alt+N', desc: 'Rich canvas titles and notes',
       tip: 'Creates or edits a canvas label: text, size, font, color, corners, top shine, spacing and quick icons. Uses Label (rgthree) or an installed label node when it can, otherwise MarkdownNote / Note / Group. Also the Add Label row (L) of the hotbox.' },
     { uid: 'tool:loadcanvas', icon: 'loadCanvas', name: 'Load in Canvas', keys: 'Alt+R · V', desc: 'Hand a render to a new Load Image / Load Video',
