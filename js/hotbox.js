@@ -262,7 +262,9 @@
   var CFG_NAME_RE = /^hotbox(?:_v(\d+))?\.json$/;
   var CFG = { file: 'hotbox.json', ready: false, booted: false, timer: 0, state: 'local', err: '', savedAt: 0, versions: [], userDir: '', origin: 'browser',
     srv: false, dir: '', defDir: '', custom: false, missing: '', sep: '/', recent: [],
-    host: null, hostWait: '', pending: false };
+    host: null, hostWait: '', pending: false,
+    /* the file as this page last read or wrote it: which one (key), its stamp, and the preferences in it (base) */
+    known: null, busy: null, again: false, checking: false, checkedAt: 0, slowAt: 0, noStamp: false };
   /* Set once this browser has read or written the file. A browser without it still carries its preferences
      from before the file existed. */
   var CFG_SYNCED_KEY = 'hotbox_cfg_synced';
@@ -276,8 +278,8 @@
   }
 
   /* `origin: 'defaults'` marks a file that a fresh browser started from scratch */
-  function cfgPayload() {
-    return { hotbox_version: 2, saved_at: new Date().toISOString(), origin: CFG.origin, settings: JSON.parse(JSON.stringify(S)) };
+  function cfgPayload(txt) {
+    return { hotbox_version: 2, saved_at: new Date().toISOString(), origin: CFG.origin, settings: JSON.parse(txt || JSON.stringify(S)) };
   }
 
   function cfgVerNum(name) {
@@ -300,22 +302,106 @@
     });
   }
 
-  function cfgPut(name, obj) {
-    if (CFG.host) return Promise.resolve().then(function () { return CFG.host.write(name, obj); });
-    return apiFetch(cfgUrl(name) + (CFG.srv ? '' : '?overwrite=true'), {
+  /* Writes a file and answers its new stamp ('' when it cannot tell). With ifStamp, the Python side refuses
+     the write when the file is no longer the one with that stamp: the error then says conflict */
+  function cfgPut(name, obj, ifStamp) {
+    if (CFG.host) {
+      return Promise.resolve().then(function () { return CFG.host.write(name, obj); }).then(function () {
+        return typeof CFG.host.stamp === 'function' ? CFG.host.stamp(name) : '';
+      }).then(function (s) { return s == null ? '' : String(s); });
+    }
+    var hd = { 'Content-Type': 'application/json' };
+    if (CFG.srv && ifStamp) hd['X-Hotbox-If-Stamp'] = ifStamp;
+    return apiFetch(cfgUrl(name) + (CFG.srv ? '' : '?overwrite=true&full_info=true'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: hd,
       body: JSON.stringify(obj, null, 2)
     }).then(function (r) {
+      if (r.status === 409 && ifStamp) { var c = new Error('changed since it was read'); c.conflict = true; throw c; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json().catch(function () { return null; });
+    }).then(function (j) {
+      if (CFG.srv) return String((j && j.stamp) || '');
+      return j && j.modified != null ? j.modified + '-' + j.size : '';
     });
   }
 
+  /* ---- Several ComfyUIs on one file (a home folder on a network drive, one ComfyUI per machine) ----
+     Nothing runs while you work: no timer, no polling. A page that comes back to the front asks for the file's
+     stamp, a few bytes, and reads the file only when another ComfyUI wrote it since; a write checks the stamp
+     first, and when the file changed it reads it, puts this page's own changes on top and writes the two.
+     The stamp: the Python side's /hotbox/stamp, ComfyUI's user-data listing without it, or the page that
+     keeps the files (window.__hotboxFiles.stamp, when it has one). Without any, the page reads the file
+     itself on coming back, no more than every 30 seconds, and a write is not checked */
+  function cfgKey() {
+    return (CFG.host ? 'host:' : CFG.srv ? 'srv:' : 'ud:') + CFG.dir + '|' + CFG.file;
+  }
+
+  function cfgKnow(key, stamp, txt) {
+    CFG.known = { key: key, stamp: stamp || '', base: txt };
+  }
+
+  /* the file's stamp: '' when there is no file, null when it cannot be told without reading it */
+  function cfgStamp(name) {
+    if (CFG.host) {
+      if (typeof CFG.host.stamp !== 'function') return Promise.resolve(null);
+      return Promise.resolve().then(function () { return CFG.host.stamp(name); }).then(function (s) { return s == null ? null : String(s); });
+    }
+    if (CFG.srv) {
+      if (CFG.noStamp) return Promise.resolve(null);
+      return apiFetch('/hotbox/stamp/' + encodeURIComponent(name), { cache: 'no-store' }).then(function (r) {
+        /* a Python side from before stamps: ComfyUI was not restarted since Hotbox was updated */
+        if (r.status === 404) { CFG.noStamp = true; return null; }
+        if (!r.ok) return null;
+        return r.json().then(function (j) { return String((j && j.stamp) || ''); });
+      });
+    }
+    return apiFetch('/userdata?dir=' + encodeURIComponent(CFG_DIR) + '&full_info=true', { cache: 'no-store' }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (list) {
+      if (!Array.isArray(list)) return null;
+      for (var i = 0; i < list.length; i++) {
+        var f = list[i];
+        if (!f || typeof f !== 'object') return null;
+        if (String(f.path || '').split(/[\\/]/).pop() === name) return f.modified + '-' + f.size;
+      }
+      return '';
+    });
+  }
+
+  /* reads a file with its stamp: { raw, stamp } */
+  function cfgReadS(name) {
+    if (CFG.srv && !CFG.host) {
+      return apiFetch(cfgUrl(name), { cache: 'no-store' }).then(function (r) {
+        if (r.status === 404) return { raw: null, stamp: '' };
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var st = r.headers.get('X-Hotbox-Stamp') || '';
+        return r.json().then(function (raw) { return { raw: raw, stamp: st }; });
+      });
+    }
+    var st = '';
+    return cfgStamp(name).catch(function () { return null; }).then(function (s) {
+      st = s || '';
+      return cfgRead(name);
+    }).then(function (raw) { return { raw: raw, stamp: st }; });
+  }
+
+  function cfgSettingsOf(raw) {
+    return (raw && raw.settings && typeof raw.settings === 'object') ? raw.settings : (raw && typeof raw === 'object' ? raw : {});
+  }
+
+  function cfgClock(raw) {
+    var t = Date.parse(raw && raw.saved_at);
+    return isFinite(t) ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  }
+
+  /* One write at a time: a change made while one is on its way is written right after it */
   function cfgWrite() {
     if (CFG.timer) { clearTimeout(CFG.timer); CFG.timer = 0; }
+    if (CFG.busy) { CFG.again = true; return CFG.busy; }
     CFG.state = 'saving';
     cfgShow();
-    return cfgPut(CFG.file, cfgPayload()).then(function () {
+    var run = cfgSync(0).then(function () {
       cfgMarkSynced();
       CFG.state = 'saved';
       CFG.err = '';
@@ -327,7 +413,146 @@
       CFG.state = 'error';
       CFG.err = msgOf(err);
       cfgShow();
+    }).then(function () {
+      CFG.busy = null;
+      if (CFG.again) { CFG.again = false; return cfgWrite(); }
     });
+    CFG.busy = run;
+    return run;
+  }
+
+  /* The write itself. When the file is the one this page knows, it is checked first (by the Python side as it
+     writes, otherwise by its stamp): written by another ComfyUI meanwhile, it is read, this page's changes go
+     on top, and the two are written */
+  function cfgSync(tries) {
+    var key = cfgKey(), k = (CFG.known && CFG.known.key === key && CFG.known.stamp) ? CFG.known : null;
+    var txt = JSON.stringify(S);
+    var check = (k && !CFG.srv) ? cfgStamp(CFG.file).catch(function () { return null; }) : Promise.resolve(null);
+    return check.then(function (now) {
+      if (now && now !== k.stamp) { var c = new Error('changed since it was read'); c.conflict = true; throw c; }
+      return cfgPut(CFG.file, cfgPayload(txt), k ? k.stamp : '');
+    }).then(function (stamp) {
+      cfgKnow(key, stamp, txt);
+    }, function (err) {
+      if (!(err && err.conflict) || tries >= 2 || cfgKey() !== key) throw err;
+      return cfgReadS(CFG.file).then(function (res) {
+        if (cfgKey() !== key) throw err;
+        if (res.raw) {
+          var theirs = cfgSettingsOf(res.raw);
+          /* this page as it is now, with any change made while the write was on its way */
+          applyConfig(hbMerge(JSON.parse(k.base), JSON.parse(JSON.stringify(S)), theirs));
+          cfgKnow(key, res.stamp, JSON.stringify(theirs));
+          cfgApplied();
+          var at = cfgClock(res.raw);
+          setStatus('ok', '⇄ Merged with the Hotbox file' + (at ? ', saved at ' + at : '') + ' from another ComfyUI · both kept');
+        } else {
+          cfgKnow(key, '', k.base);
+        }
+        return cfgSync(tries + 1);
+      });
+    });
+  }
+
+  /* Three-way merge of the preferences: what this page changed since it last read or wrote the file (mine
+     against base) goes on top of the file as it is now (theirs). Settings changed on both sides keep this
+     page's, the newest; lists of buttons merge one by one (by id), lists of names keep both sides' additions
+     and removals. It runs only when two ComfyUIs really did write the same file */
+  function hbObjOnly(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function hbSame(a, b) { return a === b || JSON.stringify(a) === JSON.stringify(b); }
+  function hbOwn(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+
+  function hbMerge(base, mine, theirs) {
+    if (hbSame(mine, base)) return theirs;
+    if (hbSame(theirs, base) || hbSame(mine, theirs)) return mine;
+    if (hbObjOnly(mine) && hbObjOnly(theirs)) {
+      var b = hbObjOnly(base) ? base : {}, out = {}, k;
+      for (k in theirs) if (hbOwn(theirs, k)) out[k] = theirs[k];
+      var keys = Object.keys(mine).concat(Object.keys(b).filter(function (x) { return !hbOwn(mine, x); }));
+      keys.forEach(function (key) {
+        var inM = hbOwn(mine, key), inT = hbOwn(theirs, key), inB = hbOwn(b, key);
+        if (!inM) {
+          /* gone here: stays gone unless the other side changed it */
+          if (inB && inT && hbSame(theirs[key], b[key])) delete out[key];
+          return;
+        }
+        if (!inT) {
+          /* gone there: stays gone unless this page changed it */
+          if (!(inB && hbSame(mine[key], b[key]))) out[key] = mine[key];
+          return;
+        }
+        out[key] = hbMerge(inB ? b[key] : undefined, mine[key], theirs[key]);
+      });
+      return out;
+    }
+    if (Array.isArray(mine) && Array.isArray(theirs)) {
+      var bl = Array.isArray(base) ? base : [];
+      var byId = function (a) { return a.every(function (x) { return hbObjOnly(x) && x.id != null; }); };
+      var flat = function (a) { return a.every(function (x) { return x === null || typeof x !== 'object'; }); };
+      if (byId(mine) && byId(theirs) && byId(bl)) return hbMergeById(bl, mine, theirs);
+      if (flat(mine) && flat(theirs) && flat(bl)) {
+        var gone = bl.filter(function (x) { return theirs.indexOf(x) < 0; });
+        return mine.filter(function (x) { return gone.indexOf(x) < 0; })
+          .concat(theirs.filter(function (x) { return bl.indexOf(x) < 0 && mine.indexOf(x) < 0; }));
+      }
+    }
+    return mine;
+  }
+
+  function hbMergeById(base, mine, theirs) {
+    function map(a) { var m = {}; a.forEach(function (x) { m[String(x.id)] = x; }); return m; }
+    function ids(a) { return a.map(function (x) { return String(x.id); }); }
+    var B = map(base), M = map(mine), T = map(theirs), out = [];
+    theirs.forEach(function (t) {
+      var id = String(t.id);
+      if (!M[id]) { if (!(B[id] && hbSame(B[id], t))) out.push(t); return; }
+      out.push(hbMerge(B[id], M[id], t));
+    });
+    mine.forEach(function (m) {
+      var id = String(m.id);
+      if (!T[id] && !(B[id] && hbSame(B[id], m))) out.push(m);
+    });
+    /* in this page's order unless the file's moved some (its additions and deletions do not count) */
+    var tIds = ids(theirs), bIds = ids(base);
+    var moved = !hbSame(tIds.filter(function (i) { return B[i]; }), bIds.filter(function (i) { return T[i]; }));
+    var ref = moved ? tIds : ids(mine);
+    var at = function (x) { var i = ref.indexOf(String(x.id)); return i < 0 ? ref.length : i; };
+    return out.map(function (x, i) { return { x: x, i: i }; })
+      .sort(function (p, q) { return (at(p.x) - at(q.x)) || (p.i - q.i); })
+      .map(function (p) { return p.x; });
+  }
+
+  /* Back to this page (the tab in front again, or the window): has another ComfyUI written the file since? One
+     small question, at most every 2 seconds; the file itself is read only when it changed */
+  function cfgCheck() {
+    if (!CFG.ready || CFG.hostWait || CFG.pending || CFG.busy || CFG.timer || CFG.checking) return;
+    if (document.visibilityState === 'hidden') return;
+    var key = cfgKey(), k = CFG.known;
+    if (!k || k.key !== key) return;
+    var now = Date.now();
+    if (now - CFG.checkedAt < 2000) return;
+    CFG.checkedAt = now;
+    CFG.checking = true;
+    cfgStamp(CFG.file).then(function (st) {
+      if (st === '') return;
+      if (st === null) {
+        /* no stamp to ask for: the file is read, no more than every 30 seconds */
+        if (now - CFG.slowAt < 30000) return;
+        CFG.slowAt = now;
+      } else if (st === k.stamp) return;
+      return cfgReadS(CFG.file).then(function (res) {
+        if (!res.raw || CFG.busy || CFG.timer || cfgKey() !== key) return;
+        var theirs = cfgSettingsOf(res.raw), txt = JSON.stringify(theirs);
+        if (txt === k.base) { cfgKnow(key, res.stamp || st || '', txt); return; }
+        applyConfig(res.raw);
+        cfgKnow(key, res.stamp || st || '', txt);
+        CFG.origin = res.raw.origin || CFG.origin;
+        CFG.state = 'saved';
+        CFG.savedAt = Date.parse(res.raw.saved_at) || Date.now();
+        cfgApplied();
+        var at = cfgClock(res.raw);
+        setStatus('ok', '↻ Hotbox updated from its file' + (at ? ', saved at ' + at : '') + ' from another ComfyUI');
+      });
+    }).catch(function () {}).then(function () { CFG.checking = false; });
   }
 
   /* The folder on disk: the one the Python side reports, else the default layout as ComfyUI was started */
@@ -401,11 +626,13 @@
   /* Switch to another saved version: the one in use is written first, so nothing is lost */
   function cfgSwitch(name, onDone) {
     var flush = CFG.timer ? cfgWrite() : Promise.resolve();
-    flush.then(function () { return cfgRead(name); }).then(function (raw) {
+    flush.then(function () { return cfgReadS(name); }).then(function (res) {
+      var raw = res.raw;
       if (!raw) throw new Error(name + ' is missing');
       applyConfig(raw);
       CFG.origin = raw.origin || 'browser';
       CFG.file = name;
+      cfgKnow(cfgKey(), res.stamp, JSON.stringify(cfgSettingsOf(raw)));
       CFG.state = 'saved';
       CFG.savedAt = Date.parse(raw.saved_at) || Date.now();
       cfgApplied();
@@ -420,6 +647,9 @@
   function cfgBoot() {
     if (CFG.booted) return;
     CFG.booted = true;
+    /* coming back to this page: has another ComfyUI written the file meanwhile? (nothing runs otherwise) */
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') cfgCheck(); });
+    window.addEventListener('focus', cfgCheck);
     apiFetch('/system_stats').then(function (r) { return r.json(); }).then(function (st) {
       var a = (st && st.system && st.system.argv) || [];
       var ud = a.indexOf('--user-directory'), bd = a.indexOf('--base-directory');
@@ -508,8 +738,9 @@
     CFG.file = 'hotbox.json';
     return cfgRead('active.json').catch(function () { return null; }).then(function (act) {
       if (act && CFG_NAME_RE.test(String(act.file || ''))) CFG.file = act.file;
-      return cfgRead(CFG.file);
-    }).then(function (raw) {
+      return cfgReadS(CFG.file);
+    }).then(function (res) {
+      var raw = res.raw;
       CFG.ready = true;
       /* the prompt history comes in now, so the first Up in a new browser already has it */
       phBootSync();
@@ -530,6 +761,7 @@
       }
       if (raw && !(local && !synced && raw.origin === 'defaults')) {
         applyConfig(raw);
+        cfgKnow(cfgKey(), res.stamp, JSON.stringify(cfgSettingsOf(raw)));
         CFG.origin = raw.origin || 'browser';
         CFG.state = 'saved';
         CFG.savedAt = Date.parse(raw.saved_at) || Date.now();

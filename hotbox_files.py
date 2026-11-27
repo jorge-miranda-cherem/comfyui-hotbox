@@ -22,6 +22,13 @@ address, or the address ComfyUI itself answers on). From any other computer, or 
 answer 403, so a ComfyUI started with --listen never lets someone else point Hotbox at a folder. Everything
 else keeps working from anywhere, inside the folders already set.
 
+Several ComfyUIs can share one Hotbox file (a home folder on a network drive, one ComfyUI per machine). Each
+file has a stamp, which changes whenever it is written: GET /hotbox/stamp/<name> answers just that, a few
+bytes from os.stat, so a page that comes back to the front can tell whether another ComfyUI saved since it
+read the file, without reading it. A read carries the stamp in X-Hotbox-Stamp; a write that sends the stamp
+it knows in X-Hotbox-If-Stamp is refused (409, with the stamp now) when the file changed meanwhile, and the
+page merges the two before writing again. A write without it is written as before.
+
 Get Workflow (GET /hotbox/workflow) reads the workflow that made a file given by its path: the _ui.json saved
 beside EXR frames, the text of a PNG, the metadata of an MP4 / MOV. It only reads, only those, and only the
 workflow in them, and like Set Project it answers only the computer running ComfyUI.
@@ -210,6 +217,16 @@ def current_dir(request):
     if pick and os.path.isdir(pick):
         return pick, base, ""
     return base, base, pick
+
+
+def _stamp(path):
+    """changes with every write: a write replaces the file (a new one, so a new inode), and stamps its time and
+    size. '' when there is no file"""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return ""
+    return "%d-%d-%d" % (st.st_ino, st.st_mtime_ns, st.st_size)
 
 
 def _file_path(request):
@@ -750,13 +767,18 @@ def setup(routes):
         cur = current_dir(request)[0]
         return web.json_response({"files": sorted(n for n in os.listdir(cur) if NAME_RE.match(n))})
 
+    @routes.get("/hotbox/stamp/{name}")
+    async def get_stamp(request):
+        return web.json_response({"stamp": _stamp(_file_path(request))})
+
     @routes.get("/hotbox/file/{name}")
     async def read_file(request):
         path = _file_path(request)
         if not os.path.isfile(path):
             return web.Response(status=404)
+        stamp = _stamp(path)
         with open(path, encoding="utf-8") as f:
-            return web.Response(text=f.read(), content_type="application/json")
+            return web.Response(text=f.read(), content_type="application/json", headers={"X-Hotbox-Stamp": stamp})
 
     @routes.post("/hotbox/file/{name}")
     async def write_file(request):
@@ -766,8 +788,14 @@ def setup(routes):
             json.loads(text)
         except ValueError:
             return web.json_response({"error": "Not valid JSON"}, status=400)
-        tmp = path + ".tmp"
+        known = request.headers.get("X-Hotbox-If-Stamp", "")
+        if known:
+            now = _stamp(path)
+            if now and now != known:
+                return web.json_response({"error": "Changed since it was read", "stamp": now}, status=409)
+        # a temporary name of its own, so two ComfyUIs writing at once never share one
+        tmp = "%s.%d.%s.tmp" % (path, os.getpid(), os.urandom(3).hex())
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(text)
         os.replace(tmp, path)
-        return web.json_response({"ok": True})
+        return web.json_response({"ok": True, "stamp": _stamp(path)})
