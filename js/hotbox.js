@@ -1031,6 +1031,7 @@
       '.shb-w-range input::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--shb-w-thumb)}',
       '.shb-w-val{min-width:40px;font-variant-numeric:tabular-nums;white-space:nowrap}',
       '.shb-w-sw,.shb-w-seg{display:inline-flex;align-items:center}',
+      '.shb-w-sw.shb-w-sw2{display:inline-grid;grid-template-columns:repeat(9,max-content)}',
       '.shb-w-segb{border:0;background:transparent;cursor:pointer;white-space:nowrap}',
       '.shb-w-field{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;white-space:nowrap}',
       '.shb-w-car{display:inline-grid;place-items:center;opacity:.6}',
@@ -1046,9 +1047,10 @@
       '.shb-gets{max-height:206px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}',
 
       /* Color swatches & pipette */
-      '.shb-colors{display:flex;align-items:center;flex-wrap:nowrap}',
+      /* the node's colors: two rows of nine, the custom color beside both */
+      '.shb-colors{display:grid;grid-template-columns:repeat(9,max-content) 1fr;align-items:center}',
       '.shb-cdot{display:block;border-radius:50%;cursor:pointer;flex-shrink:0;box-sizing:border-box}',
-      '.shb-pipette{position:relative;margin-left:auto;display:grid;place-items:center;width:22px;height:22px;border-radius:6px;cursor:pointer}',
+      '.shb-pipette{position:relative;grid-column:10;grid-row:1 / span 2;justify-self:end;display:grid;place-items:center;width:22px;height:22px;border-radius:6px;cursor:pointer}',
       '.shb-pipette input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}',
 
       /* Pro sliders (iOS track in Fluid, hairline in Quiet) */
@@ -1254,6 +1256,7 @@
       '.shb-ebtn-row{flex-wrap:wrap}',
       '.shb-ebtn-gi{align-items:flex-start;flex-wrap:nowrap}',
       '.shb-ebtn-gi > span{padding-top:15px}',
+      '.shb-ebtn-row .shb-swatches{display:grid;grid-template-columns:repeat(9,20px);gap:8px 10px}',
       '.shb-gicons{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}',
       '.shb-gicons small{display:block;margin:0 0 4px;font:500 11px/1.2 Inter,system-ui,sans-serif;color:#7a7a7a}',
       '.shb-gicons-r{display:flex;flex-wrap:wrap;gap:4px}',
@@ -1515,11 +1518,11 @@
       '.shb-bed-name input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:oklch(0.96 0.006 286);font:600 14px/1.2 "IBM Plex Sans",Inter,system-ui,sans-serif;user-select:text}',
       '.shb-bed-name .shb-bed-ico{font-size:15px}',
       '.shb-bed-name .shb-bed-sq{width:11px;height:11px}',
-      '.shb-bed-sws{display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
+      '.shb-bed-sws{display:grid;grid-template-columns:repeat(9,24px);align-items:center;gap:7px}',
       '.shb-bed-sw{width:24px;height:24px;border:0;border-radius:6px;padding:0;transition:transform .1s}',
       '.shb-bed-sw:hover{transform:scale(1.12)}',
       '.shb-bed-sw.shb-on{box-shadow:0 0 0 2px oklch(0.215 0.006 286),0 0 0 4px oklch(0.92 0.006 286)}',
-      '.shb-bed-fill{margin-left:4px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0.006 286)}',
+      '.shb-bed-fill{grid-column:1 / -1;justify-self:start;margin-top:2px;height:24px;padding:0 9px;border:1px solid oklch(0.32 0.006 286);border-radius:999px;background:transparent;font-size:11px;color:oklch(0.66 0.006 286)}',
       '.shb-bed-fill.shb-on{background:oklch(0.32 0.006 286);border-color:oklch(0.5 0.006 286);color:oklch(0.97 0.006 286)}',
       '.shb-bed-fill:disabled{opacity:.4}',
       '.shb-bed-gl{display:flex;gap:4px}',
@@ -1736,7 +1739,7 @@
       '.shb-fluid .shb-row.shb-lead > .shb-ico{color:var(--shb-t1)}',
       '.shb-fluid .shb-row.shb-active{background:rgba(90,162,240,.18);color:#fff}',
       '.shb-fluid .shb-sep{background:rgba(255,255,255,.08);margin:6px 8px}',
-      '.shb-fluid .shb-colors{gap:8px;padding:6px 10px 4px}',
+      '.shb-fluid .shb-colors{gap:7px 6px;padding:6px 10px 4px}',
       '.shb-fluid .shb-cdot{width:16px;height:16px;transition:transform 38ms cubic-bezier(.34,1.56,.64,1),box-shadow 30ms}',
       '.shb-fluid .shb-cdot:hover{transform:scale(1.25)}',
       '.shb-fluid .shb-cdot-on{box-shadow:0 0 0 2px rgba(30,30,34,.9),0 0 0 3.5px #fff}',
@@ -1792,6 +1795,8 @@
       '.shb-fluid .shb-w-step:active{transform:scale(.92)}',
       '.shb-fluid .shb-w-val{font:500 11.5px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--shb-t2)}',
       '.shb-fluid .shb-w-sw{gap:7px;padding:0 6px}',
+      '.shb-fluid .shb-w-sw2{gap:3px 8px}',
+      '.shb-fluid .shb-w-sw2 .shb-cdot{width:13px;height:13px}',
       '.shb-fluid .shb-w-seg{padding:2px;border-radius:11px;background:rgba(0,0,0,.25)}',
       '.shb-fluid .shb-w-segb{padding:8px 11px;border-radius:9px;color:var(--shb-t2);font:600 12px/1 Inter,system-ui,sans-serif;transition:background 30ms}',
       '.shb-fluid .shb-w-segb:hover{color:#fff}',
@@ -1860,7 +1865,7 @@
       '.shb-quiet .shb-row.shb-lead > .shb-ico{color:#d6d6d6}',
       '.shb-quiet .shb-row:hover,.shb-quiet .shb-row.shb-active{background:var(--shb-qhover);color:#fff}',
       '.shb-quiet .shb-sep{background:#2c2c2c;margin:4px 6px}',
-      '.shb-quiet .shb-colors{gap:7px;padding:6px 9px 5px}',
+      '.shb-quiet .shb-colors{gap:6px;padding:6px 9px 5px}',
       '.shb-quiet .shb-cdot{width:11px;height:11px}',
       '.shb-quiet .shb-cdot-on{box-shadow:0 0 0 1.5px #1f1f1f,0 0 0 2.5px #e6e6e6}',
       '.shb-quiet .shb-pipette{width:18px;height:18px;color:#888}',
@@ -1907,6 +1912,8 @@
       '.shb-quiet .shb-w-range input::-webkit-slider-thumb{width:10px;height:10px;margin-top:-4px;box-shadow:none}',
       '.shb-quiet .shb-w-val{font:500 11px/1 var(--shb-mono);color:#bdbdbd}',
       '.shb-quiet .shb-w-sw{gap:6px;padding:0 5px}',
+      '.shb-quiet .shb-w-sw2{gap:3px 7px}',
+      '.shb-quiet .shb-w-sw2 .shb-cdot{width:9px;height:9px}',
       '.shb-quiet .shb-w-seg{border:1px solid var(--shb-qbd);border-radius:6px;background:#161616}',
       '.shb-quiet .shb-w-segb{padding:6px 8px;font:500 11px/1 var(--shb-mono);color:#7d7d7d}',
       '.shb-quiet .shb-w-segb:hover{color:#fff}',
@@ -2091,6 +2098,7 @@
       '.shb-seg button.shb-on{background:#353535;color:#ffffff}',
       '.shb-lb-prev{border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px;overflow:hidden;border:1px solid var(--shb-border);background:var(--shb-bg-input)}',
       '.shb-swatches{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
+      '.shb-swatches[data-lb-colors]{display:grid;grid-template-columns:repeat(9,20px);gap:8px 10px}',
       '.shb-swatch{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.22);cursor:pointer;box-sizing:border-box}',
       '.shb-swatch.shb-on{border-color:#ffffff;transform:scale(1.1);box-shadow:0 0 0 1.5px var(--shb-accent)}'
     ].join('\n');
@@ -5717,7 +5725,8 @@
     { name: 'Black',     color: '#222222', bgcolor: '#000000', dot: '#444444' }
   ];
 
-  /* Hotbox swatches: dot color + node header tint (first entry clears the color) */
+  /* Hotbox swatches: dot color + node header tint (first entry clears the color). Two rows of nine
+     wherever they are shown; a button keeps its color by name, so the order can change */
   var HB_SWATCHES = [
     { name: 'Default', color: '',        bgcolor: '',        dot: '#9a9a9a' },
     { name: 'Red',     color: '#3d2523', bgcolor: '#4d302d', dot: '#d26b5f' },
@@ -5730,8 +5739,13 @@
     { name: 'Blue',    color: '#20324a', bgcolor: '#29405e', dot: '#5f97d6' },
     { name: 'Indigo',  color: '#21253d', bgcolor: '#2b304d', dot: '#7381d9' },
     { name: 'Purple',  color: '#2f2645', bgcolor: '#3c3158', dot: '#9378d6' },
+    { name: 'Orchid',  color: '#35233f', bgcolor: '#452d52', dot: '#b56cd0' },
     { name: 'Pink',    color: '#3d2335', bgcolor: '#4d2d44', dot: '#cc6ea9' },
-    { name: 'Slate',   color: '#292e36', bgcolor: '#353a43', dot: '#8d9bb0' }
+    { name: 'Rose',    color: '#3d2329', bgcolor: '#4d2d35', dot: '#df6d84' },
+    { name: 'Brown',   color: '#352a21', bgcolor: '#45362a', dot: '#a77a52' },
+    { name: 'Sand',    color: '#38342b', bgcolor: '#484338', dot: '#cbb38b' },
+    { name: 'Slate',   color: '#292e36', bgcolor: '#353a43', dot: '#8d9bb0' },
+    { name: 'Snow',    color: '#3b3c41', bgcolor: '#4c4d53', dot: '#e3e3ea' }
   ];
 
   function barTint(uid) {
@@ -5851,7 +5865,17 @@
     { bg: '#c9921a', fg: '#ffffff' },
     { bg: '#c0392b', fg: '#ffffff' },
     { bg: '#252830', fg: '#ffffff' },
-    { bg: '#EDEDED', fg: '#111111' }
+    { bg: '#EDEDED', fg: '#111111' },
+    /* the second row, each under its neighbor of the first (new ones go last: the next label's color is remembered by its place) */
+    { bg: '#e0559a', fg: '#ffffff' },
+    { bg: '#5b5fd0', fg: '#ffffff' },
+    { bg: '#2ea3d8', fg: '#ffffff' },
+    { bg: '#b04ab5', fg: '#ffffff' },
+    { bg: '#8dbb35', fg: '#111111' },
+    { bg: '#f0c93a', fg: '#111111' },
+    { bg: '#8d5f3e', fg: '#ffffff' },
+    { bg: '#5f6c80', fg: '#ffffff' },
+    { bg: '#d8c4a0', fg: '#111111' }
   ];
   var LABEL_EDGES = [
     { k: 'square', label: 'Square', f: 0 },
@@ -12513,7 +12537,8 @@
     }
     if (t === 'swatches') {
       var sv = String(it.value || '').toLowerCase();
-      return '<span class="shb-w-wrap"' + (it.title ? tip : '') + '>' + cap + '<span class="shb-w-sw">' +
+      /* more than nine colors: two rows of nine, as wide as one */
+      return '<span class="shb-w-wrap"' + (it.title ? tip : '') + '>' + cap + '<span class="shb-w-sw' + (it.colors.length > 9 ? ' shb-w-sw2' : '') + '">' +
         it.colors.map(function (c, k) {
           var cc = wColor(c);
           return cc ? '<i class="shb-cdot' + (cc.toLowerCase() === sv ? ' shb-cdot-on' : '') + '"' + at + ' data-hb-wv="' + k + '" style="background:' + esc(cc) + '" title="' + esc(cc) + '"></i>' : '';
