@@ -184,6 +184,14 @@ On Linux it sits in your home folder, outside ComfyUI, so reinstalling or moving
 
 Because it lives on disk (not in the browser), your setup follows you to any browser and survives clearing the cache.
 
+### Several ComfyUIs on one file
+A change is written to the file under half a second after you make it, and **✓ Saved** in Settings → Project shows when. Several ComfyUIs can share one file (a home folder on a network drive, one ComfyUI per machine), and none of them loses the others' changes:
+
+- **Back to a ComfyUI** (its tab in front again, or its window), Hotbox asks whether another ComfyUI wrote the file since. When one did, it reads the file and shows it, with a note (*Hotbox updated from its file, saved at 1:14 PM*): a button saved on another machine is there without reloading the page.
+- **Before it writes**, Hotbox checks the file has not changed under it. When it has, it reads it, puts this ComfyUI's change on top and writes both (*Merged with the Hotbox file… both kept*). A saved button added on one side and deleted on the other, a setting changed here and another there: both are kept. The same setting changed on both sides keeps the newest.
+
+Nothing runs while you work: no timer and no polling. Coming back to a page asks for the file's stamp, a few bytes from the file's date and size, and the file is read only when it changed. A write costs nothing more. It needs the Python side as it comes with this version (until ComfyUI restarts, the page reads the file on coming back, no more than every 30 seconds); without the Python side, ComfyUI's own file list gives the stamp.
+
 ### Projects
 <img src="media/projects.png" alt="Settings: the Night Shift project, its hotbox.json, Set Project with Spring Ad and Brand Film under Recent, and Backup & Share" width="460">
 
@@ -210,9 +218,12 @@ window.__hotboxFiles = {
   folder: () => Promise,        // { folder, sep, ready, why }: ready false = the files cannot be reached now, why says so
   read:   (name) => Promise,    // the parsed file, null when it does not exist yet
   write:  (name, obj) => Promise,
-  list:   () => Promise         // the file names in the folder
+  list:   () => Promise,        // the file names in the folder
+  stamp:  (name) => Promise     // optional: anything that changes whenever the file is written ('' when there is none)
 };
 ```
+
+With `stamp`, a page that comes back to the front asks only for it and reads the file when it changed, and a write checks it first (see *Several ComfyUIs on one file*). Without it, the page reads the file on coming back, no more than every 30 seconds, and reads it once more before each write to check it.
 
 While `ready` is false Hotbox keeps working from this browser's copy and Settings shows `why`. Call `window.__hotbox.filesChanged()` when the files can be reached, or no longer: what changed in the meantime is written to the file, otherwise the file is read.
 
