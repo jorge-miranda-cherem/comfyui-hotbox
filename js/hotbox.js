@@ -730,6 +730,11 @@
     label: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
     edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     reroute: '<circle cx="12" cy="12" r="3"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>',
+    /* a Reroute's own tools: back to what feeds it, on to what it feeds, a straight wire, take it out */
+    rrSrc: '<rect x="2" y="7" width="7" height="10" rx="1.5"/><path d="M21 12h-9"/><path d="m15 9-3 3 3 3"/>',
+    rrNext: '<rect x="15" y="7" width="7" height="10" rx="1.5"/><path d="M3 12h9"/><path d="m9 9 3 3-3 3"/>',
+    rrStraight: '<circle cx="4.5" cy="15" r="2"/><circle cx="19.5" cy="15" r="2"/><path d="M6.5 15h11"/><path d="M5 9c3-4 5 0 7 0s4-4 7 0" stroke-dasharray="2 2.5"/>',
+    scissors: '<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>',
     set: '<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/>',
     seed: '<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>',
     video: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/>',
@@ -3179,6 +3184,8 @@
 
   function hbBucket(node) {
     if (!node) return 'empty';
+    /* a Reroute has a bar of its own: its tools are not an ordinary node's, and editing it changes only Reroutes */
+    if (isRerouteNode(node)) return 'reroute';
     var k = ndKind(node) || 'other';
     /* image and video generators keep separate bars: a video model's first tool is Save Video, not Crop */
     if ((k === 'api' || k === 'gen' || k === 'other') && genOut(node) === 'video') return k + '-video';
@@ -5068,6 +5075,171 @@
     var made = hbCreate('Reroute', node);
     if (made) setStatus('ok', 'KN Reroute added');
     return made;
+  }
+
+  /* A Reroute's own tools, the first of its context bar: Go to Source flies to the node that feeds it (through
+     other Reroutes), Go to Next to each node it feeds in turn, Straighten puts it level with what feeds it so
+     the wire is flat, To Set / Get swaps it for a Set by its source and a Get by each node it fed, and Take
+     Out wires the source straight to them. Ctrl+Z undoes the last three */
+  var RR = { id: null, i: -1 };
+
+  function isRerouteNode(node) {
+    return /^Reroute( \(rgthree\))?$/i.test(String((node && (node.type || node.comfyClass)) || ''));
+  }
+
+  /* what feeds it: { node, slot }, or null */
+  function rrSource(g, node) {
+    var inp = node && node.inputs && node.inputs[0];
+    var l = (g && inp && inp.link != null) ? linkById(g, inp.link) : null;
+    var o = l && g.getNodeById(l.origin_id);
+    return o ? { node: o, slot: l.origin_slot } : null;
+  }
+
+  /* what it feeds, wire by wire: [{ node, slot }] */
+  function rrTargets(g, node) {
+    var out = [];
+    ((node && node.outputs) || []).forEach(function (o) {
+      ((o && o.links) || []).slice().forEach(function (lid) {
+        var l = linkById(g, lid), t = l && g.getNodeById(l.target_id);
+        if (t) out.push({ node: t, slot: l.target_slot });
+      });
+    });
+    return out;
+  }
+
+  /* past any Reroutes in a row: the first real node upstream, or the real nodes at the end of every wire */
+  function rrFirstSource(g, node) {
+    var s = rrSource(g, node), seen = {};
+    while (s && isRerouteNode(s.node) && !seen[s.node.id]) {
+      seen[s.node.id] = 1;
+      var up = rrSource(g, s.node);
+      if (!up) break;
+      s = up;
+    }
+    return s;
+  }
+
+  function rrLastTargets(g, node) {
+    var out = [], seen = {};
+    (function walk(n) {
+      if (seen[n.id]) return;
+      seen[n.id] = 1;
+      rrTargets(g, n).forEach(function (t) {
+        if (isRerouteNode(t.node)) walk(t.node);
+        else if (out.indexOf(t.node) < 0) out.push(t.node);
+      });
+    })(node);
+    return out;
+  }
+
+  /* fly to a node the way "." does (and "." comes back to where you were), selected so it is easy to spot */
+  function rrFly(n) {
+    var c = getCanvas();
+    try { if (c && c.selectNodes) c.selectNodes([n]); } catch (e) {}
+    actDotZoom(n);
+  }
+
+  function actRerouteSource(node) {
+    var g = getGraph();
+    if (!g || !isRerouteNode(node)) return;
+    var s = rrFirstSource(g, node);
+    if (!s) { setStatus('error', 'Nothing feeds this Reroute'); return; }
+    rrFly(s.node);
+    setStatus('ok', '← Source: ' + (s.node.title || s.node.type) + ' · press "." to come back');
+  }
+
+  function actRerouteNext(node) {
+    var g = getGraph();
+    if (!g || !isRerouteNode(node)) return;
+    var ts = rrLastTargets(g, node);
+    if (!ts.length) { setStatus('error', 'This Reroute feeds nothing'); return; }
+    RR.i = RR.id === node.id ? (RR.i + 1) % ts.length : 0;
+    RR.id = node.id;
+    var t = ts[RR.i];
+    rrFly(t);
+    setStatus('ok', '→ ' + (ts.length > 1 ? (RR.i + 1) + ' of ' + ts.length + ': ' : '') + (t.title || t.type)
+      + (ts.length > 1 ? ' · press again for the next' : '') + ' · "." comes back');
+  }
+
+  /* One undo step for a Reroute tool: ComfyUI's tracker takes note right away, since the press comes after its own mouseup */
+  function rrNoteUndo() {
+    try {
+      var app = getApp(), wf = app && app.extensionManager && app.extensionManager.workflow;
+      cedCapture(wf && wf.activeWorkflow && wf.activeWorkflow.changeTracker);
+    } catch (e) {}
+  }
+
+  function actRerouteStraighten(node) {
+    var g = getGraph();
+    if (!g || !isRerouteNode(node)) return;
+    var s = rrSource(g, node);
+    if (!s) { setStatus('error', 'Nothing feeds this Reroute'); return; }
+    var dy = 0;
+    try { dy = s.node.getConnectionPos(false, s.slot)[1] - node.getConnectionPos(true, 0)[1]; } catch (e) { dy = 0; }
+    if (!isFinite(dy) || Math.abs(dy) < 0.5) { setStatus('ok', '— Already straight'); return; }
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    nodeMoveTo(node, node.pos[0], node.pos[1] + dy);
+    try { if (g.afterChange) g.afterChange(); } catch (e) {}
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    rrNoteUndo();
+    setStatus('ok', '— Straightened: level with ' + (s.node.title || s.node.type));
+  }
+
+  function rrSetGetTypes() {
+    if ((canMake('SetNode') || hasType('SetNode')) && (canMake('GetNode') || hasType('GetNode'))) return ['SetNode', 'GetNode'];
+    if ((canMake('easy setNode') || hasType('easy setNode')) && (canMake('easy getNode') || hasType('easy getNode'))) return ['easy setNode', 'easy getNode'];
+    return null;
+  }
+
+  function actRerouteToBus(node) {
+    var g = getGraph();
+    if (!g || !isRerouteNode(node)) return;
+    var types = rrSetGetTypes();
+    if (!types) { setStatus('error', 'Set / Get needs KJNodes or Easy-Use'); return; }
+    var s = rrSource(g, node), ts = rrTargets(g, node);
+    if (!s) { setStatus('error', 'Nothing feeds this Reroute'); return; }
+    if (!ts.length) { setStatus('error', 'This Reroute feeds nothing'); return; }
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    var set = createNodeOrSubgraph(types[0], [node.pos[0], node.pos[1]], true);
+    if (!set) {
+      try { if (g.afterChange) g.afterChange(); } catch (e) {}
+      setStatus('error', 'Could not make a ' + types[0]);
+      return;
+    }
+    try { s.node.connect(s.slot, set, 0); } catch (e) {}
+    /* named after what feeds it, past any Reroutes before this one: its title, and the output when it has several */
+    var f = rrFirstSource(g, node) || s, so = f.node.outputs && f.node.outputs[f.slot];
+    var base = String(f.node.title || f.node.type || 'wire') + ((f.node.outputs || []).length > 1 && so && so.name ? '_' + so.name : '');
+    setNameOn(set, base.replace(/\s+/g, '_'));
+    var nm = setGetName(set), made = 0;
+    ts.forEach(function (t) {
+      var p = [t.node.pos[0] - 240, t.node.pos[1]];
+      try { var ip = t.node.getConnectionPos(true, t.slot); p = [ip[0] - 240, ip[1] - 20]; } catch (e) {}
+      var gn = createNodeOrSubgraph(types[1], p, true);
+      if (!gn) return;
+      setNameOn(gn, nm);
+      try { if (gn.size && gn.size[0]) nodeMoveTo(gn, p[0] + 220 - gn.size[0], p[1]); } catch (e) {}
+      try { if (gn.connect(0, t.node, t.slot)) made++; } catch (e) {}
+    });
+    try { g.remove(node); } catch (e) {}
+    try { if (g.afterChange) g.afterChange(); } catch (e) {}
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    rrNoteUndo();
+    setStatus(made === ts.length ? 'ok' : 'error', '⦿ Set / Get "' + nm + '": ' + made + (made === 1 ? ' Get' : ' Gets')
+      + (made === ts.length ? '' : ' · ' + (ts.length - made) + ' could not be wired'));
+  }
+
+  function actRerouteOut(node) {
+    var g = getGraph();
+    if (!g || !isRerouteNode(node)) return;
+    var s = rrSource(g, node), ts = rrTargets(g, node), made = 0;
+    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
+    if (s) ts.forEach(function (t) { try { if (s.node.connect(s.slot, t.node, t.slot)) made++; } catch (e) {} });
+    try { g.remove(node); } catch (e) {}
+    try { if (g.afterChange) g.afterChange(); } catch (e) {}
+    try { g.setDirtyCanvas(true, true); } catch (e) {}
+    rrNoteUndo();
+    setStatus('ok', '✂ Reroute taken out' + (s && ts.length ? ': ' + made + (made === 1 ? ' wire goes' : ' wires go') + ' straight from ' + (s.node.title || s.node.type) : ''));
   }
 
   function setGetName(node) {
@@ -9326,6 +9498,8 @@
   function getMasterTools(node) {
     var seedCtrls = node ? seedControls(node) : [];
     var curSeedMode = seedCtrls.length ? seedModeOf([node]) : '';
+    var rrMany = false;
+    try { rrMany = isRerouteNode(node) && !!getGraph() && rrLastTargets(getGraph(), node).length > 1; } catch (e) {}
     var map = {
       crop:       { id: 'crop',       icon: 'crop',       label: 'Crop',           kbd: 'C', fn: function () { addCrop(node); } },
       rsz:        { id: 'rsz',        icon: 'resize',     label: 'Resize',         kbd: '',  fn: function () { addResize(node); } },
@@ -9350,6 +9524,12 @@
       label:      { id: 'label',      icon: 'label',      label: 'Add Label',      kbd: 'L', fn: function () { labelOpen(node); } },
       rename:     { id: 'rename',     icon: 'edit',       label: 'Rename Node',    kbd: 'F2', fn: function () { actRenameNode(node); } },
       reroute:    { id: 'reroute',    icon: 'reroute',    label: 'Add Reroute',    kbd: 'R', fn: function () { addReroute(node); } },
+      rrsrc:      { id: 'rrsrc',      icon: 'rrSrc',      label: 'Go to Source',   kbd: '',  fn: function () { actRerouteSource(node); } },
+      /* with several nodes at the end of its wires the hotbox stays open: each press goes on to the next one */
+      rrnext:     { id: 'rrnext',     icon: 'rrNext',     label: 'Go to Next',     kbd: '',  stayOpen: rrMany, fn: function () { actRerouteNext(node); } },
+      rrstraight: { id: 'rrstraight', icon: 'rrStraight', label: 'Straighten',     kbd: '',  fn: function () { actRerouteStraighten(node); } },
+      rrbus:      { id: 'rrbus',      icon: 'set',        label: 'To Set / Get',   kbd: '',  fn: function () { actRerouteToBus(node); } },
+      rrout:      { id: 'rrout',      icon: 'scissors',   label: 'Take Out',       kbd: '',  fn: function () { actRerouteOut(node); } },
       set:        { id: 'set',        icon: 'set',        label: 'Set / Get Bus',  kbd: 'S', fn: function () { addSetNode(node); } },
       setinh:     { id: 'setinh',     icon: 'set',        label: 'Inherit Name',   kbd: 'C', fn: function () { actSetInherit(node); } },
       addget:     { id: 'addget',     icon: 'plus',       label: 'Paired Get',     kbd: '',  fn: function () { addGetNode(node); } },
@@ -9626,6 +9806,12 @@
     var stT = hasImg && k !== 'crop' && k !== 'stitch' ? stitchTargets(getGraph(), node) : null;
     var stOn = !!(stT && stT.crops.length), stFirst = stOn && !!stT.src;
 
+    /* a Reroute: its own tools first; carrying an image, a Preview, then the image tools as on any node */
+    if (isRerouteNode(node)) {
+      ids.push('rrsrc', 'rrnext', 'rrstraight', 'rrbus', 'rrout', 'reroute');
+      if (hasImg) ids.push('prev');
+    }
+
     if (k === 'crop') {
       ids.push('cropedit', 'stitch');
       if (stitchesOf(getGraph(), node).length) ids.push('stitchupd');
@@ -9680,6 +9866,14 @@
     if (/^u_/.test(tid)) {
       var own = utById(tid.slice(2));
       return (own && !utOk(own)) ? 'its code is off in this browser · Settings → Power Tools shows it' : '';
+    }
+    if (/^rr(src|next|straight|bus|out)$/.test(tid)) {
+      if (!isRerouteNode(node)) return 'works on a Reroute: open the hotbox over one';
+      var rg = getGraph();
+      if (/^rr(src|straight)$/.test(tid) && !rrSource(rg, node)) return 'nothing feeds this Reroute';
+      if (tid === 'rrnext' && !rrLastTargets(rg, node).length) return 'this Reroute feeds nothing';
+      if (tid === 'rrbus' && !rrSetGetTypes()) return 'needs KJNodes or Easy-Use, for Set / Get';
+      if (tid === 'rrbus' && (!rrSource(rg, node) || !rrTargets(rg, node).length)) return 'works on a Reroute wired in and out';
     }
     if (!node && /^(prev|loadcanvas|bypass|mute|seedtoggle|rename|reroute|set|addget|setinh|stitch|stitchupd|stitchswap)$/.test(tid)) {
       return 'works on a node: open the hotbox over one';
@@ -10032,8 +10226,9 @@
     }
     if (barName === 'tools') {
       var ctx = hbContextTools(node);
-      /* a crop keeps all its ratio segments; other nodes show their first six tools */
-      return (isCropNode(node) ? ctx : ctx.slice(0, 6)).map(function (t) { return 'tool:' + t.id; });
+      /* a crop keeps all its ratio segments, a Reroute its own tools (and a Preview, carrying an image); other
+         nodes show their first six tools */
+      return (isCropNode(node) ? ctx : ctx.slice(0, isRerouteNode(node) ? 7 : 6)).map(function (t) { return 'tool:' + t.id; });
     }
     if (barName === 'bot') {
       /* Every action is listed and each one shows only where it applies (resolveBarItem), so the first
@@ -16175,7 +16370,7 @@
      its kind, to know what the bar holds before any change) and, for the dock, always the empty canvas and the
      two swap bars ---- */
   var BRW_BUCKET_NAMES = { empty: 'Empty canvas', load: 'Loader node', crop: 'Crop node', stitch: 'Stitch node', paint: 'Painter node', bbox: 'Bounding Boxes node',
-    set: 'Set node', get: 'Get node', view: 'Preview node', out: 'Output node', api: 'Image API node', 'api-video': 'Video API node',
+    set: 'Set node', get: 'Get node', reroute: 'Reroute', view: 'Preview node', out: 'Output node', api: 'Image API node', 'api-video': 'Video API node',
     gen: 'Image generator', 'gen-video': 'Video generator', other: 'Other nodes', 'other-video': 'Other video nodes' };
 
   function brwCtxName(bar, key) {
