@@ -422,14 +422,18 @@
   }
 
   /* The write itself. When the file is the one this page knows, it is checked first (by the Python side as it
-     writes, otherwise by its stamp): written by another ComfyUI meanwhile, it is read, this page's changes go
-     on top, and the two are written */
+     writes, otherwise by its stamp; a page that keeps the files without stamps has it read and compared, a
+     write being rare): written by another ComfyUI meanwhile, it is read, this page's changes go on top, and
+     the two are written */
   function cfgSync(tries) {
-    var key = cfgKey(), k = (CFG.known && CFG.known.key === key && CFG.known.stamp) ? CFG.known : null;
+    var key = cfgKey(), k = (CFG.known && CFG.known.key === key && (CFG.known.stamp || CFG.host)) ? CFG.known : null;
     var txt = JSON.stringify(S);
-    var check = (k && !CFG.srv) ? cfgStamp(CFG.file).catch(function () { return null; }) : Promise.resolve(null);
-    return check.then(function (now) {
-      if (now && now !== k.stamp) { var c = new Error('changed since it was read'); c.conflict = true; throw c; }
+    var check = (!k || CFG.srv) ? Promise.resolve(false) : cfgStamp(CFG.file).catch(function () { return null; }).then(function (now) {
+      if (now != null) return !!now && now !== k.stamp;
+      return cfgRead(CFG.file).then(function (raw) { return !!raw && JSON.stringify(cfgSettingsOf(raw)) !== k.base; });
+    });
+    return check.then(function (changed) {
+      if (changed) { var c = new Error('changed since it was read'); c.conflict = true; throw c; }
       return cfgPut(CFG.file, cfgPayload(txt), k ? k.stamp : '');
     }).then(function (stamp) {
       cfgKnow(key, stamp, txt);

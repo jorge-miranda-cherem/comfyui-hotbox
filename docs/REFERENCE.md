@@ -223,7 +223,7 @@ window.__hotboxFiles = {
 };
 ```
 
-With `stamp`, a page that comes back to the front asks only for it and reads the file when it changed, and a write checks it first (see *Several ComfyUIs on one file*). Without it, the page reads the file on coming back, no more than every 30 seconds, and writes are not checked.
+With `stamp`, a page that comes back to the front asks only for it and reads the file when it changed, and a write checks it first (see *Several ComfyUIs on one file*). Without it, the page reads the file on coming back, no more than every 30 seconds, and reads it once more before each write to check it.
 
 While `ready` is false Hotbox keeps working from this browser's copy and Settings shows `why`. Call `window.__hotbox.filesChanged()` when the files can be reached, or no longer: what changed in the meantime is written to the file, otherwise the file is read.
 
