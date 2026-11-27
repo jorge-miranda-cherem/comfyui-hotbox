@@ -3511,11 +3511,12 @@
     var models = (SRV.models || []).filter(function (m) {
       return m.type !== cur && (!want || m.kind === want) && (withOld || !isOldVersion(m.type));
     });
-    /* and to subgraphs that make the same: the workflow's own model subgraphs first on a subgraph, after the
-       API models on an API node; ComfyUI's ready-made ones last */
+    /* and to subgraphs that make the same. The workflow's own model subgraphs come first, on an API node too: a
+       subgraph placed in this workflow is the likeliest one to swap to, and after the API models it never reached
+       the dock. ComfyUI's ready-made ones come last */
     var subs = subMates(want, withOld).filter(function (m) { return m.type !== 'subgraph:' + cur; });
     var own = subs.filter(function (m) { return m.wf; }), global = subs.filter(function (m) { return !m.wf; });
-    return isSubgraphNode(node) ? own.concat(models, global) : models.concat(own, global);
+    return own.concat(models, global);
   }
 
   /* ---- Subgraphs as models. A subgraph with a model inside (an API node, or a loader of a local model) swaps
@@ -3625,22 +3626,106 @@
     });
   }
 
+  /* The prompt of a node that makes images or video: the widget it is typed in. An API node calls it prompt; a
+     subgraph shows what it promoted from inside, under a name of its own and often a label: Z-Image's "text" is
+     labeled prompt, LTX's "value" too, Anima's "text" is positive_prompt and its "text_1" negative_prompt. So the
+     label counts as much as the name, and with neither, the first multiline text that is no system prompt, trigger
+     word or mask prompt is the prompt. Newer API nodes nest it under the model picker (model.prompt) */
+  var PROMPT_RE = /^(prompt|text|positive|positive[ _]prompt)$|^positive prompt\b/i;
+  var NEG_PROMPT_RE = /^(negative|negative[ _]prompt|neg[ _]prompt)$|^negative prompt\b/i;
+
+  function wLeaf(name) { return String(name || '').split('.').pop(); }
+
+  function wSays(w, re) {
+    return !!w && (re.test(wLeaf(w.name)) || (w.label != null && re.test(String(w.label).trim())));
+  }
+
+  function promptWidget(node, neg) {
+    var ws = (node && node.widgets) || [], hit = null;
+    if (neg) {
+      ws.forEach(function (w) { if (!hit && wSays(w, NEG_PROMPT_RE)) hit = w; });
+      return hit;
+    }
+    ws.forEach(function (w) { if (!hit && wSays(w, PROMPT_RE) && !wSays(w, NEG_PROMPT_RE)) hit = w; });
+    if (!hit) ws.forEach(function (w) {
+      if (!hit && w && w.type === 'customtext' && !wSays(w, NEG_PROMPT_RE)
+        && !/system|negative|trigger|mask|sam\d?_/i.test(String(w.name || '') + ' ' + String(w.label || ''))) hit = w;
+    });
+    return hit;
+  }
+
+  /* 'pos' for the prompt, 'neg' for the negative prompt, '' for anything else */
+  function promptRole(node, w) {
+    if (!w) return '';
+    if (w === promptWidget(node)) return 'pos';
+    if (w === promptWidget(node, true)) return 'neg';
+    return '';
+  }
+
+  /* the same for an input: one that stands for a widget has that widget's role, a bare text input its name's */
+  function slotPromptRole(node, slot) {
+    if (!slot) return '';
+    var wn = slot.widget && slot.widget.name;
+    if (wn) {
+      var w = null;
+      ((node && node.widgets) || []).forEach(function (x) { if (!w && x && x.name === wn) w = x; });
+      if (w) return promptRole(node, w);
+    }
+    if (String(slotType(slot)).toUpperCase() !== 'STRING') return '';
+    return wSays(slot, NEG_PROMPT_RE) ? 'neg' : (wSays(slot, PROMPT_RE) ? 'pos' : '');
+  }
+
+  /* The input of `to` that takes a wire coming into `from`'s input `fromSlot`: the one with the same role (the
+     prompt to the prompt, whatever each calls it), else the same name, else the first of a fitting type that is
+     no prompt. `taken` (index → 1) skips inputs already given a wire */
+  function swapInSlot(from, fromSlot, to, taken, fits) {
+    var src = (from && from.inputs && from.inputs[fromSlot]) || null, ins = (to && to.inputs) || [];
+    if (!src) return -1;
+    var role = slotPromptRole(from, src), hit = -1;
+    fits = fits || typeFits;
+    function free(j) { return ins[j] && !(taken && taken[j]); }
+    if (role) {
+      ins.forEach(function (d, j) { if (hit < 0 && free(j) && slotPromptRole(to, d) === role) hit = j; });
+      return hit;
+    }
+    ins.forEach(function (d, j) { if (hit < 0 && free(j) && d.name === src.name && fits(src.type, d.type)) hit = j; });
+    ins.forEach(function (d, j) { if (hit < 0 && free(j) && !slotPromptRole(to, d) && fits(src.type, d.type)) hit = j; });
+    return hit;
+  }
+
+  /* One Ctrl+Z step for a change made of several (a paste among them): ComfyUI's change tracker waits for the
+     outermost after-change, as it does for its own pastes, then takes note right away, since a hotbox press comes
+     after its own mouseup */
+  function hbOneStep(fn) {
+    var g = getGraph(), c = getCanvas();
+    try { if (g && g.beforeChange) g.beforeChange(); } catch (e) {}
+    try { if (c && c.emitBeforeChange) c.emitBeforeChange(); } catch (e) {}
+    try {
+      return fn();
+    } finally {
+      try { if (g && g.afterChange) g.afterChange(); } catch (e) {}
+      try { if (c && c.emitAfterChange) c.emitAfterChange(); } catch (e) {}
+      hbNoteUndo();
+    }
+  }
+
   function carryWidgets(fromNode, toNode) {
     if (!fromNode || !toNode) return 0;
     var src = (fromNode.widgets || []);
     var dst = (toNode.widgets || []);
     var count = 0;
     var aliases = {
-      prompt: ['prompt', 'text', 'positive', 'positive_prompt'],
-      negative_prompt: ['negative_prompt', 'negative'],
       seed: ['seed', 'noise_seed'],
       aspect_ratio: ['aspect_ratio', 'ratio'],
       resolution: ['resolution', 'size', 'image_size'],
       duration: ['duration', 'seconds', 'length']
     };
+    /* the prompt goes to the prompt, and only there, whatever each node calls it */
+    var srcPos = promptWidget(fromNode), srcNeg = promptWidget(fromNode, true);
+    var dstPos = promptWidget(toNode), dstNeg = promptWidget(toNode, true);
     /* newer API nodes nest their settings under a model picker (model.prompt, model.resolution…):
        a setting matches by its own name, whatever group it sits in */
-    function leaf(name) { return String(name).split('.').pop(); }
+    var leaf = wLeaf;
     function findSrc(name) {
       for (var i = 0; i < src.length; i++) {
         if (src[i] && src[i].name === name) return src[i];
@@ -3659,8 +3744,9 @@
     }
     dst.forEach(function (dw) {
       if (!dw || !dw.name) return;
-      var sw = findSrc(dw.name);
+      var sw = dw === dstPos ? srcPos : (dw === dstNeg ? srcNeg : findSrc(dw.name));
       if (!sw || sw.value === undefined) return;
+      if ((sw === srcPos || sw === srcNeg) && dw !== dstPos && dw !== dstNeg) return;
       if (dw.options && Array.isArray(dw.options.values)) {
         if (dw.options.values.indexOf(sw.value) < 0) return;
       }
@@ -4034,30 +4120,21 @@
     if (node.color) made.color = node.color;
     if (node.bgcolor) made.bgcolor = node.bgcolor;
     var carried = carryWidgets(node, made);
+    /* a prompt with nowhere to go: the new node (a subgraph that promoted none) has no prompt of its own */
+    var oldPrompt = promptWidget(node), promptLeft = !!(oldPrompt && !promptWidget(made)
+      && (String(oldPrompt.value || '').trim() || (node.inputs || []).some(function (i) { return i.link != null && slotPromptRole(node, i) === 'pos'; })));
 
-    /* Reconnect inputs */
-    var oldIns = node.inputs || [];
-    var newIns = made.inputs || [];
-    oldIns.forEach(function (inp) {
+    /* Reconnect inputs: the prompt's wire to the prompt, the rest by name, then by type */
+    var taken = {};
+    (node.inputs || []).forEach(function (inp, i) {
       if (!inp || inp.link == null) return;
       var l = linkById(g, inp.link);
       if (!l) return;
       var orig = g.getNodeById ? g.getNodeById(l.origin_id) : null;
       if (!orig) return;
-      var targetIdx = -1;
-      for (var j = 0; j < newIns.length; j++) {
-        if (newIns[j].link == null && newIns[j].name === inp.name && typeFits(inp.type, newIns[j].type)) {
-          targetIdx = j; break;
-        }
-      }
-      if (targetIdx < 0) {
-        for (var j2 = 0; j2 < newIns.length; j2++) {
-          if (newIns[j2].link == null && typeFits(inp.type, newIns[j2].type)) {
-            targetIdx = j2; break;
-          }
-        }
-      }
+      var targetIdx = swapInSlot(node, i, made, taken);
       if (targetIdx >= 0) {
+        taken[targetIdx] = 1;
         try { orig.connect(l.origin_slot, made, targetIdx); } catch (e) {}
       }
     });
@@ -4087,32 +4164,38 @@
     try { g.remove(node); } catch (e) {}
     try { if (c && c.selectNodes) c.selectNodes([made]); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    setStatus('ok', '⇄ Swapped to ' + (made.title || made.type)
-      + (carried ? ' (' + carried + ' settings carried)' : ''));
+    setStatus(promptLeft ? 'error' : 'ok', '⇄ Swapped to ' + (made.title || made.type)
+      + (carried ? ' (' + carried + (carried === 1 ? ' setting' : ' settings') + ' carried)' : '')
+      + (promptLeft ? ' · it shows no prompt to carry yours into' : ''));
     return made;
   }
 
   /* Swap the model on the node under the hotbox and on every other selected node of the same type, in one go:
-     select a whole batch of templates, swap once, and each keeps its own prompt, settings and wires */
+     select a whole batch of templates, swap once, and each keeps its own prompt, settings and wires. However many
+     nodes, and a subgraph pasted in on the way, it is one Ctrl+Z */
   function swapSelected(node, type) {
-    var c = getCanvas(), oldType = node && node.type, sel = selNodes(), made = [];
-    var first = swapNode(node, type);
-    if (first) made.push(first);
-    sel.forEach(function (s) {
-      if (!s || s === node || s.type !== oldType || ndAdds(s)) return;
-      var m = swapNode(s, type);
-      if (m) made.push(m);
+    return hbOneStep(function () {
+      var c = getCanvas(), oldType = node && node.type, sel = selNodes(), made = [];
+      var first = swapNode(node, type);
+      if (first) made.push(first);
+      sel.forEach(function (s) {
+        if (!s || s === node || s.type !== oldType || ndAdds(s)) return;
+        var m = swapNode(s, type);
+        if (m) made.push(m);
+      });
+      if (made.length > 1) {
+        try { if (c && c.selectNodes) c.selectNodes(made); } catch (e) {}
+        setStatus('ok', '⇄ Swapped ' + made.length + ' nodes to ' + (made[0].title || made[0].type));
+      }
+      return first;
     });
-    if (made.length > 1) {
-      try { if (c && c.selectNodes) c.selectNodes(made); } catch (e) {}
-      setStatus('ok', '⇄ Swapped ' + made.length + ' nodes to ' + (made[0].title || made[0].type));
-    }
-    return first;
   }
 
   /* Swap Nodes: two selected nodes trade places and wires (Nuke's Ctrl+Shift drag). Each slot goes to the
-     other node's slot with the same name, else the first free one of a fitting type, so two different
-     models of one kind swap cleanly too. Wired or not, they always trade places. */
+     other node's slot with the same role (the prompt to the prompt), else the same name, else the first free one
+     of a fitting type, so two different models of one kind swap cleanly too. Wired or not, they always trade
+     places. Two nodes that make images or video (API nodes, subgraphs that run a model) trade their prompts too:
+     the prompt stays in its spot, like its wires, and only the model that renders it changes */
   function actSwapPair() {
     var g = getGraph();
     var sel = selNodes();
@@ -4120,7 +4203,10 @@
       setStatus('error', 'Select exactly two nodes to swap them');
       return;
     }
-    var a = sel[0], b = sel[1];
+    hbOneStep(function () { swapPairNow(g, sel[0], sel[1]); });
+  }
+
+  function swapPairNow(g, a, b) {
     function twin(n) { return n === a ? b : (n === b ? a : n); }
     function fits(x, y) { return typeFits(x, y) || typeFits(y, x); }
     function slotMap(from, to, key) {
@@ -4128,8 +4214,11 @@
       src.forEach(function (sl, i) {
         if (!sl) return;
         var hit = -1;
-        dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && d.name === sl.name && fits(sl.type, d.type)) hit = j; });
-        dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && fits(sl.type, d.type)) hit = j; });
+        if (key === 'inputs') hit = swapInSlot(from, i, to, used, fits);
+        else {
+          dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && d.name === sl.name && fits(sl.type, d.type)) hit = j; });
+          dst.forEach(function (d, j) { if (hit < 0 && !used[j] && d && fits(sl.type, d.type)) hit = j; });
+        }
         if (hit >= 0) { map[i] = hit; used[hit] = 1; }
       });
       return map;
@@ -4156,7 +4245,6 @@
         });
       });
     });
-    try { if (g.beforeChange) g.beforeChange(); } catch (e) {}
     wires.forEach(function (w) { try { w.t.disconnectInput(w.ts); } catch (e) {} });
     var pa = [a.pos[0], a.pos[1]], pb = [b.pos[0], b.pos[1]];
     nodeMoveTo(a, pb[0], pb[1]);
@@ -4169,11 +4257,28 @@
       }
       if (!ok) lost++;
     });
-    try { if (g.afterChange) g.afterChange(); } catch (e) {}
+    /* two generators: the prompt (and the negative one) stays in its spot. A wired prompt went with its wire
+       already; a typed one goes across here, and the one left under a wire does no harm */
+    var traded = 0;
+    if (!ndAdds(a) && !ndAdds(b)) {
+      [false, true].forEach(function (neg) {
+        var wa = promptWidget(a, neg), wb = promptWidget(b, neg);
+        if (!wa || !wb || wa.value === undefined || wb.value === undefined) return;
+        var va = wa.value, vb = wb.value;
+        [[a, wa, vb], [b, wb, va]].forEach(function (t) {
+          try {
+            t[1].value = t[2];
+            if (t[1].callback) t[1].callback(t[2], null, t[0]);
+          } catch (e) {}
+        });
+        if (!neg) traded = 1;
+      });
+    }
     hbWiggleNode(a);
     hbWiggleNode(b);
     try { g.setDirtyCanvas(true, true); } catch (e) {}
     setStatus(lost ? 'error' : 'ok', '⇄ Swapped ' + (a.title || a.type) + ' ↔ ' + (b.title || b.type)
+      + (traded ? ' · each spot keeps its prompt' : '')
       + (lost ? ' · ' + lost + (lost === 1 ? ' wire had' : ' wires had') + ' no matching slot' : ''));
   }
 
@@ -5161,8 +5266,8 @@
       + (ts.length > 1 ? ' · press again for the next' : '') + ' · "." comes back');
   }
 
-  /* One undo step for a Reroute tool: ComfyUI's tracker takes note right away, since the press comes after its own mouseup */
-  function rrNoteUndo() {
+  /* One undo step for a Reroute tool or a swap: ComfyUI's tracker takes note right away, since the press comes after its own mouseup */
+  function hbNoteUndo() {
     try {
       var app = getApp(), wf = app && app.extensionManager && app.extensionManager.workflow;
       cedCapture(wf && wf.activeWorkflow && wf.activeWorkflow.changeTracker);
@@ -5181,7 +5286,7 @@
     nodeMoveTo(node, node.pos[0], node.pos[1] + dy);
     try { if (g.afterChange) g.afterChange(); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    rrNoteUndo();
+    hbNoteUndo();
     setStatus('ok', '— Straightened: level with ' + (s.node.title || s.node.type));
   }
 
@@ -5224,7 +5329,7 @@
     try { g.remove(node); } catch (e) {}
     try { if (g.afterChange) g.afterChange(); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    rrNoteUndo();
+    hbNoteUndo();
     setStatus(made === ts.length ? 'ok' : 'error', '⦿ Set / Get "' + nm + '": ' + made + (made === 1 ? ' Get' : ' Gets')
       + (made === ts.length ? '' : ' · ' + (ts.length - made) + ' could not be wired'));
   }
@@ -5238,7 +5343,7 @@
     try { g.remove(node); } catch (e) {}
     try { if (g.afterChange) g.afterChange(); } catch (e) {}
     try { g.setDirtyCanvas(true, true); } catch (e) {}
-    rrNoteUndo();
+    hbNoteUndo();
     setStatus('ok', '✂ Reroute taken out' + (s && ts.length ? ': ' + made + (made === 1 ? ' wire goes' : ' wires go') + ' straight from ' + (s.node.title || s.node.type) : ''));
   }
 
