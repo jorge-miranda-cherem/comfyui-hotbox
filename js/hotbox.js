@@ -19583,7 +19583,7 @@
    * page picks groups and saved buttons, packs them as plain JSON, and another Hotbox adds the pack to what it
    * has, as its next version. Hotbox knows nothing of who carries the pack, or how
    * --------------------------------------------------------------------- */
-  var HB_VERSION = '1.2.14';
+  var HB_VERSION = '1.2.15';
 
   function hbShareable() {
     function colorOf(uid) { return (S.customColors && S.customColors[uid]) || ''; }
